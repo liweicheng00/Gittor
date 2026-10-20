@@ -1,5 +1,5 @@
 //! Repository access through the git CLI. The git CLI respects the user's config, hooks and credentials,
-//! the same way IntelliJ does. See `docs/rebased-lite/design-spec.md`, chapters 3 and 6.
+//! the same way IntelliJ does. See `docs/design-spec.md`, chapters 3 and 6.
 
 pub mod changelist;
 pub mod cleanup;

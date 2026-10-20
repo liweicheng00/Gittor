@@ -325,7 +325,7 @@ get_file_pair(left: Rev, right: Rev | "WORKTREE", change: Change): { left?: Blob
 
 ## 11. 實作狀態（v0.4，2026-09-28）
 
-程式碼在 `rebased-lite/`。
+程式碼在 [Gittor](https://github.com/liweicheng00/Gittor) 的根目錄（原本在 rebased 的 `rebased-lite/`）。
 
 | 規格章節 | 狀態 |
 |---|---|

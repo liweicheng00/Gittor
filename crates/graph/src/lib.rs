@@ -1,7 +1,7 @@
 //! Commit graph layout for Rebased Lite.
 //!
 //! The algorithms are a port of the IntelliJ Community `platform/vcs-log/graph` module (Apache-2.0),
-//! so the graph looks the same as in Rebased. See `docs/rebased-lite/design-spec.md`, chapter 4.
+//! so the graph looks the same as in Rebased. See `docs/design-spec.md`, chapter 4.
 
 pub mod bek;
 pub mod collapse;

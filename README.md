@@ -3,7 +3,7 @@
 Rebased Lite is a light, read-only git viewer. It draws the commit graph the same way as
 Rebased (IntelliJ), and it compares files between any two commits. It does not use a JVM.
 
-The design spec is in [`docs/rebased-lite/design-spec.md`](../docs/rebased-lite/design-spec.md).
+The design spec is in [`docs/design-spec.md`](docs/design-spec.md).
 
 ## Features
 
