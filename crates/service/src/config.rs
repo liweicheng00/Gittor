@@ -2,8 +2,7 @@
 //! History limits. They are in `settings.json` in the configuration directory of the user:
 //! `$XDG_CONFIG_HOME/gittor` or `~/.config/gittor` on Linux,
 //! `~/Library/Application Support/gittor` on macOS, and `%APPDATA%\gittor` on Windows.
-//! A directory of the old name, `rebased-lite`, moves there first. `GITTOR_CONFIG_DIR` changes the
-//! directory, for tests.
+//! `GITTOR_CONFIG_DIR` changes the directory, for tests.
 
 use crate::history::Limits;
 use serde::{Deserialize, Serialize};
@@ -37,12 +36,7 @@ pub fn config_dir() -> Option<PathBuf> {
     } else {
         std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from).or_else(|| home.map(|h| h.join(".config")))?
     };
-    let dir = base.join("gittor");
-    let old = base.join("rebased-lite");
-    if !dir.exists() && old.is_dir() {
-        let _ = std::fs::rename(&old, &dir);
-    }
-    Some(dir)
+    Some(base.join("gittor"))
 }
 
 /// Reads the settings file. A missing or damaged file gives the defaults.

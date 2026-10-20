@@ -1,7 +1,7 @@
 //! Commit graph layout for Gittor.
 //!
 //! The algorithms are a port of the IntelliJ Community `platform/vcs-log/graph` module (Apache-2.0),
-//! so the graph looks the same as in Rebased. See `docs/design-spec.md`, chapter 4.
+//! so the graph looks the same as in IntelliJ. See `docs/design-spec.md`, chapter 4.
 
 pub mod bek;
 pub mod collapse;
@@ -70,7 +70,7 @@ pub struct Graph {
     visible: Arc<VisibleGraph>,
 }
 
-/// Same as Java `String.hashCode`, so branch colors match Rebased.
+/// Same as Java `String.hashCode`, so branch colors match IntelliJ.
 pub fn java_string_hash(s: &str) -> i32 {
     s.encode_utf16().fold(0i32, |h, c| h.wrapping_mul(31).wrapping_add(c as i32))
 }

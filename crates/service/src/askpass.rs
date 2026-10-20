@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 
-const SOCKET_ENV: &str = "REBASED_ASKPASS_SOCKET";
+const SOCKET_ENV: &str = "GITTOR_ASKPASS_SOCKET";
 /// A prompt that nobody answers fails after this time, so git does not wait forever.
 const TIMEOUT: Duration = Duration::from_secs(300);
 

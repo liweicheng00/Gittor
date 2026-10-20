@@ -47,8 +47,7 @@ The defaults; change them in Settings › Keymap.
 | Git program, Local History limits, editor | `settings.json` in `~/.config/gittor` (Linux), `~/Library/Application Support/gittor` (macOS) or `%APPDATA%\gittor` (Windows) |
 | Other settings and recent repositories | The storage of the window |
 
-Nothing goes to a remote. Gittor was named Rebased Lite before; folders named `rebased-lite` move to
-`gittor` the first time Gittor needs them.
+Nothing goes to a remote.
 
 ## Build
 

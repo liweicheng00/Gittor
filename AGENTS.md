@@ -50,7 +50,7 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   `rewrite_files` builds a tree in a temporary index (`GIT_INDEX_FILE`).
 - Undo (`crates/git/src/undo.rs`): `Reset`, `Checkout`, `CreateRef`, `DeleteRef`, `MoveRef`,
   `RenameBranch`, `StashStore`, `SetConfig`. Each step checks that nothing moved since.
-- Files of the app in a git dir: always `app_dir(git_dir)` (it moves the old `rebased-lite` folder).
+- Files of the app in a git dir: always `app_dir(git_dir)`.
 - Windows (Compare, History, Review, Show Repository): `windows.ts`. A window calls
   `registerWindow(close, kind, show)`, and listens with `onRepoChange`. `watch.ts` calls
   `notifyRepoChange("files" | "repo")`.
@@ -131,10 +131,7 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
 ## Open points
 
 - The mouse buttons Back and Forward are not tested in the macOS app (WKWebView).
-- The moves of the old `rebased-lite` folders (`app_dir`, `config_dir`, the settings key) have no
-  tests.
 - There is no CI yet. A workflow must build `ui/dist` before `cargo test`.
 - `README.md` still says that an app from Finder uses `/usr/bin/git`; the app now chooses a git that
   works.
-- One environment variable keeps the old name: `REBASED_DEV_LOG` (the dev server).
 - The owner postponed: patches (create and apply) and automatic updates.

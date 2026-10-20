@@ -148,12 +148,10 @@ const DEFAULTS: Settings = {
 };
 
 const KEY = "gittor.settings.v1";
-/** The key of the settings before the app had the name Gittor. */
-const OLD_KEY = "rebased-lite.settings.v1";
 
 function load(): Settings {
   try {
-    const raw = localStorage.getItem(KEY) ?? localStorage.getItem(OLD_KEY);
+    const raw = localStorage.getItem(KEY);
     if (raw) return { ...DEFAULTS, ...JSON.parse(raw) };
   } catch {}
   return { ...DEFAULTS };

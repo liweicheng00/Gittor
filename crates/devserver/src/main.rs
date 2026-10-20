@@ -108,7 +108,7 @@ fn handle(stream: TcpStream, service: &Service, dist: &std::path::Path) -> std::
             return respond(&stream, 400, "application/json", serde_json_string("use POST").as_bytes());
         }
         let body = String::from_utf8_lossy(&req.body);
-        let log = std::env::var_os("REBASED_DEV_LOG").is_some();
+        let log = std::env::var_os("GITTOR_DEV_LOG").is_some();
         let t = std::time::Instant::now();
         if log {
             eprintln!("start {cmd}");

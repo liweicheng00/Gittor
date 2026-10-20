@@ -6,7 +6,7 @@
 
 ## 1. 目標
 
-Gittor 是一個輕量的桌面 git 檢視工具。它重現 Rebased（IntelliJ）的 commit graph 畫法，並提供任意兩個 commit 之間的檔案比較。
+Gittor 是一個輕量的桌面 git 檢視工具。它重現 IntelliJ 的 commit graph 畫法，並提供任意兩個 commit 之間的檔案比較。
 
 ### 1.1 MVP 功能
 
@@ -54,7 +54,7 @@ Gittor 是一個輕量的桌面 git 檢視工具。它重現 Rebased（IntelliJ�
 
 ### 3.1 Graph 拓撲（一次載入）
 
-IntelliJ 的做法（`GitLogProvider.readAllHashes`）是先載入全部 commit 的 hash、parents 和時間，再依需要載入細節。Lite 版採用相同的做法：
+IntelliJ 的做法（`GitLogProvider.readAllHashes`）是先載入全部 commit 的 hash、parents 和時間，再依需要載入細節。Gittor 採用相同的做法：
 
 ```
 git log HEAD --branches --remotes --tags --date-order \
@@ -270,7 +270,7 @@ git diff --name-status -M -C -z <left>                # 與工作目錄比較
 - 不顯示文字 diff 的情況：
   - 二進位檔（含 NUL byte），只顯示「二進位檔已變更」。
   - 超過 5 MB 的檔案，先顯示提示，使用者確認後才載入。這個門檻值是暫定的。
-- 語法上色：用 Monaco 載入 VS Code 的 TextMate 語法（`vscode-textmate` + `vscode-oniguruma`）。這樣上色結果會和 Rebased 相同。
+- 語法上色：用 Monaco 載入 VS Code 的 TextMate 語法（`vscode-textmate` + `vscode-oniguruma`）。這樣上色結果會和 IntelliJ 相同。
 
 ## 7. Backend 介面（Tauri commands）
 
@@ -301,13 +301,13 @@ get_file_pair(left: Rev, right: Rev | "WORKTREE", change: Change): { left?: Blob
 
 - 開啟 git/git（約 8.6 萬個 commit）後，可以從頭捲到尾，沒有筆數上限。
 - 跨越 30 列以上的 edge 在中間不顯示，兩端有箭頭。
-- 同一個 repo 在 Rebased 和 Lite 版的 graph 截圖，前 200 列的形狀相同。這項用人工比對。
+- 同一個 repo 在 IntelliJ 和 Gittor 的 graph 截圖，前 200 列的形狀相同。這項用人工比對。
 - 選兩個 commit，變更檔案清單與 `git diff --name-status -M <舊> <新>` 相同。
 - 改名的檔案顯示新舊路徑，diff 正確配對。
 
 ### 8.3 資源量測
 
-- 用與 Rebased 相同的量測方法，量測 RSS 和啟動時間，並和 Rebased 的量測值比較。量測方法見先前的量測腳本。
+- 用與 IntelliJ 相同的量測方法，量測 RSS 和啟動時間，並和 IntelliJ 的量測值比較。量測方法見先前的量測腳本。
 - MVP 不設數字目標。先量測，再決定目標。
 
 ## 9. 授權
@@ -325,7 +325,7 @@ get_file_pair(left: Rev, right: Rev | "WORKTREE", change: Change): { left?: Blob
 
 ## 11. 實作狀態（v0.4，2026-09-28）
 
-程式碼在 [Gittor](https://github.com/liweicheng00/Gittor) 的根目錄（原本在 rebased 的 `rebased-lite/`）。
+程式碼在 [Gittor](https://github.com/liweicheng00/Gittor) 的根目錄。
 
 | 規格章節 | 狀態 |
 |---|---|
@@ -375,7 +375,7 @@ get_file_pair(left: Rev, right: Rev | "WORKTREE", change: Change): { left?: Blob
 
 資源量測（Linux x86_64、Xvfb、WebKitGTK 軟體繪圖，git/git）：
 
-| 項目 | Rebased 1.1.19 | Gittor 0.1 |
+| 項目 | IntelliJ | Gittor 0.1 |
 |---|---|---|
 | 開啟 repo 後的 RSS | 1,250 MB | 478 MB（app 194 + WebKit 網頁 246 + WebKit 網路 50） |
 | 開啟 diff 後的 RSS | 未量測 | 552 MB |
@@ -388,7 +388,7 @@ v0.4 的量測（同一台機器、同樣條件，git/git，開啟後 20 秒）�
 | WebKit 網頁行程 | 603 MB | 598 MB |
 | 總計（app + WebKit 網頁 + WebKit 網路） | 未取得 app 行程的數字 | 865 MB（218 + 598 + 48） |
 
-新功能沒有增加記憶體：兩個前端在同樣條件下差不多。但這次的絕對數字比上表 v0.1 的數字高（網頁行程 598 MB 對 246 MB）。JavaScript heap 只有 16 MB，DOM 約 1,600 個節點，所以差異在 WebKit 本身（繪圖或編譯後的程式碼），不在前端資料。原因還沒有找到。Rebased 1.1.19 這次沒有重新量測，所以不能直接和上表的 1,250 MB 比較。
+新功能沒有增加記憶體：兩個前端在同樣條件下差不多。但這次的絕對數字比上表 v0.1 的數字高（網頁行程 598 MB 對 246 MB）。JavaScript heap 只有 16 MB，DOM 約 1,600 個節點，所以差異在 WebKit 本身（繪圖或編譯後的程式碼），不在前端資料。原因還沒有找到。IntelliJ 這次沒有重新量測，所以不能直接和上表的 1,250 MB 比較。
 
 ### 記憶體瓶頸分析（v0.4.1）
 
@@ -421,9 +421,9 @@ Rust 核心（dev server 開啟 git/git）只用 41.6 MB。
 |---|---|---|
 | 優化前 | 968 MB | 767 MB |
 | 優化後 | 541 MB | 386 MB |
-| Rebased 1.1.19（同一天、同樣環境，開啟 5 分鐘後） | 1,479 MB（GC 後 1,305 MB） | 單一 JVM 行程，RSS 約等於 PSS |
+| IntelliJ（同一天、同樣環境，開啟 5 分鐘後） | 1,479 MB（GC 後 1,305 MB） | 單一 JVM 行程，RSS 約等於 PSS |
 
-Rebased 的 1,479 MB 裡，Java heap、metaspace 和 native malloc 占 830 MB，jar 檔映射占 269 MB，native 函式庫占 98 MB。它用 Java2D 軟體繪圖，不受上面 WebKit 合成問題的影響。
+IntelliJ 的 1,479 MB 裡，Java heap、metaspace 和 native malloc 占 830 MB，jar 檔映射占 269 MB，native 函式庫占 98 MB。它用 Java2D 軟體繪圖，不受上面 WebKit 合成問題的影響。
 
 macOS 的 WKWebView 數字會不同，還需要在 macOS 上量測。
 

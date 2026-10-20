@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { pathLabels } from "../src/path-labels.ts";
 
 test("unique folder names stay alone", () => {
-  assert.deepEqual(pathLabels(["/home/u/rebased", "/home/u/rebased-wt"]), ["rebased", "rebased-wt"]);
+  assert.deepEqual(pathLabels(["/home/u/gittor", "/home/u/gittor-wt"]), ["gittor", "gittor-wt"]);
 });
 
 test("the same name takes the folder above it", () => {
