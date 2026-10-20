@@ -20,7 +20,7 @@ pub struct TagInfo {
     pub subject: String,
     /// The message after the subject.
     pub body: String,
-    /// The tag has a GPG, SSH or X.509 signature. Rebased Lite does not check it.
+    /// The tag has a GPG, SSH or X.509 signature. Gittor does not check it.
     pub signed: bool,
 }
 

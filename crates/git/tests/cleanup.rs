@@ -1,7 +1,7 @@
 //! Delete Merged Branches. The same repository goes through the rules of this crate and, when
 //! `REBASED_NEW_GIT` names a git 2.56 or later, through `git branch --delete-merged`.
 
-use rebased_git::Repo;
+use gittor_git::Repo;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -19,7 +19,7 @@ fn commit(dir: &Path, file: &str, msg: &str) {
 
 /// A clone with one branch for each rule. Only `topic-done` and `stack-a` are deleted.
 fn setup(name: &str) -> PathBuf {
-    let base = std::env::temp_dir().join(format!("rebased-lite-cleanup-{name}-{}", std::process::id()));
+    let base = std::env::temp_dir().join(format!("gittor-cleanup-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&base);
     std::fs::create_dir_all(&base).unwrap();
     let origin = base.join("origin.git");
@@ -158,13 +158,13 @@ fn no_upstream(dir: &Path, branch: &str) -> bool {
 #[test]
 fn delete_merged_branches() {
     // A global value of a branch, which Undo must not copy into the repository.
-    let global = std::env::temp_dir().join(format!("rebased-lite-cleanup-global-{}", std::process::id()));
+    let global = std::env::temp_dir().join(format!("gittor-cleanup-global-{}", std::process::id()));
     std::fs::write(&global, "[branch \"topic-done\"]\n\tdescription = global\n").unwrap();
     std::env::set_var("GIT_CONFIG_GLOBAL", &global);
     check(false);
     if let Ok(program) = std::env::var("REBASED_NEW_GIT") {
-        assert!(rebased_git::set_git_program(&program).is_ok());
-        assert!(rebased_git::git_at_least(rebased_git::cleanup::NATIVE_VERSION), "REBASED_NEW_GIT is older than 2.56");
+        assert!(gittor_git::set_git_program(&program).is_ok());
+        assert!(gittor_git::git_at_least(gittor_git::cleanup::NATIVE_VERSION), "REBASED_NEW_GIT is older than 2.56");
         check(true);
     }
 }
@@ -172,7 +172,7 @@ fn delete_merged_branches() {
 /// Merged into a branch, as `git branch --merged uat`: the branches do not need to track uat.
 #[test]
 fn delete_branches_merged_into_a_branch() {
-    let dir = std::env::temp_dir().join(format!("rebased-lite-cleanup-into-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("gittor-cleanup-into-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     git(&dir, &["init", "-q", "-b", "uat"]);

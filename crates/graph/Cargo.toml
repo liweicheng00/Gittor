@@ -1,5 +1,5 @@
 [package]
-name = "rebased-graph"
+name = "gittor-graph"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true

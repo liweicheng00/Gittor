@@ -1,4 +1,4 @@
-// Monaco with only the features that Rebased Lite uses. The full "edcore.main" loads about 60 features and
+// Monaco with only the features that Gittor uses. The full "edcore.main" loads about 60 features and
 // costs about 24 MB more in the WebKit process on open.
 import "monaco-editor/esm/vs/editor/browser/coreCommands.js";
 import "monaco-editor/esm/vs/editor/browser/widget/codeEditor/codeEditorWidget.js";

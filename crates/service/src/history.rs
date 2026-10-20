@@ -1,6 +1,6 @@
 //! Local History, as in IntelliJ: versions of working-tree files that the app keeps apart from git.
 //!
-//! The store is in `<git dir>/rebased-lite/local-history`. `index.jsonl` has one line for each version.
+//! The store is in `<git dir>/gittor/local-history`. `index.jsonl` has one line for each version.
 //! `blobs/` has the content, compressed and named by its SHA-256. The watcher adds a version when a file
 //! changes. An operation that can lose local changes adds a version of each affected file before it runs.
 
@@ -98,7 +98,7 @@ impl LocalHistory {
         let h = LocalHistory {
             root: root.to_path_buf(),
             git_dir: git_dir.to_path_buf(),
-            dir: git_dir.join("rebased-lite").join("local-history"),
+            dir: gittor_git::app_dir(git_dir).join("local-history"),
             inner: Mutex::new(Inner { last: HashMap::new(), since_prune: 0, limits }),
         };
         let lines = h.prune();
@@ -313,7 +313,7 @@ mod tests {
 
     #[test]
     fn prune_removes_versions_and_blobs() {
-        let root = std::env::temp_dir().join(format!("rebased-lite-prune-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("gittor-prune-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(root.join(".git")).unwrap();
         let h = LocalHistory::open(&root, &root.join(".git"), Limits::default());

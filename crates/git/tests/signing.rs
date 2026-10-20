@@ -1,9 +1,9 @@
 //! Commits that the app writes with git commit-tree get a signature when commit.gpgsign is on, and a
 //! partial commit runs the commit hooks. The test uses a GPG key without a passphrase in its own GNUPGHOME.
 
-use rebased_git::changelist::PartialFile;
-use rebased_git::ops::{Action, PlanEntry};
-use rebased_git::Repo;
+use gittor_git::changelist::PartialFile;
+use gittor_git::ops::{Action, PlanEntry};
+use gittor_git::Repo;
 use std::path::Path;
 use std::process::Command;
 
@@ -22,7 +22,7 @@ fn commit(dir: &Path, file: &str, text: &str, msg: &str) -> String {
 
 #[test]
 fn rewrites_and_partial_commits_are_signed_and_run_hooks() {
-    let base = std::env::temp_dir().join(format!("rebased-lite-sign-{}", std::process::id()));
+    let base = std::env::temp_dir().join(format!("gittor-sign-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&base);
     let gnupg = base.join("gnupg");
     std::fs::create_dir_all(&gnupg).unwrap();

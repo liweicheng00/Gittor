@@ -1,7 +1,7 @@
 // Hides the console window on Windows release builds.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use rebased_service::Service;
+use gittor_service::Service;
 use serde_json::Value;
 use tauri::{Emitter, Manager, State};
 
@@ -10,8 +10,8 @@ use tauri::{Emitter, Manager, State};
 /// repository of the command. A failure is `{ error, kind }`.
 #[tauri::command(async)]
 fn call(state: State<'_, Service>, cmd: String, body: Value) -> Result<Value, Value> {
-    let out = state.dispatch(&cmd, &body.to_string()).map_err(|e| rebased_service::errors::error_json(&e))?;
-    serde_json::from_str(&out).map_err(|e| rebased_service::errors::error_json(&e.to_string()))
+    let out = state.dispatch(&cmd, &body.to_string()).map_err(|e| gittor_service::errors::error_json(&e))?;
+    serde_json::from_str(&out).map_err(|e| gittor_service::errors::error_json(&e.to_string()))
 }
 
 /// The repository path given on the command line, if any.
@@ -44,7 +44,7 @@ fn use_software_rendering_without_gpu() {
 }
 
 fn main() {
-    rebased_service::askpass::run_helper_if_requested();
+    gittor_service::askpass::run_helper_if_requested();
     #[cfg(target_os = "linux")]
     use_software_rendering_without_gpu();
     tauri::Builder::default()
@@ -63,5 +63,5 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![initial_path, call, set_zoom])
         .run(tauri::generate_context!())
-        .expect("error while running Rebased Lite");
+        .expect("error while running Gittor");
 }

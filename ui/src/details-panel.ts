@@ -70,7 +70,7 @@ export class DetailsPanel {
               { class: "tag-card-head" },
               h("span", { class: "ref ref-tag" }, t.name),
               t.annotated ? "" : h("span", { class: "muted-inline" }, "lightweight tag"),
-              t.signed ? h("span", { class: "tag-signed", title: "The tag has a signature. Rebased Lite does not check it." }, "signed") : "",
+              t.signed ? h("span", { class: "tag-signed", title: "The tag has a signature. Gittor does not check it." }, "signed") : "",
             ),
             t.annotated
               ? h("div", { class: "muted-inline tag-card-meta" }, `${t.tagger} <${t.taggerEmail}> · ${formatDate(t.time)}`)

@@ -1,6 +1,6 @@
 //! Local History keeps versions of changed files and the content before an operation that loses it.
 
-use rebased_service::{OpenArgs, PathArgs, Service, ViewArgs};
+use gittor_service::{OpenArgs, PathArgs, Service, ViewArgs};
 use std::path::Path;
 use std::process::Command;
 use std::time::{Duration, Instant};
@@ -20,7 +20,7 @@ fn wait_for(what: &str, mut f: impl FnMut() -> bool) {
 
 #[test]
 fn versions_and_revert() {
-    let dir = std::env::temp_dir().join(format!("rebased-lite-history-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("gittor-history-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     git(&dir, &["init", "-q", "-b", "main"]);

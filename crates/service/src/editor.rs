@@ -107,7 +107,7 @@ pub(crate) fn login_path() -> &'static Option<String> {
     })
 }
 
-/// The folders where Rebased Lite looks for the program of the editor.
+/// The folders where Gittor looks for the program of the editor.
 fn search_dirs() -> Vec<PathBuf> {
     let mut dirs: Vec<PathBuf> = Vec::new();
     for p in [std::env::var("PATH").ok(), login_path().clone()].into_iter().flatten() {
@@ -191,7 +191,7 @@ mod tests {
 
     #[test]
     fn the_path_stays_in_the_repository() {
-        let root = std::env::temp_dir().join(format!("rebased-lite-editor-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("gittor-editor-{}", std::process::id()));
         std::fs::create_dir_all(root.join("src")).unwrap();
         std::fs::write(root.join("src/a.rs"), "").unwrap();
         assert_eq!(working_tree_file(&root, "src/a.rs").unwrap(), root.join("src/a.rs"));

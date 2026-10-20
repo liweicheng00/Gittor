@@ -1,14 +1,14 @@
 //! The read commands.
 
 use crate::{err, history, watch, BlameArgs, BlobArgs, CompareArgs, CompareRefsArgs, MergedBranchesArgs, MergedIntoArgs, UrlArgs, TagArgs, RemoteArgs, ReviewArgs, ReviewEdit, CompareResult, FilePair, FilePairArgs, IndexArgs, OidArgs, PathArgs, PushInfoArgs, Result, RevSpec, Service};
-use rebased_git::changelist::{ChangeListOp, LocalChanges};
-use rebased_git::history::{Blame, HistoryEntry};
-use rebased_git::merge::MergeSides;
-use rebased_git::ops::{RepoState, RewriteRange};
-use rebased_git::remote::PushInfo;
-use rebased_git::stash::{Stash, StashDetail};
-use rebased_git::worktree::{RecentBranch, Worktree};
-use rebased_git::{BranchInfo, Repo, Rev};
+use gittor_git::changelist::{ChangeListOp, LocalChanges};
+use gittor_git::history::{Blame, HistoryEntry};
+use gittor_git::merge::MergeSides;
+use gittor_git::ops::{RepoState, RewriteRange};
+use gittor_git::remote::PushInfo;
+use gittor_git::stash::{Stash, StashDetail};
+use gittor_git::worktree::{RecentBranch, Worktree};
+use gittor_git::{BranchInfo, Repo, Rev};
 
 impl Service {
     pub fn refs(&self) -> Result<Vec<BranchInfo>> {
@@ -20,12 +20,12 @@ impl Service {
     }
 
     /// What stops the removal of a worktree without --force.
-    pub fn worktree_blockers(&self, args: PathArgs) -> Result<rebased_git::worktree::WorktreeBlockers> {
+    pub fn worktree_blockers(&self, args: PathArgs) -> Result<gittor_git::worktree::WorktreeBlockers> {
         self.with_repo(|r| r.worktree_blockers(&args.path).map_err(err))
     }
 
     /// The pattern that decides about a path of the active repository.
-    pub fn check_ignore(&self, args: PathArgs) -> Result<Option<rebased_git::global_ignore::IgnoreMatch>> {
+    pub fn check_ignore(&self, args: PathArgs) -> Result<Option<gittor_git::global_ignore::IgnoreMatch>> {
         self.with_repo(|r| r.check_ignore(&args.path).map_err(err))
     }
 
@@ -96,14 +96,14 @@ impl Service {
     /// favorites. They are in the common git dir, so all worktrees share them.
     pub fn favorites(&self) -> Result<Option<Vec<String>>> {
         self.with_repo(|r| {
-            let path = r.common_dir().join("rebased-lite").join("favorites.json");
+            let path = gittor_git::app_dir(&r.common_dir()).join("favorites.json");
             Ok(std::fs::read(path).ok().and_then(|b| serde_json::from_slice(&b).ok()))
         })
     }
 
     pub fn set_favorites(&self, refs: Vec<String>) -> Result<()> {
         self.with_repo(|r| {
-            let dir = r.common_dir().join("rebased-lite");
+            let dir = gittor_git::app_dir(&r.common_dir());
             std::fs::create_dir_all(&dir).map_err(err)?;
             std::fs::write(dir.join("favorites.json"), serde_json::to_vec_pretty(&refs).map_err(err)?).map_err(err)
         })
@@ -113,11 +113,11 @@ impl Service {
         self.with_repo(|r| Ok(r.commit_template()))
     }
 
-    pub fn remotes(&self) -> Result<Vec<rebased_git::remote::RemoteInfo>> {
+    pub fn remotes(&self) -> Result<Vec<gittor_git::remote::RemoteInfo>> {
         self.with_repo(|r| r.remote_details().map_err(err))
     }
 
-    pub fn submodules(&self) -> Result<Vec<rebased_git::submodule::Submodule>> {
+    pub fn submodules(&self) -> Result<Vec<gittor_git::submodule::Submodule>> {
         self.with_repo(|r| r.submodules().map_err(err))
     }
 
@@ -150,7 +150,7 @@ impl Service {
     }
 
     /// One file of a commit.
-    pub fn file_at(&self, args: crate::FileAtArgs) -> Result<rebased_git::FileContent> {
+    pub fn file_at(&self, args: crate::FileAtArgs) -> Result<gittor_git::FileContent> {
         self.with_repo(|r| r.file_content(&Rev::Commit(args.oid.clone()), &args.path).map_err(err))
     }
 
@@ -184,16 +184,16 @@ impl Service {
     }
 
     /// The commits that each of two refs has and the other has not.
-    pub fn compare_refs(&self, args: CompareRefsArgs) -> Result<rebased_git::remote::RefComparison> {
+    pub fn compare_refs(&self, args: CompareRefsArgs) -> Result<gittor_git::remote::RefComparison> {
         self.with_repo(|r| r.compare_refs(&args.left, &args.right).map_err(err))
     }
 
     /// The reviews of the repository, for the Reviews tab.
-    pub fn reviews(&self) -> Result<Vec<rebased_git::review::ReviewSummary>> {
+    pub fn reviews(&self) -> Result<Vec<gittor_git::review::ReviewSummary>> {
         self.with_repo(|r| r.reviews().map_err(err))
     }
 
-    pub fn review(&self, args: ReviewArgs) -> Result<rebased_git::review::ReviewDetail> {
+    pub fn review(&self, args: ReviewArgs) -> Result<gittor_git::review::ReviewDetail> {
         self.with_repo(|r| r.review(&args.branch).map_err(err))
     }
 
@@ -212,7 +212,7 @@ impl Service {
         })
     }
 
-    pub fn tag_info(&self, args: TagArgs) -> Result<rebased_git::tags::TagInfo> {
+    pub fn tag_info(&self, args: TagArgs) -> Result<gittor_git::tags::TagInfo> {
         self.with_repo(|r| r.tag_info(&args.name).map_err(err))
     }
 
@@ -243,12 +243,12 @@ impl Service {
     }
 
     /// The local branches whose commits are all on a branch, as `git branch --merged`.
-    pub fn merged_into(&self, args: MergedIntoArgs) -> Result<rebased_git::cleanup::MergedBranches> {
+    pub fn merged_into(&self, args: MergedIntoArgs) -> Result<gittor_git::cleanup::MergedBranches> {
         self.with_repo(|r| r.merged_into(&args.target).map_err(err))
     }
 
     /// The local branches that Delete Merged Branches deletes.
-    pub fn merged_branches(&self, args: MergedBranchesArgs) -> Result<rebased_git::cleanup::MergedBranches> {
+    pub fn merged_branches(&self, args: MergedBranchesArgs) -> Result<gittor_git::cleanup::MergedBranches> {
         self.with_repo(|r| r.merged_branches(&args.upstreams).map_err(err))
     }
 

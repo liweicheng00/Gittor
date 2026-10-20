@@ -29,8 +29,8 @@ const UNVERSIONED = "Unversioned Files";
 function setDragData(e: DragEvent, files: LocalFile[]) {
   const paths = files.filter((x) => x.list !== null).map((x) => x.change.path);
   const unversioned = files.filter((x) => x.list === null).map((x) => x.change.path);
-  e.dataTransfer?.setData("text/x-rebased-paths", JSON.stringify(paths));
-  e.dataTransfer?.setData("text/x-rebased-unversioned", JSON.stringify(unversioned));
+  e.dataTransfer?.setData("text/x-gittor-paths", JSON.stringify(paths));
+  e.dataTransfer?.setData("text/x-gittor-unversioned", JSON.stringify(unversioned));
   e.dataTransfer?.setData("text/plain", [...paths, ...unversioned].join("\n"));
 }
 
@@ -602,7 +602,7 @@ export class CommitPanel {
     });
     if (list) {
       row.addEventListener("dragover", (e) => {
-        if (!e.dataTransfer?.types.includes("text/x-rebased-paths")) return;
+        if (!e.dataTransfer?.types.includes("text/x-gittor-paths")) return;
         e.preventDefault();
         row.classList.add("drop");
       });
@@ -610,8 +610,8 @@ export class CommitPanel {
       row.addEventListener("drop", (e) => {
         e.preventDefault();
         row.classList.remove("drop");
-        const paths = JSON.parse(e.dataTransfer?.getData("text/x-rebased-paths") || "[]") as string[];
-        const unversioned = JSON.parse(e.dataTransfer?.getData("text/x-rebased-unversioned") || "[]") as string[];
+        const paths = JSON.parse(e.dataTransfer?.getData("text/x-gittor-paths") || "[]") as string[];
+        const unversioned = JSON.parse(e.dataTransfer?.getData("text/x-gittor-unversioned") || "[]") as string[];
         if (paths.length || unversioned.length) this.onMove(paths, list.id, unversioned);
       });
     }

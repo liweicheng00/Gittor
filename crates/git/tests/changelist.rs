@@ -1,8 +1,8 @@
 //! Runs changelists and partial commits against temporary repositories.
 
-use rebased_git::changelist::{ChangeListOp, LocalChanges, DEFAULT_ID};
-use rebased_git::ops::{UndoAction, UndoMode};
-use rebased_git::Repo;
+use gittor_git::changelist::{ChangeListOp, LocalChanges, DEFAULT_ID};
+use gittor_git::ops::{UndoAction, UndoMode};
+use gittor_git::Repo;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -13,7 +13,7 @@ fn git(dir: &Path, args: &[&str]) -> String {
 }
 
 fn temp_repo(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("rebased-lite-cl-{name}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("gittor-cl-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     git(&dir, &["init", "-q", "-b", "main"]);
@@ -189,7 +189,7 @@ fn commit_during_merge_takes_the_whole_index() {
 
 #[test]
 fn partial_commit_takes_the_given_content() {
-    use rebased_git::changelist::PartialFile;
+    use gittor_git::changelist::PartialFile;
     let dir = temp_repo("partial");
     let repo = Repo::open(&dir).unwrap();
     std::fs::write(dir.join("a.txt"), "one\ntwo\n").unwrap();
@@ -259,7 +259,7 @@ fn hunks_in_different_changelists() {
     // Commit the default changelist: only its hunks go in.
     let ids: Vec<String> = hunks.iter().filter(|h| h.list == DEFAULT_ID).map(|h| h.id.clone()).collect();
     let content = repo.content_with_hunks("a.txt", &ids).unwrap();
-    let file = rebased_git::changelist::PartialFile { path: "a.txt".into(), content };
+    let file = gittor_git::changelist::PartialFile { path: "a.txt".into(), content };
     let r = repo.commit_partial(&[], &[], &[file], "Fix line 2", false).unwrap();
     assert!(r.ok, "{}", r.message);
     let committed = git(&dir, &["show", "HEAD:a.txt"]);
@@ -309,12 +309,12 @@ fn commit_template_and_comment_lines() {
 
     // A partial commit removes comment lines, as git commit does.
     std::fs::write(dir.join("a.txt"), "a.txt\nmore\n").unwrap();
-    let file = rebased_git::changelist::PartialFile { path: "a.txt".into(), content: "a.txt\nmore\n".into() };
+    let file = gittor_git::changelist::PartialFile { path: "a.txt".into(), content: "a.txt\nmore\n".into() };
     let r = repo.commit_partial(&[], &[], &[file], "Real subject\n\n# a comment\nBody\n", false).unwrap();
     assert!(r.ok, "{}", r.message);
     assert_eq!(git(&dir, &["log", "-1", "--format=%B"]), "Real subject\n\nBody");
     // Only comments: refused.
     std::fs::write(dir.join("b.txt"), "changed\n").unwrap();
-    let file = rebased_git::changelist::PartialFile { path: "b.txt".into(), content: "changed\n".into() };
+    let file = gittor_git::changelist::PartialFile { path: "b.txt".into(), content: "changed\n".into() };
     assert!(repo.commit_partial(&[], &[], &[file], "# only a comment\n", false).is_err());
 }

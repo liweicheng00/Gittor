@@ -61,7 +61,7 @@ pub struct Askpass {
 impl Askpass {
     /// Starts the socket listener and makes git use `helper` for prompts.
     pub fn start(helper: &Path, on_prompts: Option<OnPrompts>) -> std::io::Result<Arc<Askpass>> {
-        let socket = std::env::temp_dir().join(format!("rebased-lite-askpass-{}.sock", std::process::id()));
+        let socket = std::env::temp_dir().join(format!("gittor-askpass-{}.sock", std::process::id()));
         let askpass = Arc::new(Askpass { state: Mutex::default(), changed: Condvar::new(), socket: socket.clone(), on_prompts });
         #[cfg(unix)]
         {
@@ -76,7 +76,7 @@ impl Askpass {
             });
         }
         let helper = helper.to_string_lossy().into_owned();
-        rebased_git::set_network_env(vec![
+        gittor_git::set_network_env(vec![
             ("GIT_ASKPASS".into(), helper.clone()),
             ("SSH_ASKPASS".into(), helper),
             // OpenSSH 8.4 and newer: use the askpass program without a terminal or a display.

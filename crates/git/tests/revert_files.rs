@@ -1,6 +1,6 @@
 //! Revert to a revision and Write File: the file actions of a compare with the working tree.
 
-use rebased_git::Repo;
+use gittor_git::Repo;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -13,7 +13,7 @@ fn git(dir: &Path, args: &[&str]) -> String {
 /// main has a.txt and b.txt. The working tree changes a.txt, deletes b.txt, adds c.txt to the index and
 /// leaves d.txt untracked.
 fn setup(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("rebased-lite-revert-{name}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("gittor-revert-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     git(&dir, &["init", "-q", "-b", "main"]);

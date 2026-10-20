@@ -215,7 +215,7 @@ impl Repo {
             return Ok(OpResult::ok("Nothing changed"));
         }
         let head_tree = self.meta(&old_head)?.tree;
-        let reflog = format!("rebased-lite: {what}");
+        let reflog = format!("gittor: {what}");
         let moved = if head_tree == current_tree {
             self.git_write(&["update-ref", "-m", &reflog, &format!("refs/heads/{branch}"), &current, &old_head], &[])
         } else {
@@ -252,7 +252,7 @@ impl Repo {
             return Err(GitError("The commit is not on the current branch".into()));
         }
         // The tree of the commit with the files as in its parent.
-        let tmp = self.git_dir().join("rebased-lite").join("index.rewrite");
+        let tmp = crate::app_dir(&self.git_dir()).join("index.rewrite");
         std::fs::create_dir_all(tmp.parent().unwrap()).map_err(|e| GitError(e.to_string()))?;
         let _ = std::fs::remove_file(&tmp);
         let tmp_s = tmp.to_string_lossy().into_owned();
@@ -290,7 +290,7 @@ impl Repo {
             current_tree = tree;
         }
         let what = if extract.is_some() { "Extract the changes to a new commit" } else { "Drop the changes" };
-        let reflog = format!("rebased-lite: {what}");
+        let reflog = format!("gittor: {what}");
         let head_tree = self.meta(&old_head)?.tree;
         let moved = if head_tree == current_tree {
             self.git_write(&["update-ref", "-m", &reflog, &format!("refs/heads/{branch}"), &current, &old_head], &[])
@@ -314,7 +314,7 @@ impl Repo {
     /// New messages are set with `exec git commit --amend` lines. Local changes are stashed and restored.
     fn rebase_interactive(&self, base: &str, plan: &[PlanEntry], what: &str) -> Result<OpResult> {
         let old_head = self.resolve("HEAD").ok_or_else(|| GitError("no HEAD".into()))?;
-        let dir = self.git_dir().join("rebased-lite");
+        let dir = crate::app_dir(&self.git_dir());
         std::fs::create_dir_all(&dir).map_err(|e| GitError(e.to_string()))?;
         let mut todo = String::new();
         let mut group_message: Option<&str> = None;
@@ -346,7 +346,7 @@ impl Repo {
         let todo_file = dir.join("rebase-todo.txt");
         std::fs::write(&todo_file, todo).map_err(|e| GitError(e.to_string()))?;
         let editor = format!("cp {}", shell_quote(&todo_file.to_string_lossy()));
-        let reflog = format!("rebased-lite: {what}");
+        let reflog = format!("gittor: {what}");
         let env = [("GIT_SEQUENCE_EDITOR", editor.as_str()), ("GIT_REFLOG_ACTION", reflog.as_str())];
         let result = self.git_write(&["rebase", "-i", "--autostash", base], &env);
         let state = self.state()?;

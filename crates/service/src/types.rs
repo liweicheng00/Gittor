@@ -1,7 +1,7 @@
 //! The arguments and the results of the commands.
 
-use rebased_git::ops::OpResult;
-use rebased_git::{Change, CommitFull, FileContent, LogFilter, RefLabel};
+use gittor_git::ops::OpResult;
+use gittor_git::{Change, CommitFull, FileContent, LogFilter, RefLabel};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Clone, Default)]

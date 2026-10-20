@@ -1,6 +1,6 @@
 //! Clone Repository: the folder name from the URL, the clone, and the checks before it.
 
-use rebased_git::{clone, clone_name};
+use gittor_git::{clone, clone_name};
 use std::path::Path;
 use std::process::Command;
 
@@ -20,7 +20,7 @@ fn the_name_comes_from_the_url() {
 
 #[test]
 fn clone_makes_the_folder_and_checks_it_first() {
-    let base = std::env::temp_dir().join(format!("rebased-lite-clone-{}", std::process::id()));
+    let base = std::env::temp_dir().join(format!("gittor-clone-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&base);
     let origin = base.join("origin");
     std::fs::create_dir_all(&origin).unwrap();

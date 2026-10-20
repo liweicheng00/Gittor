@@ -21,7 +21,7 @@ pub mod watch;
 pub use ops::{HunkSelection, Op};
 pub use types::*;
 
-pub use rebased_git::changelist::{ChangeListOp, LocalChanges, PartialFile};
+pub use gittor_git::changelist::{ChangeListOp, LocalChanges, PartialFile};
 use std::sync::Mutex;
 
 pub type Result<T> = std::result::Result<T, String>;

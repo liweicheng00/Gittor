@@ -1,8 +1,8 @@
 //! Git asks for a user name and a password through the askpass program of the app. `git credential fill`
 //! asks the same way as a fetch or a push, without a network.
 
-use rebased_service::askpass::Answer;
-use rebased_service::Service;
+use gittor_service::askpass::Answer;
+use gittor_service::Service;
 use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -13,7 +13,7 @@ fn fill(host: &str) -> std::thread::JoinHandle<(bool, String)> {
     std::thread::spawn(move || {
         let mut child = Command::new("git")
             .args(["credential", "fill"])
-            .envs(rebased_git::network_env())
+            .envs(gittor_git::network_env())
             .env("GIT_TERMINAL_PROMPT", "0")
             // No credential helper of the user may answer.
             .env("GIT_CONFIG_GLOBAL", "/dev/null")
@@ -30,7 +30,7 @@ fn fill(host: &str) -> std::thread::JoinHandle<(bool, String)> {
 }
 
 /// Waits for the next prompt of the service.
-fn next_prompt(s: &Service) -> rebased_service::askpass::Prompt {
+fn next_prompt(s: &Service) -> gittor_service::askpass::Prompt {
     let end = Instant::now() + Duration::from_secs(10);
     loop {
         if let Some(p) = s.askpass_pending().into_iter().next() {
@@ -43,7 +43,7 @@ fn next_prompt(s: &Service) -> rebased_service::askpass::Prompt {
 
 #[test]
 fn prompts_answers_cache_and_cancel() {
-    let s = Service::with_askpass(Path::new(env!("CARGO_BIN_EXE_rebased-devserver")));
+    let s = Service::with_askpass(Path::new(env!("CARGO_BIN_EXE_gittor-devserver")));
 
     let job = fill("example.com");
     let user = next_prompt(&s);

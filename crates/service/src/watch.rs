@@ -165,7 +165,7 @@ impl Worker {
                 Some(rel) if rel.as_os_str().is_empty() => {}
                 Some(rel) => {
                     let name = rel.to_string_lossy();
-                    if name.ends_with(".lock") || name.starts_with("objects") || name.starts_with("rebased-lite") {
+                    if name.ends_with(".lock") || name.starts_with("objects") || name.starts_with("gittor") {
                         continue;
                     }
                     if name == "index" {
@@ -231,7 +231,7 @@ impl Worker {
             return files;
         }
         let rel: Vec<String> = files.iter().filter_map(|p| p.strip_prefix(&self.root).ok()).map(|p| p.to_string_lossy().into_owned()).collect();
-        let Ok(mut child) = rebased_git::git_command()
+        let Ok(mut child) = gittor_git::git_command()
             .arg("-C")
             .arg(&self.root)
             .args(["check-ignore", "-z", "--stdin"])

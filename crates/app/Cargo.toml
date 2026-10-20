@@ -1,15 +1,15 @@
 [package]
-name = "rebased-lite"
+name = "gittor"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
-description = "Rebased Lite: a light, read-only git graph and compare tool"
+description = "Gittor: a light, read-only git graph and compare tool"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-rebased-service = { path = "../service" }
+gittor-service = { path = "../service" }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 serde = "1"

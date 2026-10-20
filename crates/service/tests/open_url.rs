@@ -1,6 +1,6 @@
 //! open_url opens web pages only: a remote URL must never start a program or open a file.
 
-use rebased_service::Service;
+use gittor_service::Service;
 
 #[test]
 fn only_web_addresses_open() {

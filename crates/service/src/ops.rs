@@ -2,12 +2,12 @@
 //! versions that an operation keeps before it can lose local changes.
 
 use crate::{err, history, OpOutcome, Result, Service};
-use rebased_git::changelist::PartialFile;
-use rebased_git::merge::Side;
-use rebased_git::ops::{OpResult, PlanEntry, ResetMode, UndoAction, UndoMode};
-use rebased_git::remote::UpdateMode;
-use rebased_git::review::FinishMode;
-use rebased_git::Repo;
+use gittor_git::changelist::PartialFile;
+use gittor_git::merge::Side;
+use gittor_git::ops::{OpResult, PlanEntry, ResetMode, UndoAction, UndoMode};
+use gittor_git::remote::UpdateMode;
+use gittor_git::review::FinishMode;
+use gittor_git::Repo;
 use serde::Deserialize;
 use std::path::PathBuf;
 
@@ -21,8 +21,8 @@ pub enum Op {
     RenameBranch { from: String, to: String },
     DeleteBranch { name: String, force: bool },
     DeleteTag { name: String },
-    Merge { rev: String, #[serde(default)] options: rebased_git::ops::MergeOptions },
-    Rebase { onto: String, #[serde(default)] options: rebased_git::ops::RebaseOptions },
+    Merge { rev: String, #[serde(default)] options: gittor_git::ops::MergeOptions },
+    Rebase { onto: String, #[serde(default)] options: gittor_git::ops::RebaseOptions },
     /// Fast-forwards local branches that are not checked out (Update Selected).
     FastForward { branches: Vec<String> },
     /// Checks out a branch and rebases it onto another one.
@@ -62,7 +62,7 @@ pub enum Op {
     DeleteUnversioned { paths: Vec<String> },
     /// `rev` pushes only up to that commit of the branch (Push All up to Here).
     Push { branch: String, remote: String, remote_branch: String, #[serde(default)] force: bool, #[serde(default)] set_upstream: bool, #[serde(default)] tags: bool, #[serde(default)] rev: Option<String> },
-    Update { mode: UpdateMode, #[serde(default)] options: rebased_git::remote::UpdateOptions },
+    Update { mode: UpdateMode, #[serde(default)] options: gittor_git::remote::UpdateOptions },
     StashPush { #[serde(default)] message: String, #[serde(default)] paths: Vec<String>, #[serde(default)] include_untracked: bool, #[serde(default)] keep_index: bool },
     StashApply { index: usize, #[serde(default)] pop: bool, #[serde(default)] restore_index: bool },
     StashDrop { index: usize },
@@ -317,7 +317,7 @@ impl Service {
             Op::RevertLocalHistory { path, blob } => history
                 .revert(&path, blob.as_deref())
                 .map(|_| OpResult::ok_msg(format!("Reverted {path} to the Local History version")))
-                .map_err(rebased_git::GitError),
+                .map_err(gittor_git::GitError),
         };
         let mut result = match result {
             Ok(r) => r,
@@ -332,7 +332,7 @@ impl Service {
             repo.submodules()
                 .unwrap_or_default()
                 .into_iter()
-                .filter(|s| s.state == rebased_git::submodule::SubmoduleState::OtherCommit && !s.dirty)
+                .filter(|s| s.state == gittor_git::submodule::SubmoduleState::OtherCommit && !s.dirty)
                 .map(|s| s.path)
                 .collect()
         } else {

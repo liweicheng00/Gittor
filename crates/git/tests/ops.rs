@@ -1,7 +1,7 @@
 //! Runs the write operations against temporary repositories.
 
-use rebased_git::ops::{Action, PlanEntry, ResetMode};
-use rebased_git::Repo;
+use gittor_git::ops::{Action, PlanEntry, ResetMode};
+use gittor_git::Repo;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -12,7 +12,7 @@ fn git(dir: &Path, args: &[&str]) -> String {
 }
 
 fn temp_repo(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("rebased-lite-ops-{name}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("gittor-ops-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     git(&dir, &["init", "-q", "-b", "main"]);
@@ -258,13 +258,13 @@ fn interactive_rebase_stops_for_edit() {
 #[test]
 fn git_program_setting() {
     // A program that is not git is refused, and the setting stays.
-    assert!(rebased_git::set_git_program("/bin/true").is_err());
-    assert!(rebased_git::set_git_program("/no/such/git").is_err());
-    let version = rebased_git::set_git_program("").unwrap();
+    assert!(gittor_git::set_git_program("/bin/true").is_err());
+    assert!(gittor_git::set_git_program("/no/such/git").is_err());
+    let version = gittor_git::set_git_program("").unwrap();
     assert!(version.chars().next().unwrap().is_ascii_digit(), "{version}");
     let path = String::from_utf8(Command::new("sh").args(["-c", "command -v git"]).output().unwrap().stdout).unwrap();
-    assert_eq!(rebased_git::set_git_program(path.trim()).unwrap(), version);
-    rebased_git::set_git_program("").unwrap();
+    assert_eq!(gittor_git::set_git_program(path.trim()).unwrap(), version);
+    gittor_git::set_git_program("").unwrap();
 }
 
 #[test]

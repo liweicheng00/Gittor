@@ -161,11 +161,11 @@ export function openSettingsDialog(ctx: SettingsContext): Promise<Settings | nul
       return [
         row("Git executable", h("div", { class: "dialog-field-row" }, input, browse, test)),
         status,
-        h("p", { class: "settings-hint" }, "Rebased Lite runs this program for all git commands. An empty field takes the first git that works: git from PATH, then Homebrew, the Command Line Tools and Xcode. On macOS this skips the git of /usr/bin while the Xcode license is not accepted. Test shows the program that it takes."),
+        h("p", { class: "settings-hint" }, "Gittor runs this program for all git commands. An empty field takes the first git that works: git from PATH, then Homebrew, the Command Line Tools and Xcode. On macOS this skips the git of /usr/bin while the Xcode license is not accepted. Test shows the program that it takes."),
         row(
           "Protected branches",
           text(() => draft.protectedBranches, (v) => (draft.protectedBranches = v), "for example main master release/*"),
-          "Names of remote branches, separated by spaces; * matches any characters. Rebased Lite does not force push to these branches, and it does not rewrite commits that are on them (squash, drop, reword, interactive rebase, drop or extract changes).",
+          "Names of remote branches, separated by spaces; * matches any characters. Gittor does not force push to these branches, and it does not rewrite commits that are on them (squash, drop, reword, interactive rebase, drop or extract changes).",
         ),
       ];
     };
@@ -320,7 +320,7 @@ export function openSettingsDialog(ctx: SettingsContext): Promise<Settings | nul
           "p",
           { class: "settings-hint" },
           "Open in Editor (F4) runs this command. {file} is the full path of the file, and {line} and {column} are the place of the cursor in the diff. " +
-            "A command without {file} gets the file at its end. No shell runs the command. Rebased Lite also looks for the program in the PATH of your login shell. " +
+            "A command without {file} gets the file at its end. No shell runs the command. Gittor also looks for the program in the PATH of your login shell. " +
             "A JetBrains IDE needs its command-line launcher: Tools › Create Command-line Launcher, or the shell scripts of the Toolbox app.",
         ),
       ];

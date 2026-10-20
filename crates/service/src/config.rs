@@ -1,8 +1,9 @@
 //! The settings that the backend needs before the front end starts: the git program and the Local
 //! History limits. They are in `settings.json` in the configuration directory of the user:
-//! `$XDG_CONFIG_HOME/rebased-lite` or `~/.config/rebased-lite` on Linux,
-//! `~/Library/Application Support/rebased-lite` on macOS, and `%APPDATA%\rebased-lite` on Windows.
-//! `REBASED_LITE_CONFIG_DIR` changes the directory, for tests.
+//! `$XDG_CONFIG_HOME/gittor` or `~/.config/gittor` on Linux,
+//! `~/Library/Application Support/gittor` on macOS, and `%APPDATA%\gittor` on Windows.
+//! A directory of the old name, `rebased-lite`, moves there first. `GITTOR_CONFIG_DIR` changes the
+//! directory, for tests.
 
 use crate::history::Limits;
 use serde::{Deserialize, Serialize};
@@ -25,7 +26,7 @@ pub struct BackendSettings {
 
 /// The directory of the settings file, or None when the system gives no home directory.
 pub fn config_dir() -> Option<PathBuf> {
-    if let Some(d) = std::env::var_os("REBASED_LITE_CONFIG_DIR") {
+    if let Some(d) = std::env::var_os("GITTOR_CONFIG_DIR") {
         return Some(PathBuf::from(d));
     }
     let home = std::env::var_os("HOME").map(PathBuf::from);
@@ -36,7 +37,12 @@ pub fn config_dir() -> Option<PathBuf> {
     } else {
         std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from).or_else(|| home.map(|h| h.join(".config")))?
     };
-    Some(base.join("rebased-lite"))
+    let dir = base.join("gittor");
+    let old = base.join("rebased-lite");
+    if !dir.exists() && old.is_dir() {
+        let _ = std::fs::rename(&old, &dir);
+    }
+    Some(dir)
 }
 
 /// Reads the settings file. A missing or damaged file gives the defaults.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds "Rebased Lite.app" and a .dmg on macOS. Run it from any directory.
+# Builds "Gittor.app" and a .dmg on macOS. Run it from any directory.
 # Usage: scripts/build-dmg.sh [--universal] [--unsigned]
 #   --universal  one app for Apple silicon and Intel Macs.
 #   --unsigned   a build without the Apple signature, for a test on this Mac. Other Macs block it.
@@ -62,7 +62,7 @@ npm --prefix ui install
 
 dir=target/release/bundle
 [ "$universal" = 1 ] && dir=target/universal-apple-darwin/release/bundle
-app="$dir/macos/Rebased Lite.app"
+app="$dir/macos/Gittor.app"
 dmg=$(ls -t "$dir"/dmg/*.dmg | head -n 1)
 
 if [ "$unsigned" = 0 ]; then

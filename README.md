@@ -1,13 +1,13 @@
-# Rebased Lite
+# Gittor
 
-Rebased Lite is a light, read-only git viewer. It draws the commit graph the same way as
+Gittor is a light, read-only git viewer. It draws the commit graph the same way as
 Rebased (IntelliJ), and it compares files between any two commits. It does not use a JVM.
 
 The design spec is in [`docs/design-spec.md`](docs/design-spec.md).
 
 ## Features
 
-- **Open**: a welcome screen, a native folder dialog, recent repositories, and `rebased-lite <path>` on the command line.
+- **Open**: a welcome screen, a native folder dialog, recent repositories, and `gittor <path>` on the command line.
 - **Clone**: Open > Clone Repository… clones a URL into a folder and opens the clone in a new tab. An empty
   folder name uses the name of the URL. A remote that needs a password asks for it.
 - **Branches panel**: recent branches (from the HEAD reflog), local branches with ahead and behind
@@ -49,7 +49,7 @@ The design spec is in [`docs/design-spec.md`](docs/design-spec.md).
   Revision, Apply Changes, a hard reset, a stash and a resolve. The 🕘 Local History button shows
   the recent versions of all files; "Show Local History" in the Changes tab shows one file. Revert
   writes a version back, and first keeps the current content. The store is in the git directory,
-  in `rebased-lite/local-history`. It keeps 5 days and at most 200 MB, and skips files larger
+  in `gittor/local-history`. It keeps 5 days and at most 200 MB, and skips files larger
   than 2 MB and changes of more than 200 files at one time (for example a checkout).
 - **Changelists and commit**: the Changes tab (`Ctrl/Cmd+2` or `Ctrl/Cmd+K`) groups the local changes into named
   changelists, as in IntelliJ. New changes go to the active changelist. Move files with the context
@@ -57,7 +57,7 @@ The design spec is in [`docs/design-spec.md`](docs/design-spec.md).
   staged content of other files stay as they are. Each changelist keeps its draft commit message.
   The panel also has Amend, Rollback, Add to Git, delete of unversioned files, and Undo of the last
   commit (the changes become local changes again). The changelists of a worktree are stored in its
-  git directory, in `rebased-lite/changelists.json`. A double click on a file opens the compare
+  git directory, in `gittor/changelists.json`. A double click on a file opens the compare
   window of the current branch and the working tree, with that file first.
 - **Commit extras**: Sign-off adds "Signed-off-by" with your name, as `git commit -s`. The 🕘
   button (or `Ctrl/Cmd+M` in the message field) lists the last 30 commit messages. "Edit Author…" in
@@ -119,7 +119,7 @@ The design spec is in [`docs/design-spec.md`](docs/design-spec.md).
   the window header switches between them. "Merge…" merges with a merge commit, Squash, or Rebase
   and fast-forward, and can delete the branch. When the base is not checked out, git merges without
   the working tree. Undo puts back the two branches. The reviews and notes are in
-  `.git/rebased-lite/reviews.json` and never go to a remote.
+  `.git/gittor/reviews.json` and never go to a remote.
 - **Open on the remote**: the 🌐 Remote button opens the current branch on the web page of its remote.
   The context menus open a branch, a commit or a remote in the browser. GitHub, GitLab, Bitbucket,
   Azure DevOps and Gitea links work; an ssh or https remote URL becomes the web address. Only http
@@ -131,7 +131,7 @@ The design spec is in [`docs/design-spec.md`](docs/design-spec.md).
   (backend/v1.0.0) together. After a fetch, a tag that the remote does not have shows "local". The
   menu of the Tags group pushes all tags to a remote, and marks the tags that a remote does not have.
   The commit details show the message, the tagger and the date of an annotated tag, and whether it is
-  signed (Rebased Lite does not check the signature).
+  signed (Gittor does not check the signature).
 - **Diff panel**: Esc or the ✕ button of the diff hides the diff panel below the log, and View >
   Diff Panel shows it again. The log then uses all the height. The panel keeps the size that it had. A
   double click on a changed file shows the panel again. "Show Diff" in the context menu also shows it.
@@ -140,7 +140,7 @@ The design spec is in [`docs/design-spec.md`](docs/design-spec.md).
   - Merged into a branch, as `git branch --merged uat`. This is the first way. Branches with a
     long-lived name (main, uat, release/1.0 and so on) are not checked at first.
   - Merged into the branch that each one tracks, as `git branch --delete-merged` of Git 2.56. With an
-    older git, Rebased Lite applies the same rules.
+    older git, Gittor applies the same rules.
   A preview lists the branches, and the user can keep some. When the list changed after the preview,
   for example after a fetch, nothing is deleted. Undo creates the branches again with their config,
   also after a delete that stopped halfway.
@@ -182,8 +182,8 @@ The design spec is in [`docs/design-spec.md`](docs/design-spec.md).
   Xcode license is skipped for Homebrew or the Command Line Tools), the diff font size and family, the diff options, the Local History limits, and the
   keymap. In the keymap, click a key and press the new one; an action can have several keys. A key
   that two actions use is marked red. The git program and the Local History limits are in
-  `settings.json` in the configuration directory (`~/.config/rebased-lite` on Linux,
-  `~/Library/Application Support/rebased-lite` on macOS, `%APPDATA%\rebased-lite` on Windows), so the
+  `settings.json` in the configuration directory (`~/.config/gittor` on Linux,
+  `~/Library/Application Support/gittor` on macOS, `%APPDATA%\gittor` on Windows), so the
   backend has them before the window opens. The favorite branches are in the git directory of each
   repository. The other settings are in the storage of the window.
   The keys in the commit message field and in dialogs stay fixed.
@@ -258,13 +258,13 @@ You need Rust, Node.js 20 or later, and git. On Linux, Tauri also needs WebKitGT
 ```sh
 npm --prefix ui install
 npm --prefix ui run build
-cargo build --release -p rebased-lite
-./target/release/rebased-lite /path/to/repo
+cargo build --release -p gittor
+./target/release/gittor /path/to/repo
 ```
 
 ### A macOS app and a disk image
 
-On macOS, `scripts/build-dmg.sh` builds `Rebased Lite.app` and a `.dmg` in
+On macOS, `scripts/build-dmg.sh` builds `Gittor.app` and a `.dmg` in
 `target/release/bundle/`. Add `--universal` for one app that runs on Apple silicon and on Intel.
 
 #### Sign and notarize
@@ -290,11 +290,11 @@ another git, for example Homebrew git, set the git program in Settings.
 ## Develop in a browser
 
 ```sh
-cargo run -p rebased-devserver -- ui/dist 5174   # commands on 127.0.0.1:5174
+cargo run -p gittor-devserver -- ui/dist 5174   # commands on 127.0.0.1:5174
 npm --prefix ui run dev                            # UI on http://localhost:5173/?repo=/path/to/repo
 ```
 
-Set `REBASED_LITE_CONFIG_DIR` to a scratch directory for the dev server of the UI tests, so the tests
+Set `GITTOR_CONFIG_DIR` to a scratch directory for the dev server of the UI tests, so the tests
 do not change your own `settings.json`.
 
 
@@ -311,9 +311,9 @@ npm --prefix ui test          # line diff and three-way merge chunks
 ```
 
 Set `REBASED_NEW_GIT` to a git 2.56 or later, and `crates/git/tests/cleanup.rs` also runs
-`git branch --delete-merged`. Without it, the test checks the rules of Rebased Lite only.
+`git branch --delete-merged`. Without it, the test checks the rules of Gittor only.
 
-`cargo test -p rebased-graph` compares the graph output with the IntelliJ golden files.
+`cargo test -p gittor-graph` compares the graph output with the IntelliJ golden files.
 
 UI scenarios run in Chromium against the dev server. One script runs all of them on fresh demo
 repositories:

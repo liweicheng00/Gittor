@@ -1,4 +1,4 @@
-// Rebased Lite: the start of the front end. The modules register their handlers when they load.
+// Gittor: the start of the front end. The modules register their handlers when they load.
 
 import "./style.css";
 // Each module registers its handlers when it loads; the shell comes first.

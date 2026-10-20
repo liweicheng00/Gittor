@@ -2,10 +2,10 @@
 //! `platform/vcs-log/graph/testData` (Apache-2.0). The parsers and string formats are ports of
 //! LinearGraphParser, CommitParser, GraphStrUtils and StrUtils.kt.
 
-use rebased_graph::bek::{bek_map, SortedLinearGraph};
-use rebased_graph::layout;
-use rebased_graph::linear::*;
-use rebased_graph::print::*;
+use gittor_graph::bek::{bek_map, SortedLinearGraph};
+use gittor_graph::layout;
+use gittor_graph::linear::*;
+use gittor_graph::print::*;
 use std::collections::HashMap;
 
 fn load(dir: &str, name: &str) -> (String, String) {

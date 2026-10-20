@@ -1,11 +1,11 @@
-//! Dev server: `rebased-devserver <ui-dist-dir> [port]`. POST /api/<command> runs a command; other paths serve files.
+//! Dev server: `gittor-devserver <ui-dist-dir> [port]`. POST /api/<command> runs a command; other paths serve files.
 //! It binds to 127.0.0.1 only, because the commands read any repository on disk.
 //!
 //! Each connection gets its own thread and carries one request. A server with a fixed pool of reader
 //! threads can starve: idle connections that a browser opens in advance hold the readers, and new
 //! requests wait for them.
 
-use rebased_service::Service;
+use gittor_service::Service;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::Arc;
@@ -25,12 +25,12 @@ fn content_type(path: &str) -> &'static str {
 }
 
 fn main() {
-    rebased_service::askpass::run_helper_if_requested();
+    gittor_service::askpass::run_helper_if_requested();
     let args: Vec<String> = std::env::args().collect();
     let dist = Arc::new(std::path::PathBuf::from(args.get(1).cloned().unwrap_or_else(|| "ui/dist".into())));
     let port = args.get(2).cloned().unwrap_or_else(|| "5174".into());
     let listener = TcpListener::bind(format!("127.0.0.1:{port}")).expect("bind");
-    eprintln!("rebased-lite dev server on http://127.0.0.1:{port}");
+    eprintln!("gittor dev server on http://127.0.0.1:{port}");
     let exe = std::env::current_exe().expect("current executable");
     let service = Arc::new(Service::with_askpass(&exe));
     // One thread per connection: a push can wait for a password while the page answers the prompt.
@@ -115,7 +115,7 @@ fn handle(stream: TcpStream, service: &Service, dist: &std::path::Path) -> std::
         }
         let (status, text) = match service.dispatch(cmd, &body) {
             Ok(json) => (200, json),
-            Err(e) => (400, rebased_service::errors::error_json(&e).to_string()),
+            Err(e) => (400, gittor_service::errors::error_json(&e).to_string()),
         };
         if log {
             eprintln!("end   {cmd} {status} {} ms", t.elapsed().as_millis());

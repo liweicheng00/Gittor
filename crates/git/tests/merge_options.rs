@@ -1,8 +1,8 @@
 //! The options of Merge and Update: --no-ff, --ff-only, --squash, --no-commit and a message.
 
-use rebased_git::ops::MergeOptions;
-use rebased_git::remote::{UpdateMode, UpdateOptions};
-use rebased_git::Repo;
+use gittor_git::ops::MergeOptions;
+use gittor_git::remote::{UpdateMode, UpdateOptions};
+use gittor_git::Repo;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -19,7 +19,7 @@ fn commit(dir: &Path, file: &str, msg: &str) {
 }
 
 fn setup(name: &str) -> (PathBuf, Repo) {
-    let dir = std::env::temp_dir().join(format!("rebased-lite-mopt-{name}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("gittor-mopt-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     git(&dir, &["init", "-q", "-b", "main"]);

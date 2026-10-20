@@ -38,7 +38,7 @@ export async function pushBranch(branch?: string, upTo?: string) {
   const choice = await pushDialog(info, upTo?.slice(0, 8));
   if (!choice) return;
   if (choice.force && isProtected(choice.remoteBranch)) {
-    return toast(`${choice.remote}/${choice.remoteBranch} is a protected branch: Rebased Lite does not force push to it. Settings › Git › Protected branches.`, "error");
+    return toast(`${choice.remote}/${choice.remoteBranch} is a protected branch: Gittor does not force push to it. Settings › Git › Protected branches.`, "error");
   }
   if (choice.force && !(await confirmDialog("Force push", `Force push ${info.branch} to ${choice.remote}/${choice.remoteBranch}? Commits on the remote branch that are not in ${info.branch} are removed from it.`, "Force Push", true))) return;
   const branchName = info.branch;

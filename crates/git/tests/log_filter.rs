@@ -1,6 +1,6 @@
 //! The text options of the log filter: a regular expression, the same case, and no merge commits.
 
-use rebased_git::{LogFilter, Repo};
+use gittor_git::{LogFilter, Repo};
 use std::path::Path;
 use std::process::Command;
 
@@ -12,7 +12,7 @@ fn git(dir: &Path, args: &[&str]) -> String {
 
 #[test]
 fn regex_match_case_and_no_merges() {
-    let dir = std::env::temp_dir().join(format!("rebased-lite-logfilter-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("gittor-logfilter-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     git(&dir, &["init", "-q", "-b", "main"]);

@@ -1,7 +1,7 @@
 //! Every operation that can be undone gives Undo steps that bring the repository back.
 
-use rebased_git::Repo;
-use rebased_service::{Op, OpenArgs, Service, ViewArgs};
+use gittor_git::Repo;
+use gittor_service::{Op, OpenArgs, Service, ViewArgs};
 use std::path::Path;
 use std::process::Command;
 
@@ -11,14 +11,14 @@ fn git(dir: &Path, args: &[&str]) -> String {
     String::from_utf8_lossy(&out.stdout).trim().to_string()
 }
 
-fn op(s: &Service, json: &str) -> rebased_git::ops::OpResult {
+fn op(s: &Service, json: &str) -> gittor_git::ops::OpResult {
     let op: Op = serde_json::from_str(json).unwrap();
     let r = s.run_op(op).unwrap().result;
     assert!(r.ok, "{json}: {}", r.message);
     r
 }
 
-fn undo(s: &Service, r: &rebased_git::ops::OpResult) {
+fn undo(s: &Service, r: &gittor_git::ops::OpResult) {
     assert!(!r.undo.is_empty(), "{} has no undo", r.message);
     let actions = serde_json::to_string(&r.undo).unwrap();
     let u = s.run_op(serde_json::from_str(&format!(r#"{{"op":"undo","actions":{actions}}}"#)).unwrap()).unwrap().result;
@@ -27,7 +27,7 @@ fn undo(s: &Service, r: &rebased_git::ops::OpResult) {
 
 #[test]
 fn undo_for_each_operation() {
-    let dir = std::env::temp_dir().join(format!("rebased-lite-undo-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("gittor-undo-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     git(&dir, &["init", "-q", "-b", "main"]);

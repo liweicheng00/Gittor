@@ -1,7 +1,7 @@
 //! Delete of several branches and tags in one operation: git keeps a branch that is not merged without
 //! force, and undo creates all deleted refs again with their settings.
 
-use rebased_git::Repo;
+use gittor_git::Repo;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -12,7 +12,7 @@ fn git(dir: &Path, args: &[&str]) -> String {
 }
 
 fn setup() -> (PathBuf, Repo) {
-    let dir = std::env::temp_dir().join(format!("rebased-lite-delrefs-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("gittor-delrefs-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     git(&dir, &["init", "-q", "-b", "main"]);

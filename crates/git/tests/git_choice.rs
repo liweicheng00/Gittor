@@ -3,7 +3,7 @@
 
 #![cfg(unix)]
 
-use rebased_git::{choose_git_program, git_program, set_git_program};
+use gittor_git::{choose_git_program, git_program, set_git_program};
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
@@ -16,7 +16,7 @@ fn script(dir: &Path, name: &str, body: &str) -> String {
 
 #[test]
 fn skips_a_git_that_does_not_work() {
-    let dir = std::env::temp_dir().join(format!("rebased-lite-gitchoice-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("gittor-gitchoice-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     let stub = script(&dir, "stub-git", "echo \"You have not agreed to the Xcode license agreements. Please run 'sudo xcodebuild -license'\" >&2; exit 69");

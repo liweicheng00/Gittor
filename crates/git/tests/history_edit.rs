@@ -1,8 +1,8 @@
 //! History edits of the log: drop or extract the changes of files from a commit, push up to a commit,
 //! and a rebase with options.
 
-use rebased_git::ops::RebaseOptions;
-use rebased_git::Repo;
+use gittor_git::ops::RebaseOptions;
+use gittor_git::Repo;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -21,7 +21,7 @@ fn commit(dir: &Path, files: &[(&str, &str)], msg: &str) {
 }
 
 fn setup(name: &str) -> (PathBuf, Repo) {
-    let dir = std::env::temp_dir().join(format!("rebased-lite-hedit-{name}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("gittor-hedit-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     git(&dir, &["init", "-q", "-b", "main"]);

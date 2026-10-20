@@ -1,4 +1,4 @@
-# Rebased Lite 設計規格（MVP）
+# Gittor 設計規格（MVP）
 
 > 狀態：草案 v0.1（2026-09-28）
 > 範圍：只讀的 Git Graph 與 commit 間檔案比較
@@ -6,7 +6,7 @@
 
 ## 1. 目標
 
-Rebased Lite 是一個輕量的桌面 git 檢視工具。它重現 Rebased（IntelliJ）的 commit graph 畫法，並提供任意兩個 commit 之間的檔案比較。
+Gittor 是一個輕量的桌面 git 檢視工具。它重現 Rebased（IntelliJ）的 commit graph 畫法，並提供任意兩個 commit 之間的檔案比較。
 
 ### 1.1 MVP 功能
 
@@ -355,15 +355,15 @@ get_file_pair(left: Rev, right: Rev | "WORKTREE", change: Change): { left?: Blob
 | 密碼與 passphrase（v0.5） | 完成。app 本身是 `GIT_ASKPASS` 與 `SSH_ASKPASS` 程式，透過 Unix socket 把提示送回 app，由對話框回答。可以記住答案到 app 關閉。 |
 | 簽章與 hook（v0.5） | 完成。app 自己寫的 commit（squash、drop、reword、部分 commit）在 `commit.gpgsign` 開啟時簽章。部分 commit 執行 pre-commit、commit-msg、post-commit hook。 |
 | Undo（v0.5） | 完成。每個操作回傳一串 Undo 步驟（reset、checkout、建立或刪除 ref、改名、還原 stash）。支援 checkout、新增分支與 tag、改名、刪除分支與 tag、merge、rebase、cherry-pick、revert、update、reset、改寫、commit、drop stash。HEAD 在操作後移動過時拒絕 Undo。`Ctrl/Cmd+Z` 復原上一個操作。 |
-| Local History（v0.5） | 完成。watcher 在檔案變更時保存版本；Rollback、刪除未追蹤檔、Get from Revision、Apply Changes、hard reset、stash、resolve 之前也保存。存在 git 目錄的 `rebased-lite/local-history`（`index.jsonl` 與 gzip 壓縮的 blob）。保留 5 天、最多 200 MB。視窗顯示版本與目前檔案的 diff，可以 Revert。 |
+| Local History（v0.5） | 完成。watcher 在檔案變更時保存版本；Rollback、刪除未追蹤檔、Get from Revision、Apply Changes、hard reset、stash、resolve 之前也保存。存在 git 目錄的 `gittor/local-history`（`index.jsonl` 與 gzip 壓縮的 blob）。保留 5 天、最多 200 MB。視窗顯示版本與目前檔案的 diff，可以 Revert。 |
 | Submodule（v0.5） | 完成。Branches 分頁列出 submodule 與狀態（未初始化、其他 commit、有本機變更）。可以 Update（init 後 checkout 記錄的 commit）與開啟。diff 顯示 `Subproject commit <hash>`。Rollback 會 checkout 記錄的 commit。checkout、merge、rebase、reset、update 改變記錄的 commit 後，通知提供 Update Submodules。watcher 不監看 submodule 內部。 |
 | Git LFS（v0.5） | 完成。commit 裡的 LFS 檔案，物件已下載時 diff 顯示真實內容，否則顯示 pointer 與說明。部分 commit 用 `git hash-object --path` 執行 clean filter，所以 LFS 檔案存成 pointer（修正前會存成真實內容）。 |
 | 部分 changelist（v0.5） | 完成。同一檔案的不同 hunk 可以在不同 changelist。hunk 來自 `git diff -U0 HEAD`，ID 是刪除行與新增行的雜湊，所以其他 hunk 改變時 ID 不變。在 diff 右鍵「Move Change to Another Changelist」。commit 一個 changelist 時，後端用 HEAD 加上該 changelist 的 hunk 組出內容，再用部分 commit 寫入。Rollback 只還原該 changelist 的 hunk。存在 `changelists.json`，重新開啟後保留。 |
 | 多 repo 分頁（v0.5） | 完成。後端為每個 repo 保留一個 session（graph、watcher、Local History），`activate` 切換使用中的 repo，不重新載入；`close` 釋放它。前端每個分頁保留篩選與選取的 commit。分頁在下次啟動時回來，只有使用中的分頁立即載入。每個開啟的 repo 都占用自己的記憶體（git/git 約 40 MB）。 |
 | 設定畫面（v0.5） | 完成。分為 General（主題、Update 預設、自動重新整理、自動 fetch 間隔）、Git（執行檔路徑，Test 會顯示版本；不是 git 的程式會被拒絕）、Diff（字型大小與字型、選項）、Local History（天數與大小上限）、Keymap（所有全域動作的快捷鍵，可多個、可錄製、衝突標紅、可重設）。後端所有 git 指令都經過 `git_command()`，使用設定的執行檔。 |
 | 遠端管理（v0.6） | 完成。Fetch 選單可以 fetch 全部或單一 remote，並開啟 Manage Remotes（新增、編輯名稱與 URL 和 push URL、fetch、移除）。Branches 分頁的 remote 群組右鍵有同樣的動作。本機分支可以設定、變更、停止追蹤分支；遠端分支可以在 remote 上刪除；tag 可以推送到 remote 或在 remote 上刪除。 |
-| 刪除已合併分支 | 完成。Local 群組、分支和 remote 的右鍵選單有「Delete Merged Branches」。預覽列出工作已在追蹤分支上的本機分支，使用者可以保留其中幾個。Git 2.56 以上用 `git branch --delete-merged`；較舊的 git 由 Rebased Lite 套用相同規則（追蹤分支已不存在、worktree 正在使用、push 會更新追蹤分支、被保留的分支追蹤它、`branch.<name>.deleteMerged=false` 時都不刪）。預覽之後清單若有變動（例如 fetch），就不刪除任何分支。Undo 會重建分支和追蹤設定，刪到一半失敗時也可以 Undo。 另有「合併進某個分支」模式（等同 `git branch --merged uat`），為預設模式；main、uat、release/* 等長期分支預設不勾選。 |
-| Review Branch（本機 PR） | 完成。分支右鍵「Review Branch…」或 Reviews 分頁（Mod+3）建立 review。以 merge base 為準顯示分支自己的變更，也可以看單一 commit。檔案可標記已看，檔案再被修改會自動取消。可在游標所在行加註記，檔案改過後註記標為 outdated。開啟時先用 `git merge-tree` 列出會衝突的檔案。Reviews 分頁列出所有 review 和進度，視窗標題可快速切換。「Merge…」可選 Merge commit、Squash、Rebase 後 fast-forward，並可刪除分支；base 沒有 checkout 時不動工作目錄。Undo 會還原兩個分支。資料存在 `.git/rebased-lite/reviews.json`，不會推上 remote。 |
+| 刪除已合併分支 | 完成。Local 群組、分支和 remote 的右鍵選單有「Delete Merged Branches」。預覽列出工作已在追蹤分支上的本機分支，使用者可以保留其中幾個。Git 2.56 以上用 `git branch --delete-merged`；較舊的 git 由 Gittor 套用相同規則（追蹤分支已不存在、worktree 正在使用、push 會更新追蹤分支、被保留的分支追蹤它、`branch.<name>.deleteMerged=false` 時都不刪）。預覽之後清單若有變動（例如 fetch），就不刪除任何分支。Undo 會重建分支和追蹤設定，刪到一半失敗時也可以 Undo。 另有「合併進某個分支」模式（等同 `git branch --merged uat`），為預設模式；main、uat、release/* 等長期分支預設不勾選。 |
+| Review Branch（本機 PR） | 完成。分支右鍵「Review Branch…」或 Reviews 分頁（Mod+3）建立 review。以 merge base 為準顯示分支自己的變更，也可以看單一 commit。檔案可標記已看，檔案再被修改會自動取消。可在游標所在行加註記，檔案改過後註記標為 outdated。開啟時先用 `git merge-tree` 列出會衝突的檔案。Reviews 分頁列出所有 review 和進度，視窗標題可快速切換。「Merge…」可選 Merge commit、Squash、Rebase 後 fast-forward，並可刪除分支；base 沒有 checkout 時不動工作目錄。Undo 會還原兩個分支。資料存在 `.git/gittor/reviews.json`，不會推上 remote。 |
 | 開啟遠端網頁 | 完成。工具列「🌐 Remote」開啟目前分支在遠端的網頁；分支、commit、remote 的右鍵選單也可以開啟。支援 GitHub、GitLab、Bitbucket、Azure DevOps、Gitea 的網址格式；ssh 或 https 的 remote URL 會轉成網頁網址。只開啟 http(s) 網址。 |
 | Changes 分頁 | 原 Commit 分頁改名為 Changes。雙擊本機變更的檔案，會開啟比較視窗（目前分支 ↔ 工作目錄），並先顯示該檔案。 |
 | 小功能（v0.6） | 完成。分支收藏（☆，收藏排在群組最前，★ 按鈕只顯示收藏與目前分支；預設收藏 main 與 master）。commit 訊息歷史（最近 30 筆，🕘 或訊息欄 Ctrl/Cmd+M）。Sign-off（用 `git interpret-trailers` 加上 committer）。Edit Author（改寫時換作者，作者日期不變）。操作後 1.5 秒內外部修改的檔案，現在會在之後補一次重新載入。 |
@@ -375,7 +375,7 @@ get_file_pair(left: Rev, right: Rev | "WORKTREE", change: Change): { left?: Blob
 
 資源量測（Linux x86_64、Xvfb、WebKitGTK 軟體繪圖，git/git）：
 
-| 項目 | Rebased 1.1.19 | Rebased Lite 0.1 |
+| 項目 | Rebased 1.1.19 | Gittor 0.1 |
 |---|---|---|
 | 開啟 repo 後的 RSS | 1,250 MB | 478 MB（app 194 + WebKit 網頁 246 + WebKit 網路 50） |
 | 開啟 diff 後的 RSS | 未量測 | 552 MB |

@@ -273,7 +273,7 @@ impl Repo {
         }
         args.extend([safe(&remote)?, safe(&remote_branch)?]);
         let what = if mode == UpdateMode::Rebase { "Rebase" } else { "Merge" };
-        match self.git_write(&args, &[("GIT_REFLOG_ACTION", "rebased-lite: update")]) {
+        match self.git_write(&args, &[("GIT_REFLOG_ACTION", "gittor: update")]) {
             Ok(_) => {
                 let after = self.resolve("HEAD");
                 let message = if before == after {

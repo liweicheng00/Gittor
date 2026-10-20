@@ -1,10 +1,10 @@
 //! The graph on screen: the whole graph or a filtered part of it, and the rows that the log draws.
 
 use crate::{err, CollapseArgs, El, FindArgs, FindResult, OidArgs, CommitInfo, Result, Row, RowsArgs, Service, ViewArgs, ViewResult};
-use rebased_git::{Repo, Topology};
-use rebased_graph::linear::{GraphCommit, PermanentLinearGraph};
-use rebased_graph::print::{Direction, PrintElement};
-use rebased_graph::{filter, Graph, GraphOptions, Printer};
+use gittor_git::{Repo, Topology};
+use gittor_graph::linear::{GraphCommit, PermanentLinearGraph};
+use gittor_graph::print::{Direction, PrintElement};
+use gittor_graph::{filter, Graph, GraphOptions, Printer};
 use std::collections::HashMap;
 
 /// The rows on screen: the whole graph, or a filtered part of it.

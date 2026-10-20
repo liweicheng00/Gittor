@@ -21,9 +21,9 @@ mkdirSync(join(repo, ".idea"), { recursive: true });
 writeFileSync(join(repo, ".idea", "workspace.xml"), "x");
 writeFileSync(join(repo, ".DS_Store"), "x");
 
-const env = { ...process.env, HOME: home, GIT_CONFIG_NOSYSTEM: "1", REBASED_LITE_CONFIG_DIR: join(home, "rebased") };
+const env = { ...process.env, HOME: home, GIT_CONFIG_NOSYSTEM: "1", GITTOR_CONFIG_DIR: join(home, "gittor") };
 delete env.XDG_CONFIG_HOME;
-const server = spawn(join(top, "target", "debug", "rebased-devserver"), [join(top, "ui", "dist"), "5175"], { env, stdio: "ignore" });
+const server = spawn(join(top, "target", "debug", "gittor-devserver"), [join(top, "ui", "dist"), "5175"], { env, stdio: "ignore" });
 const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
 const page = await (await browser.newContext({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1.5 })).newPage();
 const errors = [];
@@ -105,7 +105,7 @@ try {
   await page.fill(".ignore-text", ".idea/\n.DS_Store\n*.swp\n");
   writeFileSync(ignoreFile, ".idea/\n.DS_Store\n*.log\n");
   await page.click(".dialog-buttons button:has-text('OK')");
-  await within("the save refuses a change from outside", async () => (await status()).includes("changed outside Rebased Lite"));
+  await within("the save refuses a change from outside", async () => (await status()).includes("changed outside Gittor"));
   check("the dialog stays open", (await page.$(".settings-dialog")) !== null);
   check("the file keeps the change from outside", readFileSync(ignoreFile, "utf8") === ".idea/\n.DS_Store\n*.log\n");
   await shot("gi3-changed-outside");

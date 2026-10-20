@@ -1,7 +1,7 @@
 //! Review Branch: the changes from the merge base, viewed files, notes, and Finish in its three modes.
 
-use rebased_git::review::FinishMode;
-use rebased_git::Repo;
+use gittor_git::review::FinishMode;
+use gittor_git::Repo;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -19,7 +19,7 @@ fn commit(dir: &Path, file: &str, content: &str, msg: &str) {
 
 /// main: base, then "Main work" (c.txt). feature: from base, "Change a" and "Add b".
 fn setup(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("rebased-lite-review-{name}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("gittor-review-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     git(&dir, &["init", "-q", "-b", "main"]);

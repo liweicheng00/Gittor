@@ -2,8 +2,8 @@
 
 use crate::view::{build_full, build_view, View};
 use crate::{askpass, config, err, events, history, watch, OpenArgs, PathArgs, Result, Service, ViewArgs, ViewResult};
-use rebased_git::{CommitDetails, Repo, Topology};
-use rebased_graph::linear::PermanentLinearGraph;
+use gittor_git::{CommitDetails, Repo, Topology};
+use gittor_graph::linear::PermanentLinearGraph;
 use std::collections::HashMap;
 use std::cell::RefCell;
 use std::path::{Path, PathBuf};
@@ -76,16 +76,16 @@ impl Service {
     /// The version of a git program, for the Test button of the settings. It changes nothing.
     /// Clones a repository and returns the path of the new folder. The caller opens it then.
     pub fn clone_repo(&self, args: crate::CloneArgs) -> Result<String> {
-        let path = rebased_git::clone(&args.url, Path::new(&args.parent), &args.name).map_err(err)?;
+        let path = gittor_git::clone(&args.url, Path::new(&args.parent), &args.name).map_err(err)?;
         Ok(path.to_string_lossy().into_owned())
     }
 
-    pub fn global_ignore(&self) -> Result<rebased_git::global_ignore::GlobalIgnore> {
-        rebased_git::global_ignore::global_ignore().map_err(err)
+    pub fn global_ignore(&self) -> Result<gittor_git::global_ignore::GlobalIgnore> {
+        gittor_git::global_ignore::global_ignore().map_err(err)
     }
 
-    pub fn save_global_ignore(&self, args: crate::SaveIgnoreArgs) -> Result<rebased_git::global_ignore::GlobalIgnore> {
-        rebased_git::global_ignore::save_global_ignore(&args.text, &args.expected).map_err(err)
+    pub fn save_global_ignore(&self, args: crate::SaveIgnoreArgs) -> Result<gittor_git::global_ignore::GlobalIgnore> {
+        gittor_git::global_ignore::save_global_ignore(&args.text, &args.expected).map_err(err)
     }
 
     /// The kind of a repository for its tab, without a load: a linked worktree names its main repository.
@@ -104,13 +104,13 @@ impl Service {
     /// names the program that it chose.
     pub fn git_version(&self, args: PathArgs) -> Result<String> {
         if args.path.trim().is_empty() {
-            let candidates = rebased_git::git_candidates(crate::editor::login_path().as_deref());
-            let saved = rebased_git::git_program();
-            let choice = rebased_git::choose_git_program(&candidates).map_err(err);
-            let _ = rebased_git::set_git_program(&saved);
+            let candidates = gittor_git::git_candidates(crate::editor::login_path().as_deref());
+            let saved = gittor_git::git_program();
+            let choice = gittor_git::choose_git_program(&candidates).map_err(err);
+            let _ = gittor_git::set_git_program(&saved);
             return choice.map(|c| describe(&c));
         }
-        rebased_git::git_version(&args.path).map_err(err)
+        gittor_git::git_version(&args.path).map_err(err)
     }
 
     pub fn backend_settings(&self) -> Result<config::BackendSettings> {
@@ -120,7 +120,7 @@ impl Service {
     /// Applies and saves the settings. A git program that is not git is refused and nothing changes.
     /// Returns the version of the git program.
     pub fn set_backend_settings(&self, mut s: config::BackendSettings) -> Result<String> {
-        let version = if s.git_path.trim().is_empty() { use_git("")? } else { rebased_git::set_git_program(&s.git_path).map_err(err)? };
+        let version = if s.git_path.trim().is_empty() { use_git("")? } else { gittor_git::set_git_program(&s.git_path).map_err(err)? };
         let sessions: Vec<_> = self.session.lock().unwrap().map.values().cloned().collect();
         for session in sessions {
             session.lock().unwrap().history.set_limits(s.history);
@@ -281,17 +281,17 @@ fn reachable(topo: &Topology, start: Option<usize>) -> Vec<bool> {
 /// Xcode. Returns the version, with the program when it is not git from PATH.
 pub(crate) fn use_git(configured: &str) -> Result<String> {
     if !configured.trim().is_empty() {
-        if let Ok(v) = rebased_git::set_git_program(configured) {
+        if let Ok(v) = gittor_git::set_git_program(configured) {
             return Ok(v);
         }
     }
-    let candidates = rebased_git::git_candidates(crate::editor::login_path().as_deref());
-    rebased_git::choose_git_program(&candidates).map(|c| describe(&c)).map_err(err)
+    let candidates = gittor_git::git_candidates(crate::editor::login_path().as_deref());
+    gittor_git::choose_git_program(&candidates).map(|c| describe(&c)).map_err(err)
 }
 
 /// "2.45.1", or "2.39.5 (/Library/Developer/CommandLineTools/usr/bin/git)" for a program that is not git
 /// from PATH, with the reason when git from PATH did not work.
-fn describe(c: &rebased_git::GitChoice) -> String {
+fn describe(c: &gittor_git::GitChoice) -> String {
     if c.program == "git" {
         return c.version.clone();
     }

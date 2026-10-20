@@ -1,14 +1,14 @@
 [package]
-name = "rebased-devserver"
+name = "gittor-devserver"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
-description = "Serves the Rebased Lite UI and commands over HTTP for browser development and tests"
+description = "Serves the Gittor UI and commands over HTTP for browser development and tests"
 publish = false
 
 [dependencies]
-rebased-service = { path = "../service" }
+gittor-service = { path = "../service" }
 serde_json = "1"
 
 [dev-dependencies]
-rebased-git = { path = "../git" }
+gittor-git = { path = "../git" }

@@ -1,8 +1,8 @@
 //! The commit graph of a repository: every commit with its parents and time, and the refs on each commit.
 
 use crate::{hex, unhex, Repo, Result};
-use rebased_graph::linear::GraphCommit;
-use rebased_graph::{Graph, GraphOptions, RefInfo, RefKind};
+use gittor_graph::linear::GraphCommit;
+use gittor_graph::{Graph, GraphOptions, RefInfo, RefKind};
 use serde::Serialize;
 use std::collections::HashMap;
 

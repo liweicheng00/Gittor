@@ -167,12 +167,12 @@ export class DiffView {
     });
     this.listenForBlameClicks(this.editor.getModifiedEditor());
     const modified = this.editor.getModifiedEditor();
-    this.moveKey = modified.createContextKey("rebasedCanMoveChange", false);
+    this.moveKey = modified.createContextKey("gittorCanMoveChange", false);
     modified.onContextMenu((e) => (this.menuAt = { x: e.event.posx, y: e.event.posy }));
     modified.addAction({
-      id: "rebased.moveChange",
+      id: "gittor.moveChange",
       label: "Move Change to Another Changelist…",
-      precondition: "rebasedCanMoveChange",
+      precondition: "gittorCanMoveChange",
       contextMenuGroupId: "0_changelist",
       run: (ed) => {
         const line = ed.getPosition()?.lineNumber;
@@ -181,11 +181,11 @@ export class DiffView {
         if (line && fn) setTimeout(() => fn(line, this.menuAt), 50);
       },
     });
-    this.revertKey = modified.createContextKey("rebasedCanRevert", false);
+    this.revertKey = modified.createContextKey("gittorCanRevert", false);
     modified.addAction({
-      id: "rebased.revertChange",
+      id: "gittor.revertChange",
       label: "Revert This Change",
-      precondition: "rebasedCanRevert",
+      precondition: "gittorCanRevert",
       contextMenuGroupId: "0_changelist",
       contextMenuOrder: 0,
       run: (ed) => {

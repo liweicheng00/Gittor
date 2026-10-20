@@ -1,6 +1,6 @@
 //! Runs file history and blame against a temporary repository.
 
-use rebased_git::Repo;
+use gittor_git::Repo;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -18,7 +18,7 @@ fn git(dir: &Path, args: &[&str], author: &str) -> String {
 }
 
 fn repo() -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("rebased-lite-history-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("gittor-history-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     git(&dir, &["init", "-q", "-b", "main"], "x");

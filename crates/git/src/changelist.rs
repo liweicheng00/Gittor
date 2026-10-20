@@ -1,7 +1,7 @@
 //! Changelists: named groups of local changes, as in IntelliJ. A commit can take the files of one changelist
 //! and leave the other local changes alone.
 //!
-//! The groups live in `<git dir>/rebased-lite/changelists.json`. Each worktree has its own git dir, so each
+//! The groups live in `<git dir>/gittor/changelists.json`. Each worktree has its own git dir, so each
 //! worktree has its own changelists. A changed file that is in no changelist goes to the active changelist
 //! the first time it is seen. A file that is not changed any more leaves its changelist.
 //!
@@ -170,7 +170,7 @@ fn inside(root: &Path, path: &str) -> Result<PathBuf> {
 
 impl Repo {
     fn store_path(&self) -> PathBuf {
-        self.git_dir().join("rebased-lite").join("changelists.json")
+        crate::app_dir(&self.git_dir()).join("changelists.json")
     }
 
     fn load_store(&self) -> Store {
@@ -440,7 +440,7 @@ impl Repo {
             inside(&self.root, p)?;
         }
         let old_head = self.resolve("HEAD");
-        let tmp = self.git_dir().join("rebased-lite").join("index.partial");
+        let tmp = crate::app_dir(&self.git_dir()).join("index.partial");
         std::fs::create_dir_all(tmp.parent().unwrap()).map_err(|e| GitError(e.to_string()))?;
         let _ = std::fs::remove_file(&tmp);
         let tmp_s = tmp.to_string_lossy().into_owned();
@@ -469,7 +469,7 @@ impl Repo {
             }
             // The hooks of git commit, with the index of this commit: a pre-commit hook checks what goes in.
             run_hook(self, "pre-commit", &[], &env)?;
-            let msg_file = self.git_dir().join("rebased-lite").join("COMMIT_EDITMSG");
+            let msg_file = crate::app_dir(&self.git_dir()).join("COMMIT_EDITMSG");
             // Like git commit, the message file ends with a line break.
             std::fs::write(&msg_file, format!("{}\n", message.trim_end())).map_err(|e| GitError(e.to_string()))?;
             run_hook(self, "commit-msg", &[&msg_file.to_string_lossy()], &env)?;

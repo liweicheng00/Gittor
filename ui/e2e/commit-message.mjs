@@ -9,8 +9,8 @@ const [,, repo, outDir] = process.argv;
 const git = (...args) => execFileSync("git", ["-C", repo, ...args], { encoding: "utf8" }).replace(/\s+$/, "");
 git("config", "commit.gpgsign", "false");
 const template = "Subject\n\n# Why is this change needed?\n";
-writeFileSync(`${repo}/.git/rebased-template.txt`, template);
-git("config", "commit.template", ".git/rebased-template.txt");
+writeFileSync(`${repo}/.git/gittor-template.txt`, template);
+git("config", "commit.template", ".git/gittor-template.txt");
 
 const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
 const page = await (await browser.newContext({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1.5 })).newPage();

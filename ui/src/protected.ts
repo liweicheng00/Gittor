@@ -30,6 +30,6 @@ export async function protectedContaining(oid: string): Promise<string[]> {
 export async function allowRewrite(oldest: string): Promise<boolean> {
   const hit = await protectedContaining(oldest);
   if (!hit.length) return true;
-  toast(`The commits are on the protected branch ${hit[0]}. Rebased Lite does not rewrite them. Settings › Git › Protected branches.`, "error");
+  toast(`The commits are on the protected branch ${hit[0]}. Gittor does not rewrite them. Settings › Git › Protected branches.`, "error");
   return false;
 }

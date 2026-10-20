@@ -1,14 +1,14 @@
 //! The backend settings file: it is read at start, written on change, and a bad git program is refused.
 
-use rebased_service::config::BackendSettings;
-use rebased_service::history::Limits;
-use rebased_service::Service;
+use gittor_service::config::BackendSettings;
+use gittor_service::history::Limits;
+use gittor_service::Service;
 
 #[test]
 fn settings_file() {
-    let dir = std::env::temp_dir().join(format!("rebased-lite-config-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("gittor-config-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    std::env::set_var("REBASED_LITE_CONFIG_DIR", &dir);
+    std::env::set_var("GITTOR_CONFIG_DIR", &dir);
     let exe = std::env::current_exe().unwrap();
 
     // No file yet: the defaults, not stored.
@@ -34,5 +34,5 @@ fn settings_file() {
     assert!(read.stored);
     assert_eq!(read.history, Limits { days: 9, max_mb: 50 });
     assert_eq!(read.editor, "code --goto {file}:{line}");
-    assert_eq!(s.git_version(rebased_service::PathArgs { path: String::new() }).unwrap(), version);
+    assert_eq!(s.git_version(gittor_service::PathArgs { path: String::new() }).unwrap(), version);
 }

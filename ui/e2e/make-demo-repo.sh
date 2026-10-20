@@ -14,7 +14,7 @@ git checkout -qb feature/parser
 printf 'pub fn parse(s: &str) -> Vec<&str> {\n    s.split_whitespace().collect()\n}\n' > parser.rs; git add parser.rs; c 2026-09-03T11:00 "Add a whitespace parser" "Grace Hopper <grace@example.com>"
 printf "pub fn parse(s: &str) -> Vec<&str> {\n    s.split(|c: char| c.is_whitespace() || c == ',').filter(|t| !t.is_empty()).collect()\n}\n" > parser.rs; c 2026-09-04T11:00 "Parser: split on commas too" "Grace Hopper <grace@example.com>"
 git checkout -q main; printf 'fn main() {\n    println!("hello, world");\n}\n' > main.rs; c 2026-09-03T15:00 "Greet the world"
-git checkout -qb fix/readme; printf '# Demo\n\nA demo repository for Rebased Lite.\n\n## Build\n\n    cargo build\n' > README.md; c 2026-09-05T09:00 "Document the build" "Linus T <linus@example.com>"
+git checkout -qb fix/readme; printf '# Demo\n\nA demo repository for Gittor.\n\n## Build\n\n    cargo build\n' > README.md; c 2026-09-05T09:00 "Document the build" "Linus T <linus@example.com>"
 git checkout -q main; GIT_AUTHOR_DATE=2026-09-06T10:00 GIT_COMMITTER_DATE=2026-09-06T10:00 git merge -q --no-ff feature/parser -m "Merge branch 'feature/parser'"
 git mv math.rs arith.rs; sed -i.bak 's/a + b/a.wrapping_add(b)/' arith.rs && rm arith.rs.bak; c 2026-09-07T10:00 "Rename math to arith and use wrapping add"
 GIT_AUTHOR_DATE=2026-09-07T12:00 GIT_COMMITTER_DATE=2026-09-07T12:00 git merge -q --no-ff fix/readme -m "Merge branch 'fix/readme'"

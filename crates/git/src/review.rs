@@ -5,7 +5,7 @@
 //! The branch and the base can be local branches or remote-tracking branches. A name is a local branch
 //! first, then a remote-tracking branch, as git looks it up. Merge needs a local base.
 //!
-//! The reviews are in `<common git dir>/rebased-lite/reviews.json`, so all worktrees share them, and
+//! The reviews are in `<common git dir>/gittor/reviews.json`, so all worktrees share them, and
 //! nothing goes to a remote.
 
 use crate::ops::{safe, OpResult};
@@ -132,7 +132,7 @@ fn text(b: Vec<u8>) -> String {
 
 impl Repo {
     fn reviews_file(&self) -> PathBuf {
-        self.common_dir().join("rebased-lite").join("reviews.json")
+        crate::app_dir(&self.common_dir()).join("reviews.json")
     }
 
     fn load_reviews(&self) -> Vec<Stored> {
@@ -428,7 +428,7 @@ impl Repo {
             return Err(GitError("The index has staged changes. Commit or unstage them first".into()));
         }
         let before_config = self.config_local();
-        let why = format!("rebased-lite: finish the review of {branch}");
+        let why = format!("gittor: finish the review of {branch}");
         let reflog = [("GIT_REFLOG_ACTION", why.as_str())];
         let merge_base = self.git(&["merge-base", &base_old, &head]).map(text)?;
 

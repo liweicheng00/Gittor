@@ -1,4 +1,4 @@
-//! Commit graph layout for Rebased Lite.
+//! Commit graph layout for Gittor.
 //!
 //! The algorithms are a port of the IntelliJ Community `platform/vcs-log/graph` module (Apache-2.0),
 //! so the graph looks the same as in Rebased. See `docs/design-spec.md`, chapter 4.

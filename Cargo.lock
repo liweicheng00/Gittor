@@ -2520,33 +2520,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20675572f6f24e9e76ef639bc5552774ed45f1c30e2951e1e99c59888861c539"
 
 [[package]]
-name = "rebased-devserver"
+name = "gittor-devserver"
 version = "0.1.0"
 dependencies = [
- "rebased-git",
- "rebased-service",
+ "gittor-git",
+ "gittor-service",
  "serde_json",
 ]
 
 [[package]]
-name = "rebased-git"
+name = "gittor-git"
 version = "0.1.0"
 dependencies = [
- "rebased-graph",
+ "gittor-graph",
  "serde",
  "serde_json",
  "ts-rs",
 ]
 
 [[package]]
-name = "rebased-graph"
+name = "gittor-graph"
 version = "0.1.0"
 
 [[package]]
-name = "rebased-lite"
+name = "gittor"
 version = "0.1.0"
 dependencies = [
- "rebased-service",
+ "gittor-service",
  "serde",
  "serde_json",
  "tauri",
@@ -2555,14 +2555,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "rebased-service"
+name = "gittor-service"
 version = "0.1.0"
 dependencies = [
  "flate2",
  "ignore",
  "notify",
- "rebased-git",
- "rebased-graph",
+ "gittor-git",
+ "gittor-graph",
  "serde",
  "serde_json",
  "sha2",

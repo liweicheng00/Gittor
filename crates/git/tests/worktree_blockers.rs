@@ -1,7 +1,7 @@
 //! What stops the removal of a worktree: files that git counts, submodules, and a lock. These are the
 //! checks of `git worktree remove` without --force.
 
-use rebased_git::Repo;
+use gittor_git::Repo;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -12,7 +12,7 @@ fn git(dir: &Path, args: &[&str]) -> String {
 }
 
 fn setup(name: &str) -> (PathBuf, Repo) {
-    let dir = std::env::temp_dir().join(format!("rebased-lite-wtb-{name}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("gittor-wtb-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let _ = std::fs::remove_dir_all(dir.with_extension("wt"));
     std::fs::create_dir_all(&dir).unwrap();

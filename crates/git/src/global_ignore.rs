@@ -85,7 +85,7 @@ fn read(path: &Path, configured: bool) -> Result<GlobalIgnore> {
 pub fn save_global_ignore(text: &str, expected: &str) -> Result<GlobalIgnore> {
     let now = global_ignore()?;
     if now.text != expected {
-        return Err(GitError("The file changed outside Rebased Lite. Reload it, then make your changes again".into()));
+        return Err(GitError("The file changed outside Gittor. Reload it, then make your changes again".into()));
     }
     let path = PathBuf::from(&now.path);
     if let Some(dir) = path.parent() {

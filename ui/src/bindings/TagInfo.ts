@@ -14,6 +14,6 @@ commit: string, tagger: string, taggerEmail: string, time: number, subject: stri
  */
 body: string, 
 /**
- * The tag has a GPG, SSH or X.509 signature. Rebased Lite does not check it.
+ * The tag has a GPG, SSH or X.509 signature. Gittor does not check it.
  */
 signed: boolean, };

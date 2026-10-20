@@ -1,6 +1,6 @@
 //! Tag details, the tags of a remote, and Push All Tags.
 
-use rebased_git::Repo;
+use gittor_git::Repo;
 use std::path::Path;
 use std::process::Command;
 
@@ -12,7 +12,7 @@ fn git(dir: &Path, args: &[&str]) -> String {
 
 #[test]
 fn tags() {
-    let base = std::env::temp_dir().join(format!("rebased-lite-tags-{}", std::process::id()));
+    let base = std::env::temp_dir().join(format!("gittor-tags-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&base);
     std::fs::create_dir_all(&base).unwrap();
     let origin = base.join("origin.git");

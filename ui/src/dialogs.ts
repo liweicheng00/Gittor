@@ -400,7 +400,7 @@ export async function credentialDialog(prompt: { text: string; secret: boolean; 
   const body = [
     text,
     input,
-    h("label", { class: "dialog-check" }, remember, "Remember until Rebased Lite closes"),
+    h("label", { class: "dialog-check" }, remember, "Remember until Gittor closes"),
     h("p", { class: "dialog-note" }, "To keep it longer, set up a git credential helper or an SSH agent."),
   ];
   const r = await modal(prompt.secret ? "Password" : "Git needs an answer", body, [{ label: "OK", value: "ok", primary: true }]);
@@ -466,7 +466,7 @@ export async function deleteMergedDialog(
         ? `The same list as git branch --merged ${key[0]}. Branches with a long-lived name, such as main or uat, and branches in another worktree are not checked at first. Deleting a branch in a worktree removes the worktree folder; Undo creates the branch again, not the folder.`
         : r.native
           ? "Git finds the branches with git branch --delete-merged."
-          : "Your git is older than 2.56, so Rebased Lite applies the rules of git branch --delete-merged itself.";
+          : "Your git is older than 2.56, so Gittor applies the rules of git branch --delete-merged itself.";
     boxes.clear();
     list.replaceChildren(
       ...(r.branches.length

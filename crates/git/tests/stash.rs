@@ -1,6 +1,6 @@
 //! Runs stash operations against a temporary repository.
 
-use rebased_git::Repo;
+use gittor_git::Repo;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -11,7 +11,7 @@ fn git(dir: &Path, args: &[&str]) -> String {
 }
 
 fn temp_repo(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("rebased-lite-stash-{name}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("gittor-stash-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     git(&dir, &["init", "-q", "-b", "main"]);

@@ -1,8 +1,8 @@
 //! Submodules in the diff and the submodule list, Git LFS content, and clean filters in a partial commit.
 
-use rebased_git::changelist::PartialFile;
-use rebased_git::submodule::SubmoduleState;
-use rebased_git::{Repo, Rev};
+use gittor_git::changelist::PartialFile;
+use gittor_git::submodule::SubmoduleState;
+use gittor_git::{Repo, Rev};
 use std::path::Path;
 use std::process::Command;
 
@@ -28,7 +28,7 @@ fn init(dir: &Path) {
 }
 
 fn temp(name: &str) -> std::path::PathBuf {
-    let dir = std::env::temp_dir().join(format!("rebased-lite-{name}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("gittor-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     dir
 }

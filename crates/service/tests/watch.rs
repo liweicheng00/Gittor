@@ -1,8 +1,8 @@
 //! Runs the repository watcher against a temporary repository.
 
-use rebased_git::Repo;
-use rebased_service::history::{Limits, LocalHistory};
-use rebased_service::watch::RepoWatcher;
+use gittor_git::Repo;
+use gittor_service::history::{Limits, LocalHistory};
+use gittor_service::watch::RepoWatcher;
 use std::path::Path;
 use std::sync::Arc;
 use std::process::Command;
@@ -27,7 +27,7 @@ fn eventually(f: impl Fn() -> bool) -> bool {
 
 #[test]
 fn counters_follow_files_and_refs() {
-    let dir = std::env::temp_dir().join(format!("rebased-lite-watch-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("gittor-watch-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("target")).unwrap();
     git(&dir, &["init", "-q", "-b", "main"]);

@@ -52,7 +52,7 @@ impl Repo {
     /// Runs the steps of an Undo in order. It stops at the first step whose check fails.
     pub fn apply_undo(&self, actions: &[UndoAction]) -> Result<OpResult> {
         const ZERO: &str = "0000000000000000000000000000000000000000";
-        let reflog = [("GIT_REFLOG_ACTION", "rebased-lite: undo")];
+        let reflog = [("GIT_REFLOG_ACTION", "gittor: undo")];
         let head_is = |expected: &str| -> Result<()> {
             if self.resolve("HEAD").as_deref() == Some(expected) {
                 Ok(())
@@ -77,7 +77,7 @@ impl Repo {
                             // The same tree: move the ref only, so nothing in the working tree changes.
                             if branch.is_some() && self.meta(to)?.tree == self.meta(expected_head)?.tree {
                                 let r = format!("refs/heads/{}", branch.unwrap_or_default());
-                                self.git_write(&["update-ref", "-m", "rebased-lite: undo", &r, to, expected_head], &[])
+                                self.git_write(&["update-ref", "-m", "gittor: undo", &r, to, expected_head], &[])
                             } else {
                                 self.git_write(&["reset", "--keep", to], &reflog)
                             }
@@ -92,9 +92,9 @@ impl Repo {
                         self.git_write(&["checkout", safe(target)?, "--"], &reflog)
                     }
                 }
-                UndoAction::CreateRef { name, oid } => self.git_write(&["update-ref", "-m", "rebased-lite: undo", safe(name)?, safe(oid)?, ZERO], &[]),
+                UndoAction::CreateRef { name, oid } => self.git_write(&["update-ref", "-m", "gittor: undo", safe(name)?, safe(oid)?, ZERO], &[]),
                 UndoAction::DeleteRef { name, expected } => self.git_write(&["update-ref", "-d", safe(name)?, safe(expected)?], &[]),
-                UndoAction::MoveRef { name, to, expected } => self.git_write(&["update-ref", "-m", "rebased-lite: undo", safe(name)?, safe(to)?, safe(expected)?], &[]),
+                UndoAction::MoveRef { name, to, expected } => self.git_write(&["update-ref", "-m", "gittor: undo", safe(name)?, safe(to)?, safe(expected)?], &[]),
                 UndoAction::RenameBranch { from, to } => self.git_write(&["branch", "-m", safe(from)?, safe(to)?], &[]),
                 UndoAction::StashStore { oid, message: m } => self.git_write(&["stash", "store", "-m", m, safe(oid)?], &[]),
                 UndoAction::SetConfig { key, values } => {

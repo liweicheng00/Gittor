@@ -1,7 +1,7 @@
 //! Runs push and update against a local bare remote.
 
-use rebased_git::remote::UpdateMode;
-use rebased_git::Repo;
+use gittor_git::remote::UpdateMode;
+use gittor_git::Repo;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -12,7 +12,7 @@ fn git(dir: &Path, args: &[&str]) -> String {
 }
 
 fn setup(name: &str) -> (PathBuf, PathBuf, PathBuf) {
-    let base = std::env::temp_dir().join(format!("rebased-lite-remote-{name}-{}", std::process::id()));
+    let base = std::env::temp_dir().join(format!("gittor-remote-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&base);
     std::fs::create_dir_all(&base).unwrap();
     let origin = base.join("origin.git");

@@ -41,6 +41,17 @@ pub struct Repo {
     pub root: PathBuf,
 }
 
+/// The folder of the files of the app in a git dir. A folder of the old name, `rebased-lite`, moves
+/// there first.
+pub fn app_dir(git_dir: &Path) -> PathBuf {
+    let dir = git_dir.join("gittor");
+    let old = git_dir.join("rebased-lite");
+    if !dir.exists() && old.is_dir() {
+        let _ = std::fs::rename(&old, &dir);
+    }
+    dir
+}
+
 /// Environment for git commands that can ask for credentials: the askpass program of the app.
 static NETWORK_ENV: std::sync::RwLock<Vec<(String, String)>> = std::sync::RwLock::new(Vec::new());
 

@@ -2,8 +2,8 @@
 //! and check-ignore names the pattern that decides about a path. The test uses its own HOME, so the
 //! file of the user stays as it is.
 
-use rebased_git::global_ignore::{global_ignore, save_global_ignore};
-use rebased_git::Repo;
+use gittor_git::global_ignore::{global_ignore, save_global_ignore};
+use gittor_git::Repo;
 use std::path::Path;
 use std::process::Command;
 
@@ -15,7 +15,7 @@ fn git(dir: &Path, args: &[&str]) {
 // One test: the environment of the process is shared, and the steps depend on each other.
 #[test]
 fn global_ignore_file() {
-    let base = std::env::temp_dir().join(format!("rebased-lite-gi-{}", std::process::id()));
+    let base = std::env::temp_dir().join(format!("gittor-gi-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&base);
     let home = base.join("home");
     std::fs::create_dir_all(&home).unwrap();

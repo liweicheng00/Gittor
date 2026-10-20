@@ -163,7 +163,7 @@ async function closeTab(root: string) {
   else {
     app.view = null;
     commitPanel.clear();
-    document.title = "Rebased Lite";
+    document.title = "Gittor";
     refreshBtn.disabled = fetchBtn.disabled = updateBtn.disabled = pushBtn.disabled = remoteBtn.disabled = localHistoryBtn.disabled = true;
     renderTabs();
     showWorkspace(false);
@@ -212,7 +212,7 @@ export async function applyView(r: ViewResult, keepSelection: boolean) {
   const keepOids = keepSelection ? app.selected.map((s) => s.oid) : [];
   const anchor = keepSelection ? log.viewAnchor() : null;
   app.view = r;
-  document.title = `${r.root.split(/[\\/]/).pop()} – Rebased Lite`;
+  document.title = `${r.root.split(/[\\/]/).pop()} – Gittor`;
   refreshBtn.disabled = fetchBtn.disabled = updateBtn.disabled = pushBtn.disabled = remoteBtn.disabled = localHistoryBtn.disabled = false;
   updateStatus();
   log.setCollapsed(r.collapsed);

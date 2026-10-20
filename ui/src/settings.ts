@@ -147,11 +147,13 @@ const DEFAULTS: Settings = {
   blankAfterSubject: true,
 };
 
-const KEY = "rebased-lite.settings.v1";
+const KEY = "gittor.settings.v1";
+/** The key of the settings before the app had the name Gittor. */
+const OLD_KEY = "rebased-lite.settings.v1";
 
 function load(): Settings {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(KEY) ?? localStorage.getItem(OLD_KEY);
     if (raw) return { ...DEFAULTS, ...JSON.parse(raw) };
   } catch {}
   return { ...DEFAULTS };

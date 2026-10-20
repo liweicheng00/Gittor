@@ -1,7 +1,7 @@
 //! Runs conflict resolution against temporary repositories.
 
-use rebased_git::merge::Side;
-use rebased_git::Repo;
+use gittor_git::merge::Side;
+use gittor_git::Repo;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -14,7 +14,7 @@ fn git(dir: &Path, args: &[&str]) -> String {
 /// A merge of `side` into `main` that conflicts in a.txt (both edit), b.txt (both edit) and gone.txt
 /// (deleted on main, edited on side).
 fn conflicted(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("rebased-lite-merge-{name}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("gittor-merge-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     git(&dir, &["init", "-q", "-b", "main"]);

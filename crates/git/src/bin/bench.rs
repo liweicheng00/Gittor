@@ -1,6 +1,6 @@
 //! Loads a repository, lays out the graph and prints timings. Usage: bench <repo> [--no-sort]
-use rebased_git::Repo;
-use rebased_graph::GraphOptions;
+use gittor_git::Repo;
+use gittor_graph::GraphOptions;
 use std::time::Instant;
 
 fn rss_mb() -> u64 {

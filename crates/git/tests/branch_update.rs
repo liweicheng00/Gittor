@@ -1,7 +1,7 @@
 //! Update Selected (a fast-forward of branches that are not checked out) and Checkout and Rebase onto
 //! Current, with their Undo.
 
-use rebased_git::Repo;
+use gittor_git::Repo;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -20,7 +20,7 @@ fn commit(dir: &Path, file: &str, msg: &str) {
 /// A clone with the branches a, b and c that track the origin. The origin then gets new commits on a
 /// and b, and c gets a commit of its own in the clone.
 fn setup(name: &str) -> (PathBuf, PathBuf, Repo) {
-    let base = std::env::temp_dir().join(format!("rebased-lite-bupd-{name}-{}", std::process::id()));
+    let base = std::env::temp_dir().join(format!("gittor-bupd-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&base);
     let origin = base.join("origin");
     std::fs::create_dir_all(&origin).unwrap();
