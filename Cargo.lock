@@ -1095,6 +1095,56 @@ dependencies = [
 ]
 
 [[package]]
+name = "gittor"
+version = "0.1.0"
+dependencies = [
+ "gittor-service",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+]
+
+[[package]]
+name = "gittor-devserver"
+version = "0.1.0"
+dependencies = [
+ "gittor-git",
+ "gittor-service",
+ "serde_json",
+]
+
+[[package]]
+name = "gittor-git"
+version = "0.1.0"
+dependencies = [
+ "gittor-graph",
+ "serde",
+ "serde_json",
+ "ts-rs",
+]
+
+[[package]]
+name = "gittor-graph"
+version = "0.1.0"
+
+[[package]]
+name = "gittor-service"
+version = "0.1.0"
+dependencies = [
+ "flate2",
+ "gittor-git",
+ "gittor-graph",
+ "ignore",
+ "notify",
+ "serde",
+ "serde_json",
+ "sha2",
+ "ts-rs",
+]
+
+[[package]]
 name = "glib"
 version = "0.18.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2518,56 +2568,6 @@ name = "raw-window-handle"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20675572f6f24e9e76ef639bc5552774ed45f1c30e2951e1e99c59888861c539"
-
-[[package]]
-name = "gittor-devserver"
-version = "0.1.0"
-dependencies = [
- "gittor-git",
- "gittor-service",
- "serde_json",
-]
-
-[[package]]
-name = "gittor-git"
-version = "0.1.0"
-dependencies = [
- "gittor-graph",
- "serde",
- "serde_json",
- "ts-rs",
-]
-
-[[package]]
-name = "gittor-graph"
-version = "0.1.0"
-
-[[package]]
-name = "gittor"
-version = "0.1.0"
-dependencies = [
- "gittor-service",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
-]
-
-[[package]]
-name = "gittor-service"
-version = "0.1.0"
-dependencies = [
- "flate2",
- "ignore",
- "notify",
- "gittor-git",
- "gittor-graph",
- "serde",
- "serde_json",
- "sha2",
- "ts-rs",
-]
 
 [[package]]
 name = "redox_syscall"
