@@ -120,7 +120,7 @@ ui/e2e/run-all.sh /tmp/e2e       # UI scenarios in Chromium on fresh demo reposi
 - Commit changed files in `ui/src/bindings/` with the Rust change. Check them with
   `cargo test -q export_bindings && git diff --exit-code ui/src/bindings`.
 - `cargo test -p gittor-graph` compares the graph with the IntelliJ golden files.
-- Set `REBASED_NEW_GIT` to a git 2.56 or later to also test against `git branch --delete-merged`.
+- Set `GITTOR_NEW_GIT` to a git 2.56 or later to also test against `git branch --delete-merged`.
 - `ui/e2e/run-all.sh /tmp/e2e /path/to/git.git` also runs the large-repository scenarios. Each
   scenario takes screenshots and fails when the page logs an error; each file says how to run it
   alone.

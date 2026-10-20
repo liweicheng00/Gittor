@@ -136,6 +136,5 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
 - There is no CI yet. A workflow must build `ui/dist` before `cargo test`.
 - `README.md` still says that an app from Finder uses `/usr/bin/git`; the app now chooses a git that
   works.
-- Two environment variables keep the old name: `REBASED_NEW_GIT` (tests of `crates/git`) and
-  `REBASED_DEV_LOG` (the dev server).
+- One environment variable keeps the old name: `REBASED_DEV_LOG` (the dev server).
 - The owner postponed: patches (create and apply) and automatic updates.

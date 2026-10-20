@@ -1,5 +1,5 @@
 //! Delete Merged Branches. The same repository goes through the rules of this crate and, when
-//! `REBASED_NEW_GIT` names a git 2.56 or later, through `git branch --delete-merged`.
+//! `GITTOR_NEW_GIT` names a git 2.56 or later, through `git branch --delete-merged`.
 
 use gittor_git::Repo;
 use std::path::{Path, PathBuf};
@@ -162,9 +162,9 @@ fn delete_merged_branches() {
     std::fs::write(&global, "[branch \"topic-done\"]\n\tdescription = global\n").unwrap();
     std::env::set_var("GIT_CONFIG_GLOBAL", &global);
     check(false);
-    if let Ok(program) = std::env::var("REBASED_NEW_GIT") {
+    if let Ok(program) = std::env::var("GITTOR_NEW_GIT") {
         assert!(gittor_git::set_git_program(&program).is_ok());
-        assert!(gittor_git::git_at_least(gittor_git::cleanup::NATIVE_VERSION), "REBASED_NEW_GIT is older than 2.56");
+        assert!(gittor_git::git_at_least(gittor_git::cleanup::NATIVE_VERSION), "GITTOR_NEW_GIT is older than 2.56");
         check(true);
     }
 }
