@@ -364,14 +364,23 @@ export async function initialPath(): Promise<string | null> {
   return invoke<string | null>("initial_path");
 }
 
+/** The place and size of a new window, in screen pixels. */
+export interface WindowPlace {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 /** Opens a repository in a new window: an app window, or a browser window for the dev server. */
-export async function openWindow(path: string): Promise<void> {
+export async function openWindow(path: string, at: WindowPlace): Promise<void> {
   if (inTauri) {
     const { invoke } = await import("@tauri-apps/api/core");
-    await invoke("open_window", { path });
+    await invoke("open_window", { path, ...at });
     return;
   }
-  window.open(`${location.pathname}?solo=1&repo=${encodeURIComponent(path)}`, "_blank");
+  const features = `popup,left=${Math.round(at.x)},top=${Math.round(at.y)},width=${Math.round(at.width)},height=${Math.round(at.height)}`;
+  window.open(`${location.pathname}?solo=1&repo=${encodeURIComponent(path)}`, "_blank", features);
 }
 
 /** The label of the app window, or null in a browser. */

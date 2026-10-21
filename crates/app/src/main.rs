@@ -27,18 +27,20 @@ fn set_zoom(webview: tauri::Webview, level: f64) -> Result<(), String> {
     webview.set_zoom(level.clamp(0.5, 3.0)).map_err(|e| e.to_string())
 }
 
-/// Opens a repository in a new window. The window gets the path from an initialization script, and it
-/// does not keep the tabs of the session. The command is async: a window made on the main thread of a
+/// Opens a repository in a new window at a place on the screen, for a tab that the user drags out of
+/// the tab bar. The window gets the path from an initialization script, and it does not keep the tabs
+/// of the session. The command is async: a window made on the main thread of a
 /// synchronous command can deadlock on Windows.
 #[tauri::command(async)]
-fn open_window(app: tauri::AppHandle, path: String) -> Result<(), String> {
+fn open_window(app: tauri::AppHandle, path: String, x: f64, y: f64, width: f64, height: f64) -> Result<(), String> {
     static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(1);
     let label = format!("repo-{}", NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed));
     let name = std::path::Path::new(&path).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| path.clone());
     let data = serde_json::json!({ "repo": path });
     tauri::WebviewWindowBuilder::new(&app, label, tauri::WebviewUrl::default())
         .title(format!("{name} – Gittor"))
-        .inner_size(1400.0, 900.0)
+        .position(x, y)
+        .inner_size(width.max(600.0), height.max(400.0))
         .min_inner_size(600.0, 400.0)
         .disable_drag_drop_handler()
         .initialization_script(format!("window.__GITTOR_WINDOW__ = {data};"))

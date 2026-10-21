@@ -124,16 +124,31 @@ await within("the submodule opens in a tab", async () => (await page.textContent
 await within("the commit Three is selected", async () => (await page.textContent(".log-row.selected")).includes("Three"));
 await shot("sm5-open-commit");
 
-// Move to New Window: the context menu of a tab moves the repository to a window of its own. The main
-// window keeps its other tabs.
-const [popup] = await Promise.all([
-  page.context().waitForEvent("page"),
-  (async () => {
-    await page.click(".tab.on", { button: "right" });
-    await page.waitForTimeout(400);
-    await page.click(".menu-item:has-text('Move to New Window')");
-  })(),
-]);
+// Drag a tab in the tab bar: it changes its place.
+const tabNames = () => page.$$eval(".tab .tab-name", (els) => els.map((e) => e.textContent));
+const drag = async (selector, dx, dy) => {
+  const box = await page.locator(selector).boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  for (let i = 1; i <= 10; i++) await page.mouse.move(box.x + box.width / 2 + (dx * i) / 10, box.y + box.height / 2 + (dy * i) / 10);
+  await page.mouse.up();
+};
+check("the tabs are e2e1 and lib", JSON.stringify(await tabNames()) === JSON.stringify(["e2e1", "lib"]));
+const first = await page.locator(".tab:has-text('e2e1')").boundingBox();
+const libTab = await page.locator(".tab:has-text('lib')").boundingBox();
+await drag(".tab:has-text('lib')", first.x - libTab.x - 10, 0);
+await within("a drag in the tab bar puts lib first", async () => JSON.stringify(await tabNames()) === JSON.stringify(["lib", "e2e1"]));
+check("the order is saved", JSON.parse(await page.evaluate(() => localStorage.getItem("gittor.settings.v1"))).tabs[0].endsWith("vendor/lib"));
+
+// Drag a tab out of the tab bar: the repository moves to a window of its own, as in a browser. The
+// main window keeps its other tabs.
+const box = await page.locator(".tab:has-text('lib')").boundingBox();
+await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+await page.mouse.down();
+for (let i = 1; i <= 10; i++) await page.mouse.move(box.x + box.width / 2 + i * 10, box.y + box.height / 2 + i * 20);
+await within("the drag shows the hint for a new window", async () => (await page.$(".tab-detach-hint")) !== null);
+await shot("sm6-drag-out");
+const [popup] = await Promise.all([page.context().waitForEvent("page"), page.mouse.up()]);
 popup.on("pageerror", (e) => errors.push("popup pageerror: " + e));
 popup.on("console", (m) => m.type() === "error" && errors.push("popup console: " + m.text()));
 await popup.waitForSelector(".log-row", { timeout: 30000 });
@@ -151,7 +166,7 @@ await page.click(".sm-row");
 await page.click(".sm-actions button:has-text('Open as Repository')");
 await within("the main window says that another window shows it", async () => (await page.$(".toast:has-text('is open in another window')")) !== null);
 check("the main window opens no tab for it", await page.$eval(".tabbar", (e) => e.hidden));
-await popup.screenshot({ path: `${outDir}/sm6-new-window.png` });
+await popup.screenshot({ path: `${outDir}/sm8-new-window.png` });
 await shot("sm7-open-elsewhere");
 
 // After the window closes, the main window can open the submodule again. A page that Playwright closes

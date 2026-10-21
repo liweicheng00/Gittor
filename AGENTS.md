@@ -54,9 +54,9 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
 - Submodules: `Repo::submodules` reads all of them with three git commands (`.gitmodules`, the index,
   `git status --porcelain=v2`). The Submodules tab is `submodule-panel.ts` and `submodule-flow.ts`;
   `loadSubmodules` in `repo.ts` loads it with the local changes, and hides the tab when there are none.
-- App windows: "Move to New Window" in the context menu of a tab moves a repository to a new window
-  (`openWindow` in `api.ts`: the Tauri command `open_window`, or `window.open` with `?solo=1` in a
-  browser). A solo window does not save `tabs` and `activeTab`, because all windows share one
+- App windows: a tab that the user drags out of the tab bar moves to a new window at the place of
+  the mouse (`dragTab` in `repo.ts`; `openWindow` in `api.ts`: the Tauri command `open_window`, or
+  `window.open` with `?solo=1` in a browser). A drag in the tab bar changes the order of the tabs. A solo window does not save `tabs` and `activeTab`, because all windows share one
   settings key. A repository shows in one window only: each window writes its tabs to
   `gittor.windows` every 3 s, and `openRepo` brings the other window to the front
   (`focus_window`) instead. An entry older than 10 s belongs to a closed window.
@@ -128,6 +128,9 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
 - Do not draw a whole bar or list again when nothing changed. A new element under the mouse loses
   the click (this broke the tabs scenario).
 - `delete-merged` failed once in a full run and passed alone. It is a known flaky case.
+- A mouse drag in WebKitGTK (the Linux app) selects text and starts a native drag; then the page gets
+  no `mousemove`. Call `preventDefault()` on `mousedown` for a custom drag. Chromium does not show this
+  problem, so test a drag in the real app too.
 - The left tabs share about 280 px at the default width. A new tab needs a short label; measure the
   `scrollWidth` of each `.lp-tab` against its `clientWidth`.
 
