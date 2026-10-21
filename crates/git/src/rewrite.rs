@@ -59,6 +59,7 @@ pub fn parse_author(s: &str) -> Result<(String, String)> {
 #[ts(export)]
 #[serde(rename_all = "camelCase")]
 pub struct RewriteRange {
+    /// The commit before the range. Empty when the range starts at the root commit of the branch.
     pub base: String,
     pub entries: Vec<RangeCommit>,
     /// Some commits are on a remote branch already; a rewrite needs a force push.
@@ -103,6 +104,22 @@ impl Repo {
         })
     }
 
+    /// The commit before a range: `base` itself, or an empty string for `<root>^` and for an empty
+    /// `base`. An empty base means that the range starts at the root commit of the branch.
+    fn range_base(&self, base: &str) -> Result<String> {
+        if base.is_empty() {
+            return Ok(String::new());
+        }
+        if let Some(oid) = self.resolve(base) {
+            return Ok(oid);
+        }
+        let root = base.strip_suffix('^').and_then(|c| self.resolve(c));
+        match root {
+            Some(r) if self.meta(&r)?.parents.is_empty() => Ok(String::new()),
+            _ => Err(GitError(format!("unknown commit {base}"))),
+        }
+    }
+
     /// The commits after `base` on the current branch. Merges in the range are not supported.
     pub fn rewrite_range(&self, base: &str) -> Result<RewriteRange> {
         let state = self.state()?;
@@ -112,15 +129,18 @@ impl Repo {
         if state.branch.is_none() {
             return Err(GitError("HEAD is detached. Checkout a branch first".into()));
         }
-        let base = self.resolve(base).ok_or_else(|| GitError(format!("unknown commit {base}")))?;
-        if self.git(&["merge-base", "--is-ancestor", &base, "HEAD"]).is_err() {
+        let base = self.range_base(base)?;
+        if !base.is_empty() && self.git(&["merge-base", "--is-ancestor", &base, "HEAD"]).is_err() {
             return Err(GitError("The commits are not on the current branch".into()));
         }
-        let raw = self.git(&["rev-list", "--reverse", "--parents", &format!("{base}..HEAD")])?;
+        let range = if base.is_empty() { "HEAD".to_string() } else { format!("{base}..HEAD") };
+        let raw = self.git(&["rev-list", "--reverse", "--parents", &range])?;
         let mut entries = Vec::new();
         for line in String::from_utf8_lossy(&raw).lines() {
             let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() != 2 {
+            // Without a base, the first commit is the root commit: it has no parent.
+            let root = base.is_empty() && entries.is_empty() && parts.len() == 1;
+            if parts.len() != 2 && !root {
                 return Err(GitError("The range contains a merge commit. Rewriting merges is not supported".into()));
             }
             let m = self.meta(parts[0])?;
@@ -162,7 +182,7 @@ impl Repo {
         let branch = self.state()?.branch.unwrap_or_default();
 
         let mut current = range.base.clone();
-        let mut current_tree = self.meta(&current)?.tree;
+        let mut current_tree = if current.is_empty() { self.empty_tree()? } else { self.meta(&current)?.tree };
         let mut last: Option<(String, CommitMeta, String)> = None; // (parent, first meta, message)
         let mut unchanged = true;
         for e in plan {
@@ -174,6 +194,10 @@ impl Repo {
             let parent = m.parents.first().cloned().unwrap_or_default();
             let tree = if parent == current && unchanged {
                 m.tree.clone()
+            } else if current.is_empty() {
+                // No commit is before this one yet: apply its change to an empty commit.
+                let empty = self.commit_tree(&current_tree, "", &m, "")?;
+                self.merge_tree(&parent, &empty, &e.oid, &e.oid)?
             } else {
                 self.merge_tree(&parent, &current, &e.oid, &e.oid)?
             };
@@ -348,7 +372,8 @@ impl Repo {
         let editor = format!("cp {}", shell_quote(&todo_file.to_string_lossy()));
         let reflog = format!("gittor: {what}");
         let env = [("GIT_SEQUENCE_EDITOR", editor.as_str()), ("GIT_REFLOG_ACTION", reflog.as_str())];
-        let result = self.git_write(&["rebase", "-i", "--autostash", base], &env);
+        let start = if base.is_empty() { "--root" } else { base };
+        let result = self.git_write(&["rebase", "-i", "--autostash", start], &env);
         let state = self.state()?;
         match result {
             Ok(_) if state.operation == "rebase" => {

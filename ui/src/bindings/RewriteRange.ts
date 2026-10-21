@@ -4,7 +4,11 @@ import type { RangeCommit } from "./RangeCommit";
 /**
  * The commits from `base` (exclusive) to HEAD, oldest first, ready for a rewrite.
  */
-export type RewriteRange = { base: string, entries: Array<RangeCommit>, 
+export type RewriteRange = { 
+/**
+ * The commit before the range. Empty when the range starts at the root commit of the branch.
+ */
+base: string, entries: Array<RangeCommit>, 
 /**
  * Some commits are on a remote branch already; a rewrite needs a force push.
  */

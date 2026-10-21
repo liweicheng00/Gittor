@@ -82,6 +82,65 @@ fn squash_drop_reword_and_undo() {
 }
 
 #[test]
+fn rewrites_that_start_at_the_root_commit() {
+    let dir = temp_repo("root");
+    let root = commit(&dir, "a.txt", "1\n", "init");
+    let c1 = commit(&dir, "a.txt", "1\n2\n", "init again");
+    let repo = Repo::open(&dir).unwrap();
+
+    // The UI asks for the range after "<oldest>^". The root commit has no parent.
+    let range = repo.rewrite_range(&format!("{root}^")).unwrap();
+    assert_eq!(range.base, "");
+    assert_eq!(range.entries.iter().map(|e| e.oid.as_str()).collect::<Vec<_>>(), [root.as_str(), c1.as_str()]);
+    assert!(repo.rewrite_range("0123456789abcdef0123456789abcdef01234567^").is_err());
+
+    // Squash the root commit and the commit after it: one new root commit with the tree of HEAD.
+    let head = git(&dir, &["rev-parse", "HEAD"]);
+    let mut plan = vec![entry(&root, Action::Pick), entry(&c1, Action::Squash)];
+    plan[1].message = Some("init".into());
+    let r = repo.rewrite(&range.base, &plan, "Squash").unwrap();
+    assert!(r.ok, "{}", r.message);
+    assert_eq!(subjects(&dir), vec!["init"]);
+    assert_eq!(git(&dir, &["rev-list", "--count", "HEAD"]), "1");
+    assert_eq!(git(&dir, &["rev-parse", "HEAD^{tree}"]), git(&dir, &["rev-parse", &format!("{head}^{{tree}}")]));
+    repo.apply_undo(&r.undo).unwrap();
+    assert_eq!(git(&dir, &["rev-parse", "HEAD"]), head);
+
+    // Reword the root commit: the later commit moves on top of the new root.
+    let mut plan = vec![entry(&root, Action::Reword), entry(&c1, Action::Pick)];
+    plan[0].message = Some("first".into());
+    assert!(repo.rewrite("", &plan, "Reword").unwrap().ok);
+    assert_eq!(subjects(&dir), vec!["init again", "first"]);
+
+    // Drop the root commit: the next commit changes a.txt, which the root commit made. That is a
+    // conflict, as in git rebase, and nothing changes.
+    let range = repo.rewrite_range("").unwrap();
+    let before = git(&dir, &["rev-parse", "HEAD"]);
+    let plan = vec![entry(&range.entries[0].oid, Action::Drop), entry(&range.entries[1].oid, Action::Pick)];
+    let err = repo.rewrite("", &plan, "Drop").unwrap_err();
+    assert!(err.0.contains("a.txt"), "{}", err.0);
+    assert_eq!(git(&dir, &["rev-parse", "HEAD"]), before);
+
+    // Drop a root commit that the next commit does not depend on: the next commit becomes the root.
+    let dir = temp_repo("root-drop");
+    let root = commit(&dir, "a.txt", "1\n", "a");
+    let c1 = commit(&dir, "b.txt", "b\n", "b");
+    let repo = Repo::open(&dir).unwrap();
+    let r = repo.rewrite("", &[entry(&root, Action::Drop), entry(&c1, Action::Pick)], "Drop").unwrap();
+    assert!(r.ok, "{}", r.message);
+    assert_eq!(subjects(&dir), vec!["b"]);
+    assert_eq!(git(&dir, &["rev-list", "--count", "HEAD"]), "1");
+    assert!(!dir.join("a.txt").exists() && dir.join("b.txt").exists());
+
+    // An interactive rebase with an Edit step runs git rebase -i --root.
+    let only = git(&dir, &["rev-parse", "HEAD"]);
+    let r = repo.rewrite("", &[entry(&only, Action::Edit)], "Interactive rebase").unwrap();
+    assert!(r.ok, "{}", r.message);
+    assert_eq!(repo.state().unwrap().operation, "rebase");
+    git(&dir, &["rebase", "--abort"]);
+}
+
+#[test]
 fn conflicting_reorder_changes_nothing() {
     let dir = temp_repo("conflict");
     let base = commit(&dir, "a.txt", "1\n", "base");
