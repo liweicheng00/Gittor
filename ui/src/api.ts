@@ -40,6 +40,7 @@ import type { Row } from "./bindings/Row";
 import type { Stash } from "./bindings/Stash";
 import type { StashDetail } from "./bindings/StashDetail";
 import type { Submodule } from "./bindings/Submodule";
+import type { SubmoduleRange } from "./bindings/SubmoduleRange";
 import type { UndoAction } from "./bindings/UndoAction";
 import type { ViewResult } from "./bindings/ViewResult";
 import type { Worktree } from "./bindings/Worktree";
@@ -90,6 +91,7 @@ export type {
   Stash,
   StashDetail,
   Submodule,
+  SubmoduleRange,
   UndoAction,
   ViewResult,
   Worktree,
@@ -317,6 +319,7 @@ export const api = {
   localHistory: (path: string) => call<LocalRevision[]>("local_history", { path }),
   localHistoryContent: (blob: string | null) => call<Omit<FileContent, "size">>("local_history_content", { blob }),
   submodules: () => call<Submodule[]>("submodules"),
+  submoduleRange: (path: string) => call<SubmoduleRange>("submodule_range", { path }),
   remotes: () => call<RemoteInfo[]>("remotes"),
   commitTemplate: () => call<string | null>("commit_template"),
   fileHistory: (path: string) => call<HistoryEntry[]>("file_history", { path }),

@@ -66,6 +66,7 @@ impl Service {
             "children" => serde_json::to_string(&self.children(parse(body)?)?),
             "head_message" => serde_json::to_string(&self.head_message()?),
             "submodules" => serde_json::to_string(&self.submodules()?),
+            "submodule_range" => serde_json::to_string(&self.submodule_range(parse(body)?)?),
             "remotes" => serde_json::to_string(&self.remotes()?),
             "commit_template" => serde_json::to_string(&self.commit_template()?),
             "local_history" => serde_json::to_string(&self.local_history(parse(body)?)?),

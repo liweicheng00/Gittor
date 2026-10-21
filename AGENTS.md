@@ -51,6 +51,9 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
 - Undo (`crates/git/src/undo.rs`): `Reset`, `Checkout`, `CreateRef`, `DeleteRef`, `MoveRef`,
   `RenameBranch`, `StashStore`, `SetConfig`. Each step checks that nothing moved since.
 - Files of the app in a git dir: always `app_dir(git_dir)`.
+- Submodules: `Repo::submodules` reads all of them with three git commands (`.gitmodules`, the index,
+  `git status --porcelain=v2`). The Submodules tab is `submodule-panel.ts` and `submodule-flow.ts`;
+  `loadSubmodules` in `repo.ts` loads it with the local changes, and hides the tab when there are none.
 - Windows (Compare, History, Review, Show Repository): `windows.ts`. A window calls
   `registerWindow(close, kind, show)`, and listens with `onRepoChange`. `watch.ts` calls
   `notifyRepoChange("files" | "repo")`.
@@ -119,6 +122,8 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
 - Do not draw a whole bar or list again when nothing changed. A new element under the mouse loses
   the click (this broke the tabs scenario).
 - `delete-merged` failed once in a full run and passed alone. It is a known flaky case.
+- The left tabs share about 280 px at the default width. A new tab needs a short label; measure the
+  `scrollWidth` of each `.lp-tab` against its `clientWidth`.
 
 ## Environment of the cloud sessions
 

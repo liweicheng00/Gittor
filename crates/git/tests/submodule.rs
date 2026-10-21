@@ -63,6 +63,9 @@ fn submodules() {
     assert_eq!(subs[0].state, SubmoduleState::Clean);
     assert_eq!(subs[0].recorded, c2);
     assert_eq!(subs[0].url.as_deref(), lib.to_str());
+    assert_eq!(subs[0].name, "vendor/lib");
+    assert_eq!(subs[0].branch.as_deref(), Some("main"));
+    assert!(!subs[0].dirty && !subs[0].untracked);
 
     // Another commit in the submodule: the diff shows the two commits.
     git(&app.join("vendor/lib"), &["checkout", "-q", &c1]);
@@ -97,6 +100,74 @@ fn submodules() {
 
     // A repository without submodules has an empty list.
     assert!(Repo::open(&lib).unwrap().submodules().unwrap().is_empty());
+}
+
+#[test]
+fn submodule_range() {
+    std::env::set_var("GIT_CONFIG_COUNT", "1");
+    std::env::set_var("GIT_CONFIG_KEY_0", "protocol.file.allow");
+    std::env::set_var("GIT_CONFIG_VALUE_0", "always");
+    let base = temp("subrange");
+    let lib = base.join("lib");
+    init(&lib);
+    let mut commits = Vec::new();
+    for n in ["One", "Two", "Three"] {
+        std::fs::write(lib.join("lib.rs"), format!("{n}\n")).unwrap();
+        git(&lib, &["add", "."]);
+        git(&lib, &["commit", "-q", "-m", n]);
+        commits.push(git(&lib, &["rev-parse", "HEAD"]));
+    }
+    let app = base.join("app");
+    init(&app);
+    git(&app, &["submodule", "add", "-q", "-b", "main", "--name", "lib", lib.to_str().unwrap(), "vendor/lib"]);
+    git(&app, &["commit", "-q", "-m", "Add lib"]);
+    let sub = app.join("vendor/lib");
+    let repo = Repo::open(&app).unwrap();
+
+    // The name and the branch setting come from .gitmodules.
+    let s = &repo.submodules().unwrap()[0];
+    assert_eq!((s.name.as_str(), s.track_branch.as_deref()), ("lib", Some("main")));
+    let r = repo.submodule_range("vendor/lib").unwrap();
+    assert!(r.behind.is_empty() && r.ahead.is_empty() && r.changes.is_empty() && !r.recorded_missing);
+
+    // Behind: the checked-out commit is two commits older than the recorded commit. HEAD is detached.
+    git(&sub, &["checkout", "-q", &commits[0]]);
+    let s = &repo.submodules().unwrap()[0];
+    assert_eq!(s.state, SubmoduleState::OtherCommit);
+    assert_eq!(s.branch, None);
+    let r = repo.submodule_range("vendor/lib").unwrap();
+    assert_eq!(r.behind.iter().map(|c| c.subject.as_str()).collect::<Vec<_>>(), ["Three", "Two"]);
+    assert!(r.ahead.is_empty());
+
+    // Diverged: a new commit on top of the old commit.
+    std::fs::write(sub.join("lib.rs"), "Local\n").unwrap();
+    git(&sub, &["-c", "user.name=T", "-c", "user.email=t@e", "-c", "commit.gpgsign=false", "commit", "-q", "-am", "Local"]);
+    let r = repo.submodule_range("vendor/lib").unwrap();
+    assert_eq!(r.behind.len(), 2);
+    assert_eq!(r.ahead.iter().map(|c| c.subject.as_str()).collect::<Vec<_>>(), ["Local"]);
+
+    // Local changes: a changed file and a file that git does not track.
+    std::fs::write(sub.join("lib.rs"), "Changed\n").unwrap();
+    std::fs::write(sub.join("new.rs"), "new\n").unwrap();
+    let s = &repo.submodules().unwrap()[0];
+    assert!(s.dirty && s.untracked);
+    let r = repo.submodule_range("vendor/lib").unwrap();
+    let changes: Vec<(char, &str)> = r.changes.iter().map(|c| (c.status, c.path.as_str())).collect();
+    assert_eq!(changes, [('M', "lib.rs"), ('?', "new.rs")]);
+
+    // A recorded commit that the submodule does not have.
+    let other = base.join("other");
+    init(&other);
+    std::fs::write(other.join("x"), "x\n").unwrap();
+    git(&other, &["add", "."]);
+    git(&other, &["commit", "-q", "-m", "X"]);
+    let foreign = git(&other, &["rev-parse", "HEAD"]);
+    git(&app, &["update-index", "--cacheinfo", &format!("160000,{foreign},vendor/lib")]);
+    let r = repo.submodule_range("vendor/lib").unwrap();
+    assert!(r.recorded_missing);
+    assert_eq!(r.recorded, foreign);
+    assert!(r.behind.is_empty() && r.ahead.is_empty());
+    assert!(repo.submodule_range("lib.rs").is_err());
 }
 
 #[test]

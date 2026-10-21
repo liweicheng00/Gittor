@@ -247,7 +247,7 @@ pub struct CommitDetails {
 #[derive(ts_rs::TS)]
 #[ts(export)]
 pub struct Change {
-    /// A, M, D, R, C, T
+    /// A, M, D, R, C, T, or ? for a file that git does not track (local changes of a submodule)
     pub status: char,
     pub path: String,
     pub old_path: Option<String>,

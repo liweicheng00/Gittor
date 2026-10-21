@@ -329,11 +329,11 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 /* left pane: branches and commit tabs */
 .leftpane { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--panel); border-right: 1px solid var(--border); }
 .leftpane[hidden] { display: none; }
-.leftpane > .sidebar, .leftpane > .commit-panel, .leftpane > .stash-panel { flex: 1; min-height: 0; border-right: 0; }
+.leftpane > .sidebar, .leftpane > .commit-panel, .leftpane > .stash-panel, .leftpane > .submodule-panel { flex: 1; min-height: 0; border-right: 0; }
 .leftpane > [hidden] { display: none !important; }
 .leftpane .sidebar > .pane-title { display: none; }
 .lp-tabs { display: flex; overflow: hidden; border-bottom: 1px solid var(--border); padding: 0 2px; gap: 0; }
-.lp-tab { font-size: 11.5px; white-space: nowrap; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding: 6px 3px 5px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; }
+.lp-tab { font-size: 11.5px; white-space: nowrap; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding: 6px 2px 5px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; }
 .lp-tab:hover { color: var(--fg); }
 .lp-count { margin-left: 2px; padding: 0 3px; border-radius: 8px; background: var(--select); color: var(--fg); font-size: 10px; font-weight: 600; }
 .lp-tab.on { color: var(--fg); border-bottom-color: var(--accent); }
@@ -381,6 +381,33 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .stash-list:focus .stash-row.selected { background: var(--select-strong); }
 .stash-message { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stash-meta { display: flex; gap: 8px; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; }
+
+/* submodules tab */
+.submodule-panel { display: flex; flex-direction: column; min-height: 0; }
+.sm-list { flex: 0 1 auto; max-height: 45%; overflow: auto; outline: none; border-bottom: 1px solid var(--border); }
+.sm-row { padding: 5px 10px; border-bottom: 1px solid var(--border); cursor: default; }
+.sm-row:last-child { border-bottom: 0; }
+.sm-row:hover { background: var(--hover); }
+.sm-row.selected { background: var(--select); }
+.sm-list:focus .sm-row.selected { background: var(--select-strong); }
+.sm-name { display: flex; align-items: center; gap: 5px; font-weight: 600; overflow: hidden; white-space: nowrap; }
+.sm-path { overflow: hidden; text-overflow: ellipsis; }
+.sm-meta { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; padding-left: 19px; }
+.sm-detached { color: var(--warn, #b26a00); }
+.sm-badge { color: var(--deleted); }
+.sm-detail { flex: 1; min-height: 0; overflow: auto; padding: 6px 10px; }
+.sm-detail-head { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sm-actions { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.sm-summary { margin: 6px 0; line-height: 1.4; }
+.sm-section { margin-top: 8px; }
+.sm-section-title { color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; padding: 2px 0; }
+.sm-commit, .sm-file { display: flex; gap: 8px; padding: 2px 4px; border-radius: 3px; white-space: nowrap; overflow: hidden; cursor: default; }
+.sm-commit:hover, .sm-file:hover { background: var(--hover); }
+.sm-commit code { color: var(--muted); }
+.sm-subject { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.sm-author { color: var(--muted); font-size: 11px; }
+.sm-status { width: 10px; flex: none; font-weight: 700; }
+.sm-unversioned { color: var(--muted); }
 .stash-branch { color: var(--local); }
 
 /* merge window */

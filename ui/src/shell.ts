@@ -16,6 +16,7 @@ import { save, settings } from "./settings";
 import { Sidebar } from "./sidebar";
 import { ReviewPanel } from "./review-panel";
 import { StashPanel } from "./stash-panel";
+import { SubmodulePanel } from "./submodule-panel";
 import { app } from "./state";
 
 export const mod = navigator.platform.includes("Mac") ? "⌘" : "Ctrl+";
@@ -30,6 +31,7 @@ export const diff = new DiffView();
 export const commitPanel = new CommitPanel();
 export const stashPanel = new StashPanel();
 export const reviewPanel = new ReviewPanel();
+export const submodulePanel = new SubmodulePanel();
 
 export const banner = new OpBanner();
 export const authors = new Set<string>();
@@ -66,8 +68,10 @@ const tabBranches = h("button", { class: "lp-tab", title: `Branches (${mod}1)` }
 export const tabCommit = h("button", { class: "lp-tab", title: `Local changes and commit (${mod}2)` }, "Changes");
 export const tabStash = h("button", { class: "lp-tab", title: `Stashes (${mod}3)` }, "Stash");
 export const tabReviews = h("button", { class: "lp-tab", title: `Reviews (${mod}4)` }, "Reviews");
-const leftPane = h("aside", { class: "leftpane" }, h("div", { class: "lp-tabs" }, tabBranches, tabCommit, tabStash, tabReviews), sidebar.el, commitPanel.el, stashPanel.el, reviewPanel.el);
-export function showLeftTab(tab: "branches" | "commit" | "stash" | "reviews") {
+/** The tab shows only when the repository has submodules. */
+export const tabSubmodules = h("button", { class: "lp-tab", title: `Submodules (${mod}5)`, hidden: true }, "Modules");
+const leftPane = h("aside", { class: "leftpane" }, h("div", { class: "lp-tabs" }, tabBranches, tabCommit, tabStash, tabReviews, tabSubmodules), sidebar.el, commitPanel.el, stashPanel.el, reviewPanel.el, submodulePanel.el);
+export function showLeftTab(tab: "branches" | "commit" | "stash" | "reviews" | "submodules") {
   settings.leftTab = tab;
   save();
   if (!settings.showSidebar) {
@@ -82,11 +86,14 @@ export function showLeftTab(tab: "branches" | "commit" | "stash" | "reviews") {
   stashPanel.el.hidden = tab !== "stash";
   tabReviews.classList.toggle("on", tab === "reviews");
   reviewPanel.el.hidden = tab !== "reviews";
+  tabSubmodules.classList.toggle("on", tab === "submodules");
+  submodulePanel.el.hidden = tab !== "submodules";
 }
 tabBranches.addEventListener("click", () => showLeftTab("branches"));
 tabCommit.addEventListener("click", () => showLeftTab("commit"));
 tabStash.addEventListener("click", () => showLeftTab("stash"));
 tabReviews.addEventListener("click", () => showLeftTab("reviews"));
+tabSubmodules.addEventListener("click", () => showLeftTab("submodules"));
 const top = h("div", { class: "top" }, leftPane, sideGrip, center, rightGrip, right);
 export const workspace = h("main", { class: "workspace" }, top, diffGrip, diff.el);
 export const welcome = h("main", { class: "welcome" });

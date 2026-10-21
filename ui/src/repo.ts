@@ -7,7 +7,7 @@ import { emptyFilter } from "./filter-bar";
 import { loadFavorites } from "./remotes";
 import { clearCompare } from "./selection";
 import { addRecent, save, settings } from "./settings";
-import { authors, banner, commitPanel, details, fetchBtn, filterBar, localHistoryBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, sidebar, stashPanel, statusActivity, tabBar, tabCommit, tabReviews, tabStash, task, updateBtn, updateStatus } from "./shell";
+import { authors, banner, commitPanel, details, fetchBtn, filterBar, localHistoryBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, showLeftTab, sidebar, stashPanel, statusActivity, submodulePanel, tabBar, tabCommit, tabReviews, tabStash, tabSubmodules, task, updateBtn, updateStatus } from "./shell";
 import { app } from "./state";
 import { showWorkspace } from "./welcome";
 import { formDialog } from "./dialogs";
@@ -244,12 +244,11 @@ export async function applyView(r: ViewResult, keepSelection: boolean) {
 }
 
 export async function loadRefs() {
-  const [r, rec, wt, st, subs] = await Promise.all([
+  const [r, rec, wt, st] = await Promise.all([
     api.refs().catch(() => [] as BranchInfo[]),
     api.recentBranches().catch(() => [] as RecentBranch[]),
     api.worktrees().catch(() => [] as Worktree[]),
     api.repoState().catch(() => null),
-    api.submodules().catch(() => [] as Submodule[]),
   ]);
   try {
     app.refs = r;
@@ -259,7 +258,6 @@ export async function loadRefs() {
     sidebar.setRefs(app.refs);
     sidebar.setRecent(app.recent);
     sidebar.setWorktrees(app.worktrees);
-    sidebar.setSubmodules(subs);
     await loadFavorites();
     // The tooltip of the tab names the branch; a checkout changes it.
     if (app.view) void refreshTabInfo(app.view.root);
@@ -293,6 +291,21 @@ export async function loadLocalChanges() {
   }
   tabStash.replaceChildren("Stash", stashPanel.count ? h("span", { class: "lp-count" }, String(stashPanel.count)) : "");
   await loadReviews();
+  await loadSubmodules();
+}
+
+/** Loads the Submodules tab. The tab shows only when the repository has submodules; its count is the
+ * submodules that need attention. */
+export async function loadSubmodules() {
+  const subs = await api.submodules().catch(() => [] as Submodule[]);
+  submodulePanel.set(subs);
+  tabSubmodules.hidden = !subs.length;
+  const n = submodulePanel.attention;
+  tabSubmodules.replaceChildren("Modules", n ? h("span", { class: "lp-count" }, String(n)) : "");
+  if (!subs.length && settings.leftTab === "submodules") showLeftTab("branches");
+  // The commits of the selected submodule load again: its checked-out commit can have changed.
+  const s = submodulePanel.selectedSubmodule;
+  if (s) submodulePanel.onSelect(s);
 }
 
 /** Loads the reviews for the Reviews tab. The count on the tab is the reviews that are not merged. */

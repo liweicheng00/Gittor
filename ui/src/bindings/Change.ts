@@ -2,6 +2,6 @@
 
 export type Change = { 
 /**
- * A, M, D, R, C, T
+ * A, M, D, R, C, T, or ? for a file that git does not track (local changes of a submodule)
  */
 status: string, path: string, old_path: string | null, };

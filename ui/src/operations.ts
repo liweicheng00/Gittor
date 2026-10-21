@@ -1,7 +1,7 @@
 // Write operations: runOp, Undo, and the branch, tag, merge, rebase, reset and rewrite flows.
 
 import { allowRewrite } from "./protected";
-import { api, type BranchInfo, errorHint, inTauri, type Op, type OpOutcome, pickFolder, type PlanEntry, type Row, type Submodule, type Worktree } from "./api";
+import { api, type BranchInfo, errorHint, inTauri, type Op, type OpOutcome, pickFolder, type PlanEntry, type Row, type Worktree } from "./api";
 import { showBranchSwitcher } from "./branch-switcher";
 import { mergeFile } from "./conflicts";
 import { showMenu } from "./context-menu";
@@ -28,7 +28,7 @@ export async function runOp(op: Op, label: string, errorAction?: { label: string
     const stale = outcome.staleSubmodules;
     if (stale.length) {
       const what = stale.length === 1 ? `Submodule ${stale[0]} is` : `${stale.length} submodules are`;
-      toast(`${what} not at the commit that this revision records.`, "info", { label: "Update Submodules", run: () => updateSubmodules(stale) });
+      toast(`${what} not at the commit that this revision records.`, "info", { label: "Update Submodules", run: () => void updateSubmodules(stale) });
     }
     statusActivity.textContent = r.message;
   } else {
@@ -288,6 +288,9 @@ export async function addWorktree(at = "HEAD", atLabel = "HEAD") {
   if (out?.result.ok && r.open) void openRepo(String(r.path).trim());
 }
 
+/** Checks out the recorded commits of submodules, and initializes them first. No paths means all. */
+export const updateSubmodules = (paths: string[]) => runOp({ op: "updateSubmodules", paths }, "Updating submodules");
+
 /** Removes a worktree, after a check of what stops git: files, submodules and a lock. */
 async function removeWorktree(w: Worktree) {
   const b = await api.worktreeBlockers(w.path).catch(() => null);
@@ -309,18 +312,6 @@ banner.onShowFile = (path) => void mergeFile(path);
 sidebar.onCheckout = (b) => void checkoutBranch(b);
 sidebar.onAddWorktree = () => void addWorktree();
 sidebar.onOpenWorktree = (w) => void openRepo(w.path);
-const updateSubmodules = (paths: string[]) => void runOp({ op: "updateSubmodules", paths }, "Updating submodules");
-const submodulePath = (s: Submodule) => `${app.view?.root ?? ""}/${s.path}`;
-sidebar.onUpdateSubmodules = () => updateSubmodules([]);
-sidebar.onOpenSubmodule = (s) => void openRepo(submodulePath(s));
-sidebar.onSubmoduleMenu = (s, e) =>
-  showMenu(e.clientX, e.clientY, [
-    { label: "Open as Repository", disabled: s.state === "uninitialized", action: () => void openRepo(submodulePath(s)) },
-    { label: s.state === "uninitialized" ? "Initialize and Update" : "Update to the Recorded Commit", action: () => updateSubmodules([s.path]) },
-    { separator: true },
-    { label: "Copy Path", action: () => void copyText(s.path) },
-    { label: "Copy URL", disabled: !s.url, action: () => s.url && void copyText(s.url) },
-  ]);
 sidebar.onWorktreeMenu = (w, e) =>
   showMenu(e.clientX, e.clientY, [
     { label: "Open", disabled: w.current || w.prunable, action: () => void openRepo(w.path) },
