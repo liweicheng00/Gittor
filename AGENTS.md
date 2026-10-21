@@ -67,12 +67,14 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
 - Submodules: `Repo::submodules` reads all of them with three git commands (`.gitmodules`, the index,
   `git status --porcelain=v2`). The Submodules tab is `submodule-panel.ts` and `submodule-flow.ts`;
   `loadSubmodules` in `repo.ts` loads it with the local changes, and hides the tab when there are none.
-- App windows: a tab that the user drags out of the tab bar moves to a new window at the place of
-  the mouse (`dragTab` in `repo.ts`; `openWindow` in `api.ts`: the Tauri command `open_window`, or
-  `window.open` with `?solo=1` in a browser). A drag in the tab bar changes the order of the tabs. A solo window does not save `tabs` and `activeTab`, because all windows share one
-  settings key. A repository shows in one window only: each window writes its tabs to
-  `gittor.windows` every 3 s, and `openRepo` brings the other window to the front
-  (`focus_window`) instead. An entry older than 10 s belongs to a closed window.
+- App windows: a tab that the user drags out of the tab bar moves to a new window at the place of the
+  mouse (`dragTab` in `tab-drag.ts`; `openWindow` in `api.ts`: the Tauri command `open_window`, or
+  `window.open` with `?solo=1` in a browser). `window-roots.ts` keeps the repositories of each window.
+  A drag in the tab bar changes the order of the tabs. A solo window does not save `tabs` and
+  `activeTab`, because all windows share one settings key. A repository shows in one window only: each
+  window writes its tabs to `gittor.windows` every 3 s, and `openRepo` brings the other window to the
+  front (`inOtherWindow`, the Tauri command `focus_window`) instead. An entry older than 10 s belongs
+  to a closed window.
 - Windows (Compare, History, Review, Show Repository): `windows.ts`. A window calls
   `registerWindow(close, kind, show)`, and listens with `onRepoChange`. `watch.ts` calls
   `notifyRepoChange("files" | "repo")`.

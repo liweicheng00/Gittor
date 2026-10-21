@@ -17,7 +17,8 @@ import "./keyboard";
 // modules import what they use, so the order of the files does not count.
 import.meta.glob("./*-flow.ts", { eager: true });
 import { initialPath } from "./api";
-import { openRepo, renderTabs, resetWindowRoots, switchTab } from "./repo";
+import { openRepo, renderTabs, switchTab } from "./repo";
+import { resetWindowRoots } from "./window-roots";
 import { settings, soloWindow } from "./settings";
 import { applyBackendSettings, scheduleAutoFetch } from "./settings-flow";
 import { applyLayout, applyTheme, showLeftTab } from "./shell";

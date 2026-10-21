@@ -1,17 +1,19 @@
 // Opening repositories in tabs, loading the log and the refs, and moving in the log.
 
 import { pathLabels } from "./path-labels";
-import { api, type BranchInfo, focusWindow, inTauri, type LogFilter, openWindow, pickFolder, type WindowPlace, type RecentBranch, type RepoInfo, setRepoRoot, type Submodule, type ViewResult, windowLabel, type Worktree } from "./api";
+import { api, type BranchInfo, inTauri, type LogFilter, openWindow, pickFolder, type WindowPlace, type RecentBranch, type RepoInfo, setRepoRoot, type Submodule, type ViewResult, type Worktree } from "./api";
 import { showMenu } from "./context-menu";
 import { h, icon } from "./dom";
 import { emptyFilter } from "./filter-bar";
 import { loadFavorites } from "./remotes";
 import { clearCompare } from "./selection";
-import { addRecent, save, settings, soloWindow } from "./settings";
+import { addRecent, save, settings } from "./settings";
 import { authors, banner, commitPanel, details, fetchBtn, filterBar, localHistoryBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, showLeftTab, sidebar, stashPanel, statusActivity, submodulePanel, tabBar, tabCommit, tabReviews, tabStash, tabSubmodules, task, updateBtn, updateStatus } from "./shell";
 import { app } from "./state";
 import { showWorkspace } from "./welcome";
 import { formDialog } from "./dialogs";
+import { dragTab } from "./tab-drag";
+import { inOtherWindow, publishRoots, shownElsewhere } from "./window-roots";
 import { toast } from "./notify";
 
 function viewSettings() {
@@ -41,133 +43,10 @@ export async function refreshTabInfo(root: string) {
 
 const baseName = (p: string) => p.split(/[\\/]/).pop() ?? p;
 
-// Each window writes the repositories of its tabs here. A tab closes its repository in the backend
-// only when no other window shows it.
-const WINDOWS_KEY = "gittor.windows";
-const windowId = windowLabel() ?? Math.random().toString(36).slice(2);
-
-/** The repositories of each window, and when the window wrote them last. */
-type WindowRoots = Record<string, { roots: string[]; at: number }>;
-
-/** A window writes its entry every few seconds. An older entry belongs to a window that closed without
- * `beforeunload`. */
-const ALIVE_MS = 10_000;
-
-function windowRoots(): WindowRoots {
-  try {
-    return JSON.parse(localStorage.getItem(WINDOWS_KEY) ?? "{}");
-  } catch {
-    return {};
-  }
-}
-
-function publishRoots(roots: string[] | null) {
-  const all = windowRoots();
-  if (roots) all[windowId] = { roots, at: Date.now() };
-  else delete all[windowId];
-  try {
-    localStorage.setItem(WINDOWS_KEY, JSON.stringify(all));
-  } catch {}
-}
-setInterval(() => publishRoots(settings.tabs), 3000);
-
-/** The other window that shows a repository, or undefined. */
-const ownerElsewhere = (root: string) =>
-  Object.entries(windowRoots()).find(([id, w]) => id !== windowId && Date.now() - (w.at ?? 0) < ALIVE_MS && w.roots?.includes(root))?.[0];
-const shownElsewhere = (root: string) => ownerElsewhere(root) !== undefined;
-
-/** A repository shows in one window only. When another window shows it, that window comes to the front
- * and this function returns true. */
-async function inOtherWindow(path: string): Promise<boolean> {
-  const root = (await api.repoInfo(path).catch(() => null))?.root ?? path;
-  const owner = ownerElsewhere(root);
-  if (owner === undefined) return false;
-  try {
-    await focusWindow(owner);
-  } catch {
-    // The window is gone: its entry is old.
-    return false;
-  }
-  toast(`${baseName(root)} is open in another window.`, "info");
-  return true;
-}
-
-/** Starts the list of windows again. The main window calls it at the start of the app. */
-export function resetWindowRoots() {
-  try {
-    localStorage.removeItem(WINDOWS_KEY);
-  } catch {}
-}
-
-// A window that closes gives its repositories free. A solo window closes those that no other window shows.
-window.addEventListener("beforeunload", () => {
-  const roots = settings.tabs.filter((r) => !shownElsewhere(r));
-  publishRoots(null);
-  if (soloWindow) for (const r of roots) void api.close(r).catch(() => {});
-});
-
 /** Moves a tab to a new window. The repository stays open in the backend for the new window. */
 async function moveToNewWindow(root: string, at: WindowPlace) {
   await closeTab(root, true);
   await openWindow(root, at).catch((e) => toast(`The window did not open: ${String(e).replace(/^Error: /, "")}`, "error"));
-}
-
-/** A tab that is dragged out of the tab bar by more than this distance goes to a new window. */
-const DETACH_PX = 40;
-
-/** Drags a tab, as in a browser. In the tab bar, the tab changes its place. Out of the tab bar, the tab
- * goes to a new window at the place of the mouse. The tab bar can draw again during the drag, so the
- * drag finds the tab by its root each time. */
-function dragTab(root: string, down: MouseEvent) {
-  const tabOf = (r: string) => tabBar.querySelector<HTMLElement>(`.tab[data-root="${CSS.escape(r)}"]`);
-  const startX = down.clientX;
-  const startY = down.clientY;
-  let dragging = false;
-  let detach = false;
-  const hint = h("div", { class: "tab-detach-hint" }, "Release to open in a new window");
-  const move = (e: MouseEvent) => {
-    if (!dragging && Math.hypot(e.clientX - startX, e.clientY - startY) < 6) return;
-    dragging = true;
-    const tab = tabOf(root);
-    if (!tab) return;
-    const bar = tabBar.getBoundingClientRect();
-    detach = settings.tabs.length > 1 && (e.clientY > bar.bottom + DETACH_PX || e.clientY < bar.top - DETACH_PX);
-    tab.classList.add("dragging");
-    tab.classList.toggle("detaching", detach);
-    tab.style.transform = detach ? "" : `translateX(${e.clientX - startX}px)`;
-    if (detach) {
-      hint.style.left = `${e.clientX + 12}px`;
-      hint.style.top = `${e.clientY + 12}px`;
-      if (!hint.isConnected) document.body.append(hint);
-    } else hint.remove();
-  };
-  const up = (e: MouseEvent) => {
-    document.removeEventListener("mousemove", move);
-    document.removeEventListener("mouseup", up);
-    hint.remove();
-    const tab = tabOf(root);
-    if (!dragging || !tab) return;
-    tab.classList.remove("dragging", "detaching");
-    tab.style.transform = "";
-    if (detach) {
-      void moveToNewWindow(root, { x: e.screenX - 40, y: e.screenY - 20, width: window.outerWidth, height: window.outerHeight });
-      return;
-    }
-    // The new place: before the first other tab whose middle is right of the mouse.
-    const others = settings.tabs.filter((t) => t !== root);
-    const i = others.findIndex((t) => {
-      const r = tabOf(t)?.getBoundingClientRect();
-      return r && e.clientX < r.left + r.width / 2;
-    });
-    others.splice(i < 0 ? others.length : i, 0, root);
-    if (others.join("\n") !== settings.tabs.join("\n")) {
-      settings.tabs = others;
-      save();
-    }
-    renderTabs();
-  };
-  document.addEventListener("mousemove", move);
-  document.addEventListener("mouseup", up);
 }
 
 export function renderTabs() {
@@ -210,7 +89,14 @@ export function renderTabs() {
           if ((e.target as HTMLElement).closest(".tab-close")) return;
           // No text selection: in WebKitGTK, a selection starts a native drag, and the page gets no mouse moves.
           e.preventDefault();
-          dragTab(root, e);
+          dragTab(root, e, {
+            detach: (place) => void moveToNewWindow(root, place),
+            reorder: (tabs) => {
+              settings.tabs = tabs;
+              save();
+            },
+            done: renderTabs,
+          });
           if (root !== settings.activeTab) void switchTab(root);
         }
       });
