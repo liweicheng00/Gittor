@@ -54,10 +54,12 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
 - Submodules: `Repo::submodules` reads all of them with three git commands (`.gitmodules`, the index,
   `git status --porcelain=v2`). The Submodules tab is `submodule-panel.ts` and `submodule-flow.ts`;
   `loadSubmodules` in `repo.ts` loads it with the local changes, and hides the tab when there are none.
-- App windows: `openWindow` (`api.ts`) opens a repository in a new window, through the Tauri
-  command `open_window`, or `window.open` with `?solo=1` in a browser. A solo window does not save
-  `tabs` and `activeTab`, because all windows share one settings key. Each window writes its open
-  repositories to `gittor.windows`; a tab calls `api.close` only when no other window shows it.
+- App windows: "Move to New Window" in the context menu of a tab moves a repository to a new window
+  (`openWindow` in `api.ts`: the Tauri command `open_window`, or `window.open` with `?solo=1` in a
+  browser). A solo window does not save `tabs` and `activeTab`, because all windows share one
+  settings key. A repository shows in one window only: each window writes its tabs to
+  `gittor.windows` every 3 s, and `openRepo` brings the other window to the front
+  (`focus_window`) instead. An entry older than 10 s belongs to a closed window.
 - Windows (Compare, History, Review, Show Repository): `windows.ts`. A window calls
   `registerWindow(close, kind, show)`, and listens with `onRepoChange`. `watch.ts` calls
   `notifyRepoChange("files" | "repo")`.

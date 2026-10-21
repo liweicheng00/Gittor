@@ -124,25 +124,42 @@ await within("the submodule opens in a tab", async () => (await page.textContent
 await within("the commit Three is selected", async () => (await page.textContent(".log-row.selected")).includes("Three"));
 await shot("sm5-open-commit");
 
-// Open in New Window: the submodule opens in a window of its own, and the main window keeps its tabs.
-await page.click(".tab:has-text('e2e')");
-await within("the parent repository shows again", async () => !(await page.textContent(".tab.on .tab-name")).includes("lib"));
-await page.click(".lp-tab:text-is('Modules')");
-await page.click(".sm-row");
-const [popup] = await Promise.all([page.context().waitForEvent("page"), page.click(".sm-actions button:has-text('Open in New Window')")]);
+// Move to New Window: the context menu of a tab moves the repository to a window of its own. The main
+// window keeps its other tabs.
+const [popup] = await Promise.all([
+  page.context().waitForEvent("page"),
+  (async () => {
+    await page.click(".tab.on", { button: "right" });
+    await page.waitForTimeout(400);
+    await page.click(".menu-item:has-text('Move to New Window')");
+  })(),
+]);
 popup.on("pageerror", (e) => errors.push("popup pageerror: " + e));
 popup.on("console", (m) => m.type() === "error" && errors.push("popup console: " + m.text()));
 await popup.waitForSelector(".log-row", { timeout: 30000 });
 await within("the window shows the submodule log", async () => (await popup.textContent(".log")).includes("Three"));
 check("the window has no tab bar", await popup.$eval(".tabbar", (e) => e.hidden));
+await within("the main window shows the parent repository", async () => (await page.textContent(".tb-repo")).includes("e2e1"));
+check("the main window has one tab now", await page.$eval(".tabbar", (e) => e.hidden));
 await popup.click(".lp-tab:text-is('Stash')");
 const stored = JSON.parse(await page.evaluate(() => localStorage.getItem("gittor.settings.v1")));
-check("the main window keeps its tabs in the settings", stored.tabs.length === 2 && stored.tabs.some((t) => t.endsWith("/vendor/lib")));
+check("the settings keep the tabs of the main window", stored.tabs.length === 1 && stored.tabs[0].endsWith("e2e1"));
+
+// A repository shows in one window only: the main window does not open the submodule again.
+await page.click(".lp-tab:text-is('Modules')");
+await page.click(".sm-row");
+await page.click(".sm-actions button:has-text('Open as Repository')");
+await within("the main window says that another window shows it", async () => (await page.$(".toast:has-text('is open in another window')")) !== null);
+check("the main window opens no tab for it", await page.$eval(".tabbar", (e) => e.hidden));
 await popup.screenshot({ path: `${outDir}/sm6-new-window.png` });
-console.log("shot sm6-new-window");
+await shot("sm7-open-elsewhere");
+
+// After the window closes, the main window can open the submodule again. A page that Playwright closes
+// runs no beforeunload, so the entry of the window gets old first.
 await popup.close();
-await page.keyboard.press("F5");
-await within("the main window still works after the window closes", async () => (await page.$$(".log-row")).length > 5);
+await page.waitForTimeout(11000);
+await page.click(".sm-actions button:has-text('Open as Repository')");
+await within("the submodule opens in a tab again", async () => (await page.textContent(".tab.on .tab-name").catch(() => "")).includes("lib"));
 console.log("errors:", JSON.stringify(errors));
 await browser.close();
 if (errors.length) process.exit(1);

@@ -47,6 +47,14 @@ fn open_window(app: tauri::AppHandle, path: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Brings a window to the front: a repository shows in one window only.
+#[tauri::command]
+fn focus_window(app: tauri::AppHandle, label: String) -> Result<(), String> {
+    let w = app.get_webview_window(&label).ok_or_else(|| format!("no window {label}"))?;
+    let _ = w.unminimize();
+    w.set_focus().map_err(|e| e.to_string())
+}
+
 /// WebKitGTK draws with OpenGL. Without a GPU render node, Mesa runs OpenGL on the CPU (llvmpipe), and the
 /// GL buffers live in normal memory: about 280 MB more on git/git, and more CPU time. The software path of
 /// WebKit is cheaper then. A user setting of the variable wins.
@@ -81,7 +89,7 @@ fn main() {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![initial_path, call, set_zoom, open_window])
+        .invoke_handler(tauri::generate_handler![initial_path, call, set_zoom, open_window, focus_window])
         .run(tauri::generate_context!())
         .expect("error while running Gittor");
 }

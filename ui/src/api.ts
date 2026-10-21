@@ -374,6 +374,19 @@ export async function openWindow(path: string): Promise<void> {
   window.open(`${location.pathname}?solo=1&repo=${encodeURIComponent(path)}`, "_blank");
 }
 
+/** The label of the app window, or null in a browser. */
+export function windowLabel(): string | null {
+  const internals = (window as unknown as { __TAURI_INTERNALS__?: { metadata?: { currentWindow?: { label?: string } } } }).__TAURI_INTERNALS__;
+  return internals?.metadata?.currentWindow?.label ?? null;
+}
+
+/** Brings an app window to the front. A browser cannot do this for another page. */
+export async function focusWindow(label: string): Promise<void> {
+  if (!inTauri) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("focus_window", { label });
+}
+
 /** Zooms the window. A browser has its own zoom keys, so the dev server zooms the page with CSS. */
 export async function setZoom(level: number): Promise<void> {
   if (inTauri) {

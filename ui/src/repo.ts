@@ -1,7 +1,8 @@
 // Opening repositories in tabs, loading the log and the refs, and moving in the log.
 
 import { pathLabels } from "./path-labels";
-import { api, type BranchInfo, inTauri, type LogFilter, openWindow, pickFolder, type RecentBranch, type RepoInfo, setRepoRoot, type Submodule, type ViewResult, type Worktree } from "./api";
+import { api, type BranchInfo, focusWindow, inTauri, type LogFilter, openWindow, pickFolder, type RecentBranch, type RepoInfo, setRepoRoot, type Submodule, type ViewResult, windowLabel, type Worktree } from "./api";
+import { showMenu } from "./context-menu";
 import { h, icon } from "./dom";
 import { emptyFilter } from "./filter-bar";
 import { loadFavorites } from "./remotes";
@@ -43,9 +44,16 @@ const baseName = (p: string) => p.split(/[\\/]/).pop() ?? p;
 // Each window writes the repositories of its tabs here. A tab closes its repository in the backend
 // only when no other window shows it.
 const WINDOWS_KEY = "gittor.windows";
-const windowId = Math.random().toString(36).slice(2);
+const windowId = windowLabel() ?? Math.random().toString(36).slice(2);
 
-function windowRoots(): Record<string, string[]> {
+/** The repositories of each window, and when the window wrote them last. */
+type WindowRoots = Record<string, { roots: string[]; at: number }>;
+
+/** A window writes its entry every few seconds. An older entry belongs to a window that closed without
+ * `beforeunload`. */
+const ALIVE_MS = 10_000;
+
+function windowRoots(): WindowRoots {
   try {
     return JSON.parse(localStorage.getItem(WINDOWS_KEY) ?? "{}");
   } catch {
@@ -55,14 +63,34 @@ function windowRoots(): Record<string, string[]> {
 
 function publishRoots(roots: string[] | null) {
   const all = windowRoots();
-  if (roots) all[windowId] = roots;
+  if (roots) all[windowId] = { roots, at: Date.now() };
   else delete all[windowId];
   try {
     localStorage.setItem(WINDOWS_KEY, JSON.stringify(all));
   } catch {}
 }
+setInterval(() => publishRoots(settings.tabs), 3000);
 
-const shownElsewhere = (root: string) => Object.entries(windowRoots()).some(([id, roots]) => id !== windowId && roots.includes(root));
+/** The other window that shows a repository, or undefined. */
+const ownerElsewhere = (root: string) =>
+  Object.entries(windowRoots()).find(([id, w]) => id !== windowId && Date.now() - (w.at ?? 0) < ALIVE_MS && w.roots?.includes(root))?.[0];
+const shownElsewhere = (root: string) => ownerElsewhere(root) !== undefined;
+
+/** A repository shows in one window only. When another window shows it, that window comes to the front
+ * and this function returns true. */
+async function inOtherWindow(path: string): Promise<boolean> {
+  const root = (await api.repoInfo(path).catch(() => null))?.root ?? path;
+  const owner = ownerElsewhere(root);
+  if (owner === undefined) return false;
+  try {
+    await focusWindow(owner);
+  } catch {
+    // The window is gone: its entry is old.
+    return false;
+  }
+  toast(`${baseName(root)} is open in another window.`, "info");
+  return true;
+}
 
 /** Starts the list of windows again. The main window calls it at the start of the app. */
 export function resetWindowRoots() {
@@ -78,9 +106,10 @@ window.addEventListener("beforeunload", () => {
   if (soloWindow) for (const r of roots) void api.close(r).catch(() => {});
 });
 
-/** Opens a repository in a new window. */
-export function openInNewWindow(path: string) {
-  void openWindow(path).catch((e) => toast(`The window did not open: ${String(e).replace(/^Error: /, "")}`, "error"));
+/** Moves a tab to a new window. The repository stays open in the backend for the new window. */
+async function moveToNewWindow(root: string) {
+  await closeTab(root, true);
+  await openWindow(root).catch((e) => toast(`The window did not open: ${String(e).replace(/^Error: /, "")}`, "error"));
 }
 
 export function renderTabs() {
@@ -111,6 +140,14 @@ export function renderTabs() {
         void closeTab(root);
       });
       const tab = h("div", { class: "tab" + (root === settings.activeTab ? " on" : "") + (worktree ? " worktree" : ""), title, role: "tab" }, ...label, close);
+      tab.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        showMenu(e.clientX, e.clientY, [
+          { label: "Move to New Window", action: () => void moveToNewWindow(root) },
+          { separator: true },
+          { label: "Close Tab", action: () => void closeTab(root) },
+        ]);
+      });
       tab.addEventListener("mousedown", (e) => {
         if (e.button === 1) {
           e.preventDefault();
@@ -136,6 +173,7 @@ function saveTabState() {
 export async function openRepo(path: string) {
   const known = settings.tabs.find((t) => t === path);
   if (known && known === settings.activeTab && app.view) return;
+  if (!known && (await inOtherWindow(path))) return;
   saveTabState();
   const r = await task("Opening repository", () => api.open(path, { ...viewSettings(), filter: emptyFilter() }));
   if (!r) return;
@@ -188,9 +226,10 @@ export async function switchTab(root: string) {
   await showRepo(r, state);
 }
 
-async function closeTab(root: string) {
+/** Closes a tab. With `keepOpen`, the repository stays open in the backend, for a move to a new window. */
+async function closeTab(root: string, keepOpen = false) {
   await showing.catch(() => {});
-  if (!shownElsewhere(root)) await api.close(root).catch(() => {});
+  if (!keepOpen && !shownElsewhere(root)) await api.close(root).catch(() => {});
   const i = settings.tabs.indexOf(root);
   settings.tabs = settings.tabs.filter((t) => t !== root);
   tabStates.delete(root);

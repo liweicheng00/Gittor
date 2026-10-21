@@ -4,7 +4,7 @@ import { api, type Submodule } from "./api";
 import { showMenu } from "./context-menu";
 import { copyText } from "./dom";
 import { updateSubmodules } from "./operations";
-import { jumpToOid, loadSubmodules, openInNewWindow, openRepo } from "./repo";
+import { jumpToOid, loadSubmodules, openRepo } from "./repo";
 import { submodulePanel } from "./shell";
 import { app } from "./state";
 
@@ -34,14 +34,12 @@ async function openCommit(s: Submodule, oid: string) {
 
 submodulePanel.onSelect = (s) => void showRange(s);
 submodulePanel.onOpen = (s) => void openRepo(submodulePath(s));
-submodulePanel.onOpenWindow = (s) => openInNewWindow(submodulePath(s));
 submodulePanel.onOpenCommit = (s, oid) => void openCommit(s, oid);
 submodulePanel.onUpdate = (paths) => void updateSubmodules(paths);
 submodulePanel.onRefresh = () => void loadSubmodules();
 submodulePanel.onMenu = (s, e) =>
   showMenu(e.clientX, e.clientY, [
     { label: "Open as Repository", disabled: s.state === "uninitialized", action: () => void openRepo(submodulePath(s)) },
-    { label: "Open in New Window", disabled: s.state === "uninitialized", action: () => openInNewWindow(submodulePath(s)) },
     { label: s.state === "uninitialized" ? "Initialize and Update" : "Update to the Recorded Commit", action: () => void updateSubmodules([s.path]) },
     { separator: true },
     { label: "Copy Path", action: () => void copyText(s.path) },
