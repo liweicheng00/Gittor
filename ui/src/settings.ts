@@ -157,13 +157,50 @@ function load(): Settings {
   return { ...DEFAULTS };
 }
 
+/** Data that the app gives to a window that it opens for one repository. */
+declare global {
+  interface Window {
+    __GITTOR_WINDOW__?: { repo: string };
+  }
+}
+
+/** A window for one repository, for example a submodule. It does not keep the tabs of the session. */
+export const soloWindow = !!window.__GITTOR_WINDOW__ || new URLSearchParams(location.search).has("solo");
+
+/** The settings that each window has for itself. */
+const PER_WINDOW = ["tabs", "activeTab"] as const;
+
+function stored(): Partial<Settings> {
+  try {
+    return JSON.parse(localStorage.getItem(KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
 export const settings: Settings = load();
+if (soloWindow) {
+  settings.tabs = [];
+  settings.activeTab = null;
+}
 
 export function save() {
   try {
-    localStorage.setItem(KEY, JSON.stringify(settings));
+    // A solo window keeps the tabs of the session as they are in the storage.
+    const out = soloWindow ? { ...settings, ...Object.fromEntries(PER_WINDOW.map((k) => [k, stored()[k] ?? DEFAULTS[k]])) } : settings;
+    localStorage.setItem(KEY, JSON.stringify(out));
   } catch {}
 }
+
+// Another window saved the settings: take its values, except the tabs of this window.
+window.addEventListener("storage", (e) => {
+  if (e.key !== KEY || !e.newValue) return;
+  try {
+    const next = { ...DEFAULTS, ...JSON.parse(e.newValue) } as Settings;
+    for (const k of PER_WINDOW) (next as unknown as Record<string, unknown>)[k] = settings[k];
+    Object.assign(settings, next);
+  } catch {}
+});
 
 export function addRecent(path: string) {
   settings.recent = [path, ...settings.recent.filter((p) => p !== path)].slice(0, 12);

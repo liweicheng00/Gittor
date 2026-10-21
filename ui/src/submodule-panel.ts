@@ -24,6 +24,7 @@ export class SubmodulePanel {
   onSelect: (s: Submodule) => void = () => {};
   onMenu: (s: Submodule, e: MouseEvent) => void = () => {};
   onOpen: (s: Submodule) => void = () => {};
+  onOpenWindow: (s: Submodule) => void = () => {};
   onOpenCommit: (s: Submodule, oid: string) => void = () => {};
   onUpdate: (paths: string[]) => void = () => {};
   onRefresh: () => void = () => {};
@@ -148,6 +149,7 @@ export class SubmodulePanel {
         actions.append(button("Update to Recorded", "Check out the commit that the parent repository records", () => this.onUpdate([s.path])));
       }
       actions.append(button("Open as Repository", "Open the submodule in a new tab", () => this.onOpen(s)));
+      actions.append(button("Open in New Window", "Open the submodule in a window of its own", () => this.onOpenWindow(s)));
       if (r) {
         if (r.behind.length) parts.push(this.commits(s, `Only in the recorded commit (${count(r.behind)})`, r.behind));
         if (r.ahead.length) parts.push(this.commits(s, `Only in the checked-out commit (${count(r.ahead)})`, r.ahead));

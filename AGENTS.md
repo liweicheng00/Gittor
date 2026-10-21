@@ -54,6 +54,10 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
 - Submodules: `Repo::submodules` reads all of them with three git commands (`.gitmodules`, the index,
   `git status --porcelain=v2`). The Submodules tab is `submodule-panel.ts` and `submodule-flow.ts`;
   `loadSubmodules` in `repo.ts` loads it with the local changes, and hides the tab when there are none.
+- App windows: `openWindow` (`api.ts`) opens a repository in a new window, through the Tauri
+  command `open_window`, or `window.open` with `?solo=1` in a browser. A solo window does not save
+  `tabs` and `activeTab`, because all windows share one settings key. Each window writes its open
+  repositories to `gittor.windows`; a tab calls `api.close` only when no other window shows it.
 - Windows (Compare, History, Review, Show Repository): `windows.ts`. A window calls
   `registerWindow(close, kind, show)`, and listens with `onRepoChange`. `watch.ts` calls
   `notifyRepoChange("files" | "repo")`.
@@ -132,6 +136,11 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
 - Chromium is at `/opt/pw-browsers/chromium`. Do not run `playwright install`.
 - `huggingface.co` is not in the network allowlist.
 - `git filter-repo` is not installed.
+- The Tauri app builds after `apt-get install libwebkit2gtk-4.1-dev libayatana-appindicator3-dev
+  librsvg2-dev`. To run it, install `xvfb xdotool imagemagick`, start `Xvfb :99`, and run
+  `DISPLAY=:99 target/debug/gittor <repo>`. Click with `xdotool mousemove X Y click 1` and take a
+  screenshot with `import -window root shot.png`. Xvfb has no window manager: all windows open at
+  0,0. `xwininfo -root -tree` lists them.
 
 ## Open points
 

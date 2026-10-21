@@ -123,6 +123,26 @@ await page.dblclick(".sm-commit:has-text('Three')");
 await within("the submodule opens in a tab", async () => (await page.textContent(".tab.on .tab-name")).includes("lib"));
 await within("the commit Three is selected", async () => (await page.textContent(".log-row.selected")).includes("Three"));
 await shot("sm5-open-commit");
+
+// Open in New Window: the submodule opens in a window of its own, and the main window keeps its tabs.
+await page.click(".tab:has-text('e2e')");
+await within("the parent repository shows again", async () => !(await page.textContent(".tab.on .tab-name")).includes("lib"));
+await page.click(".lp-tab:text-is('Modules')");
+await page.click(".sm-row");
+const [popup] = await Promise.all([page.context().waitForEvent("page"), page.click(".sm-actions button:has-text('Open in New Window')")]);
+popup.on("pageerror", (e) => errors.push("popup pageerror: " + e));
+popup.on("console", (m) => m.type() === "error" && errors.push("popup console: " + m.text()));
+await popup.waitForSelector(".log-row", { timeout: 30000 });
+await within("the window shows the submodule log", async () => (await popup.textContent(".log")).includes("Three"));
+check("the window has no tab bar", await popup.$eval(".tabbar", (e) => e.hidden));
+await popup.click(".lp-tab:text-is('Stash')");
+const stored = JSON.parse(await page.evaluate(() => localStorage.getItem("gittor.settings.v1")));
+check("the main window keeps its tabs in the settings", stored.tabs.length === 2 && stored.tabs.some((t) => t.endsWith("/vendor/lib")));
+await popup.screenshot({ path: `${outDir}/sm6-new-window.png` });
+console.log("shot sm6-new-window");
+await popup.close();
+await page.keyboard.press("F5");
+await within("the main window still works after the window closes", async () => (await page.$$(".log-row")).length > 5);
 console.log("errors:", JSON.stringify(errors));
 await browser.close();
 if (errors.length) process.exit(1);

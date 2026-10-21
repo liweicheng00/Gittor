@@ -364,6 +364,16 @@ export async function initialPath(): Promise<string | null> {
   return invoke<string | null>("initial_path");
 }
 
+/** Opens a repository in a new window: an app window, or a browser window for the dev server. */
+export async function openWindow(path: string): Promise<void> {
+  if (inTauri) {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke("open_window", { path });
+    return;
+  }
+  window.open(`${location.pathname}?solo=1&repo=${encodeURIComponent(path)}`, "_blank");
+}
+
 /** Zooms the window. A browser has its own zoom keys, so the dev server zooms the page with CSS. */
 export async function setZoom(level: number): Promise<void> {
   if (inTauri) {

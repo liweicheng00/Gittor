@@ -1,12 +1,12 @@
 // Opening repositories in tabs, loading the log and the refs, and moving in the log.
 
 import { pathLabels } from "./path-labels";
-import { api, type BranchInfo, inTauri, type LogFilter, pickFolder, type RecentBranch, type RepoInfo, setRepoRoot, type Submodule, type ViewResult, type Worktree } from "./api";
+import { api, type BranchInfo, inTauri, type LogFilter, openWindow, pickFolder, type RecentBranch, type RepoInfo, setRepoRoot, type Submodule, type ViewResult, type Worktree } from "./api";
 import { h, icon } from "./dom";
 import { emptyFilter } from "./filter-bar";
 import { loadFavorites } from "./remotes";
 import { clearCompare } from "./selection";
-import { addRecent, save, settings } from "./settings";
+import { addRecent, save, settings, soloWindow } from "./settings";
 import { authors, banner, commitPanel, details, fetchBtn, filterBar, localHistoryBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, showLeftTab, sidebar, stashPanel, statusActivity, submodulePanel, tabBar, tabCommit, tabReviews, tabStash, tabSubmodules, task, updateBtn, updateStatus } from "./shell";
 import { app } from "./state";
 import { showWorkspace } from "./welcome";
@@ -40,7 +40,51 @@ export async function refreshTabInfo(root: string) {
 
 const baseName = (p: string) => p.split(/[\\/]/).pop() ?? p;
 
+// Each window writes the repositories of its tabs here. A tab closes its repository in the backend
+// only when no other window shows it.
+const WINDOWS_KEY = "gittor.windows";
+const windowId = Math.random().toString(36).slice(2);
+
+function windowRoots(): Record<string, string[]> {
+  try {
+    return JSON.parse(localStorage.getItem(WINDOWS_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+function publishRoots(roots: string[] | null) {
+  const all = windowRoots();
+  if (roots) all[windowId] = roots;
+  else delete all[windowId];
+  try {
+    localStorage.setItem(WINDOWS_KEY, JSON.stringify(all));
+  } catch {}
+}
+
+const shownElsewhere = (root: string) => Object.entries(windowRoots()).some(([id, roots]) => id !== windowId && roots.includes(root));
+
+/** Starts the list of windows again. The main window calls it at the start of the app. */
+export function resetWindowRoots() {
+  try {
+    localStorage.removeItem(WINDOWS_KEY);
+  } catch {}
+}
+
+// A window that closes gives its repositories free. A solo window closes those that no other window shows.
+window.addEventListener("beforeunload", () => {
+  const roots = settings.tabs.filter((r) => !shownElsewhere(r));
+  publishRoots(null);
+  if (soloWindow) for (const r of roots) void api.close(r).catch(() => {});
+});
+
+/** Opens a repository in a new window. */
+export function openInNewWindow(path: string) {
+  void openWindow(path).catch((e) => toast(`The window did not open: ${String(e).replace(/^Error: /, "")}`, "error"));
+}
+
 export function renderTabs() {
+  publishRoots(settings.tabs);
   for (const root of settings.tabs) {
     if (tabInfo.has(root) || asking.has(root)) continue;
     asking.add(root);
@@ -146,7 +190,7 @@ export async function switchTab(root: string) {
 
 async function closeTab(root: string) {
   await showing.catch(() => {});
-  await api.close(root).catch(() => {});
+  if (!shownElsewhere(root)) await api.close(root).catch(() => {});
   const i = settings.tabs.indexOf(root);
   settings.tabs = settings.tabs.filter((t) => t !== root);
   tabStates.delete(root);

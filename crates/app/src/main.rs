@@ -27,6 +27,26 @@ fn set_zoom(webview: tauri::Webview, level: f64) -> Result<(), String> {
     webview.set_zoom(level.clamp(0.5, 3.0)).map_err(|e| e.to_string())
 }
 
+/// Opens a repository in a new window. The window gets the path from an initialization script, and it
+/// does not keep the tabs of the session. The command is async: a window made on the main thread of a
+/// synchronous command can deadlock on Windows.
+#[tauri::command(async)]
+fn open_window(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(1);
+    let label = format!("repo-{}", NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed));
+    let name = std::path::Path::new(&path).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| path.clone());
+    let data = serde_json::json!({ "repo": path });
+    tauri::WebviewWindowBuilder::new(&app, label, tauri::WebviewUrl::default())
+        .title(format!("{name} – Gittor"))
+        .inner_size(1400.0, 900.0)
+        .min_inner_size(600.0, 400.0)
+        .disable_drag_drop_handler()
+        .initialization_script(format!("window.__GITTOR_WINDOW__ = {data};"))
+        .build()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 /// WebKitGTK draws with OpenGL. Without a GPU render node, Mesa runs OpenGL on the CPU (llvmpipe), and the
 /// GL buffers live in normal memory: about 280 MB more on git/git, and more CPU time. The software path of
 /// WebKit is cheaper then. A user setting of the variable wins.
@@ -61,7 +81,7 @@ fn main() {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![initial_path, call, set_zoom])
+        .invoke_handler(tauri::generate_handler![initial_path, call, set_zoom, open_window])
         .run(tauri::generate_context!())
         .expect("error while running Gittor");
 }
