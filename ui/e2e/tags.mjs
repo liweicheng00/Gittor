@@ -27,7 +27,7 @@ const within = async (what, fn, ms = 10000) => {
 };
 const tagRows = () => page.$$eval(".sidebar .branch-tag", (els) => els.map((e) => e.querySelector(".branch-name").textContent + (e.querySelector(".tag-local") ? " local" : "")));
 
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".sidebar .branch", { timeout: 30000 });
 await page.click(".group-header:has-text('Tags')");
 

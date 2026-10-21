@@ -39,7 +39,7 @@ const within = async (what, fn, ms = 8000) => {
 const tree = async () => ((await page.textContent(".commit-tree")) ?? "").replace(/\s+/g, " ");
 const file = (name) => `.cl-file:has(.path:text-is('${name}'))`;
 
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
 await page.keyboard.press("Control+2");
 await page.waitForSelector(file("draft.txt"));

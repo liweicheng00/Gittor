@@ -35,7 +35,7 @@ const shot = async (name) => { await page.waitForTimeout(700); await page.screen
 const check = (what, ok) => { console.log(ok ? "ok  " : "FAIL", what); if (!ok) errors.push("check: " + what); };
 const status = async () => (await page.textContent(".merge-status")).trim();
 
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".op-banner:not([hidden])", { timeout: 30000 });
 check("banner shows the merge", (await page.textContent(".op-banner")).includes("Merge in progress"));
 await page.click(".tb-button[title='Theme']");

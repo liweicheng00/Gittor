@@ -27,7 +27,7 @@ const files = () => page.$$eval(".review-window .review-file", (els) => els.map(
 const selected = () => page.$eval(".review-window .review-file.selected", (e) => e.title).catch(() => "");
 const commits = () => page.$$eval(".review-window .review-commit", (els) => els.length);
 
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".sidebar .branch", { timeout: 30000 });
 await page.click(".sidebar .branch:has-text('feature/cli') >> nth=0", { button: "right" });
 await page.waitForTimeout(400);

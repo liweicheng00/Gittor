@@ -47,7 +47,7 @@ page.on("console", (m) => m.type() === "error" && errors.push("console: " + m.te
 const shot = async (name) => { await page.waitForTimeout(500); await page.screenshot({ path: `${outDir}/${name}.png` }); console.log("shot", name); };
 const check = (what, ok) => { console.log(ok ? "ok  " : "FAIL", what); if (!ok) errors.push("check: " + what); };
 
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
 await page.click(".tb-button:has-text('Fetch')");
 await page.click(".menu-item:has-text('Fetch All Remotes')");

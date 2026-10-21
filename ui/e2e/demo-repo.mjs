@@ -8,7 +8,7 @@ const errors = [];
 page.on("pageerror", (e) => errors.push("pageerror: " + e));
 page.on("console", (m) => m.type() === "error" && errors.push("console: " + m.text()));
 const shot = async (name) => { await page.waitForTimeout(900); await page.screenshot({ path: `${outDir}/${name}.png` }); console.log("shot", name); };
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".changes .change", { timeout: 30000 });
 await shot("d1-main");
 console.log("sidebar:", (await page.textContent(".sidebar-list")).replace(/\s+/g, " "));

@@ -1,3 +1,4 @@
+// e2e: large repository. run-all.sh runs this scenario only with a large repository.
 // UI scenario for linear branch collapse on a large repository, for example git/git.
 // Start the dev server first (see README), then: node e2e/collapse.mjs <repo> <screenshot-dir>
 // Set CHROMIUM to a Chromium binary when Playwright has no downloaded browser.
@@ -7,7 +8,7 @@ const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: p
 const page = await (await browser.newContext({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1.5 })).newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push("pageerror: " + e));
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 60000 });
 await page.waitForTimeout(1500);
 const count = async () => (await page.textContent(".statusbar")).replace(/\s+/g, " ");

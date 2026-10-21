@@ -38,7 +38,7 @@ const within = async (what, fn, ms = 8000) => {
 };
 const firstSubject = () => page.textContent(".log-row >> nth=0");
 
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
 check("one repository has no tab bar", await page.$eval(".tabbar", (e) => e.hidden));
 
@@ -74,7 +74,7 @@ await page.keyboard.press("Control+Shift+Backquote");
 await within("Mod+Shift+` shows the second repository again", async () => (await page.textContent(".tab.on")).includes("-second"));
 
 // A reload opens the same tabs, with the second one active.
-await page.goto("http://127.0.0.1:5174/");
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/`);
 await within("the tabs come back", async () => (await page.$$(".tab")).length === 2);
 await within("the active tab loads", async () => ((await firstSubject()) ?? "").includes("Second in second"), 15000);
 

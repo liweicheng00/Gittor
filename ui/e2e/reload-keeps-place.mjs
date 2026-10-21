@@ -33,7 +33,7 @@ const rowCount = async () => Number((((await page.textContent(".statusbar")) ?? 
 const selected = () => page.$eval(".log-row.selected", (e) => ({ text: e.textContent, top: e.getBoundingClientRect().top })).catch(() => null);
 const diffTitle = async () => ((await page.textContent(".diff .diff-title").catch(() => "")) ?? "").trim();
 
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
 
 // Scroll down, choose a commit with two files, and open its second file. Initial commit is the last row.

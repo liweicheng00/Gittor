@@ -31,7 +31,7 @@ const selectedRow = async () => ((await page.textContent(".log-row.selected .sub
 const compareOpen = async () => (await page.$(".history-window[aria-label='Compare Branches']")) !== null;
 const compareFile = async () => ((await page.$eval(".compare-file.selected", (e) => e.title).catch(() => "")) ?? "");
 
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
 
 // Three places in the log: math.rs of "Add math module", then the two files of "Initial commit".

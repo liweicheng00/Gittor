@@ -40,7 +40,7 @@ const menu = async (label) => {
 const branch = (name) => `.sidebar .branch[data-ref='refs/heads/${name}'] >> nth=-1`;
 const toasts = async () => ((await page.textContent(".toasts").catch(() => "")) ?? "").replace(/\s+/g, " ");
 
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".sidebar .branch", { timeout: 30000 });
 
 // Group Branches by Prefix: folders for feature/, fix/ and topic/.

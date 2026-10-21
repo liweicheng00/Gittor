@@ -6,9 +6,12 @@
 import { chromium } from "playwright";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { basename } from "node:path";
 const [,, repo, outDir] = process.argv;
 const run = (dir, ...args) => execFileSync("git", ["-C", dir, "-c", "protocol.file.allow=always", ...args], { encoding: "utf8" }).replace(/\s+$/, "");
 const git = (...args) => run(repo, ...args);
+// The name of the tab of the repository: its folder.
+const name = basename(repo);
 
 // A library repository with two commits, added to the demo repository as a submodule.
 const lib = `${repo}-lib`;
@@ -42,9 +45,12 @@ const within = async (what, fn, ms = 6000) => {
   check(what, false);
 };
 
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
 await within("the Submodules tab shows", async () => await page.isVisible(".lp-tab:text-is('Modules')"));
+// The five left tabs fit the default width of the left pane: no label is cut.
+const cut = await page.$$eval(".lp-tab", (tabs) => tabs.filter((t) => !t.hidden && t.scrollWidth > t.clientWidth).map((t) => t.textContent));
+check(`no left tab label is cut (${cut.join(", ")})`, cut.length === 0);
 await page.click(".lp-tab:text-is('Modules')");
 await page.waitForSelector(".sm-row");
 const rowText = () => page.textContent(".sm-row");
@@ -133,11 +139,11 @@ const drag = async (selector, dx, dy) => {
   for (let i = 1; i <= 10; i++) await page.mouse.move(box.x + box.width / 2 + (dx * i) / 10, box.y + box.height / 2 + (dy * i) / 10);
   await page.mouse.up();
 };
-check("the tabs are e2e1 and lib", JSON.stringify(await tabNames()) === JSON.stringify(["e2e1", "lib"]));
-const first = await page.locator(".tab:has-text('e2e1')").boundingBox();
+check("the tabs are the repository and lib", JSON.stringify(await tabNames()) === JSON.stringify([name, "lib"]));
+const first = await page.locator(`.tab:has-text('${name}')`).boundingBox();
 const libTab = await page.locator(".tab:has-text('lib')").boundingBox();
 await drag(".tab:has-text('lib')", first.x - libTab.x - 10, 0);
-await within("a drag in the tab bar puts lib first", async () => JSON.stringify(await tabNames()) === JSON.stringify(["lib", "e2e1"]));
+await within("a drag in the tab bar puts lib first", async () => JSON.stringify(await tabNames()) === JSON.stringify(["lib", name]));
 check("the order is saved", JSON.parse(await page.evaluate(() => localStorage.getItem("gittor.settings.v1"))).tabs[0].endsWith("vendor/lib"));
 
 // Drag a tab out of the tab bar: the repository moves to a window of its own, as in a browser. The
@@ -154,11 +160,11 @@ popup.on("console", (m) => m.type() === "error" && errors.push("popup console: "
 await popup.waitForSelector(".log-row", { timeout: 30000 });
 await within("the window shows the submodule log", async () => (await popup.textContent(".log")).includes("Three"));
 check("the window has no tab bar", await popup.$eval(".tabbar", (e) => e.hidden));
-await within("the main window shows the parent repository", async () => (await page.textContent(".tb-repo")).includes("e2e1"));
+await within("the main window shows the parent repository", async () => (await page.textContent(".tb-repo")).includes(name));
 check("the main window has one tab now", await page.$eval(".tabbar", (e) => e.hidden));
 await popup.click(".lp-tab:text-is('Stash')");
 const stored = JSON.parse(await page.evaluate(() => localStorage.getItem("gittor.settings.v1")));
-check("the settings keep the tabs of the main window", stored.tabs.length === 1 && stored.tabs[0].endsWith("e2e1"));
+check("the settings keep the tabs of the main window", stored.tabs.length === 1 && stored.tabs[0].endsWith(name));
 
 // A repository shows in one window only: the main window does not open the submodule again.
 await page.click(".lp-tab:text-is('Modules')");

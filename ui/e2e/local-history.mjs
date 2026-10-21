@@ -24,7 +24,7 @@ const within = async (what, fn, ms = 5000) => {
   check(what, false);
 };
 
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
 await page.click(".lp-tab:has-text('Changes')");
 await page.waitForSelector(".cl-file:has-text('main.rs')");

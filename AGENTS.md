@@ -32,6 +32,19 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
 | `ui/test` | Unit tests with `node --test` (pure modules only). |
 | `docs/design-spec.md` | The design spec. |
 
+### Work in parallel without conflicts
+
+- A new UI feature goes in its own `<feature>-flow.ts`. `main.ts` loads each `*-flow.ts` by itself.
+- In a list that every feature changes (`dispatch.rs`, the `Op` enum, `api.ts`, `Settings`,
+  `keyboard.ts`, `style.css`), add the new entry at its place in alphabetical order or near related
+  entries, not at the end. Two branches that both add at the end always conflict.
+- `npm test` runs each `ui/test/*.test.ts` file; a new test needs no entry.
+- `ui/test/keymap-defaults.test.ts` fails when two actions have the same default key. The Submodules
+  e2e scenario fails when a left tab label is cut.
+- Generated files (`ui/src/bindings`, `Cargo.lock`, `ui/package-lock.json`): after a merge conflict,
+  take either side, then make them again (`cargo test -q export_bindings`, `cargo update -w`,
+  `npm install`). Do not merge them by hand.
+
 ### How a feature goes through the layers
 
 1. Rust: a function on `Repo` in `crates/git` (a write returns `OpResult` with `undo` steps).
@@ -102,8 +115,14 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
 - Stop it with `pkill -x gittor-devserve` (the process name has 15 characters). Never use
   `pkill -f gittor-devserver`: the pattern matches your own shell, and the shell dies.
 - One scenario: `ui/e2e/make-demo-repo.sh <dir>` and then `node ui/e2e/<name>.mjs <dir> <shots>`.
-- Add each new scenario to `run-all.sh`. A scenario cleans the extra folders that it makes. A folder
-  that an earlier run left (for example `<dir>-wt`) makes a worktree test fail.
+- `run-all.sh` finds each `ui/e2e/*.mjs` file: a new scenario needs no entry there. Do not put a
+  helper `.mjs` file in `ui/e2e`. `<name>.prep.sh` prepares the repository of a scenario. The line
+  `// e2e: large repository` marks a scenario for a large repository.
+- A scenario cleans the extra folders that it makes. A folder that an earlier run left (for example
+  `<dir>-wt`) makes a worktree test fail. Do not depend on the name of the folder: it is the name of
+  the scenario in `run-all.sh`, and any name in a run by hand.
+- Parallel runs: start a dev server on another port, and set `GITTOR_E2E_URL=http://127.0.0.1:<port>`
+  and another work dir. `GITTOR_E2E_ONLY=<regex>` runs some scenarios only.
 - The full run takes longer than the 10-minute limit of one command. Run it in the background.
 - `global-ignore.mjs` starts its own server from `target/debug` of the repository.
 

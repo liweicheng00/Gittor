@@ -120,9 +120,11 @@ ui/e2e/run-all.sh /tmp/e2e       # UI scenarios in Chromium on fresh demo reposi
   `cargo test -q export_bindings && git diff --exit-code ui/src/bindings`.
 - `cargo test -p gittor-graph` compares the graph with the IntelliJ golden files.
 - Set `GITTOR_NEW_GIT` to a git 2.56 or later to also test against `git branch --delete-merged`.
-- `ui/e2e/run-all.sh /tmp/e2e /path/to/git.git` also runs the large-repository scenarios. Each
-  scenario takes screenshots and fails when the page logs an error; each file says how to run it
-  alone.
+- `ui/e2e/run-all.sh` runs each `ui/e2e/*.mjs` file. `ui/e2e/run-all.sh /tmp/e2e /path/to/git.git`
+  also runs the large-repository scenarios. Each scenario takes screenshots and fails when the page
+  logs an error; each file says how to run it alone.
+- `GITTOR_E2E_ONLY=<regex>` runs only the matching scenarios. `GITTOR_E2E_URL` names another dev
+  server, for example `http://127.0.0.1:5180`, so that several runs can share one machine.
 
 ## License
 

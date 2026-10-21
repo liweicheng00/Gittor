@@ -1,16 +1,24 @@
 #!/usr/bin/env bash
-# Runs every UI scenario against fresh demo repositories. Start the dev server first (see README).
+# Runs every UI scenario (each ui/e2e/*.mjs file) against a fresh demo repository. Start the dev server
+# first (see README).
 # Usage: e2e/run-all.sh <work-dir> [large-repo]
-# The large repository (for example a clone of git/git) is optional; without it, the large-repo and
-# collapse scenarios are skipped. Set CHROMIUM when Playwright has no downloaded browser.
+# - A new scenario needs no entry here: the script finds it by its file.
+# - <name>.prep.sh, when it exists, runs in the fresh repository of <name>.mjs before the scenario.
+# - A scenario with the line "// e2e: large repository" runs only when [large-repo] is given (for
+#   example a clone of git/git).
+# - GITTOR_E2E_ONLY is an extended regular expression: only the scenarios whose names match run.
+# - GITTOR_E2E_URL is the address of the dev server (default http://127.0.0.1:5174). Several runs can
+#   share one machine, each with its own dev server and work dir.
+# Set CHROMIUM when Playwright has no downloaded browser.
 set -uo pipefail
 work=${1:?usage: run-all.sh <work-dir> [large-repo]}
 large=${2:-}
+only=${GITTOR_E2E_ONLY:-}
 here=$(cd "$(dirname "$0")" && pwd)
 mkdir -p "$work/shots"
 failed=()
 fresh() {
-  rm -rf "$work/$1" "$work/$1-origin" "$work/$1-wt" "$work/$1-secure.git"
+  rm -rf "$work/$1" "$work/$1-origin" "$work/$1-wt" "$work/$1-secure.git" "$work/$1-lib"
   "$here/make-demo-repo.sh" "$work/$1" >/dev/null
 }
 run() {
@@ -23,58 +31,20 @@ run() {
     tail -20 "$work/$name.log"
   fi
 }
-fresh demo && run demo-repo "$work/demo"
-fresh ops && run write-ops "$work/ops"
-fresh cl && (cd "$work/cl" && echo "More docs" >> README.md && sed -i.bak 's/wrapping_add/saturating_add/' arith.rs && rm -f arith.rs.bak && echo 'pub fn sub(a: i32, b: i32) -> i32 { a - b }' > sub.rs && git add sub.rs) && run changelists "$work/cl"
-fresh push && run push-update "$work/push"
-fresh stash && run stash "$work/stash"
-fresh merge && run merge-tool "$work/merge"
-fresh history && run history "$work/history"
-fresh partial && run partial-commit "$work/partial"
-fresh actions && run file-actions "$work/actions"
-fresh edit && run rebase-edit "$work/edit"
-fresh watch && run auto-refresh "$work/watch"
-fresh cred && run credentials "$work/cred"
-fresh lh && run local-history "$work/lh"
-fresh sm && run submodules "$work/sm"
-fresh pcl && run partial-changelists "$work/pcl"
-fresh cm && run changes-multi "$work/cm"
-fresh oe && run open-in-editor "$work/oe"
-fresh zm && run zoom "$work/zm"
-fresh crv && run compare-revert "$work/crv"
-fresh cln && run clone "$work/cln"
-fresh rk && run reload-keeps-place "$work/rk"
-fresh wr && run worktree-remove "$work/wr"
-fresh gi && run global-ignore "$work/gi"
-fresh ctr && run compare-tree "$work/ctr"
-fresh bm && run branches-multi "$work/bm"
-fresh lo && run log-options "$work/lo"
-fresh rr && run repo-at-revision "$work/rr"
-fresh he && run history-edit "$work/he"
-fresh bt && run branch-tools "$work/bt"
-fresh mo && run merge-options "$work/mo"
-fresh tabs && run tabs "$work/tabs"
-fresh set && run settings "$work/set"
-fresh rem && run remotes "$work/rem"
-fresh sf && run small-features "$work/sf"
-fresh cm && run commit-message "$work/cm"
-fresh cmp && run compare-branches "$work/cmp"
-fresh err && run errors "$work/err"
-fresh dm && run delete-merged "$work/dm"
-fresh dp && run diff-panel "$work/dp"
-fresh gw && run graph-width "$work/gw"
-fresh rv && run review "$work/rv"
-fresh rvf && run review-folders "$work/rvf"
-fresh nv && run navigate "$work/nv"
-fresh crf && run compare-refresh "$work/crf"
-fresh rvr && run review-refresh "$work/rvr"
-fresh wtt && run worktree-tab "$work/wtt"
-fresh or && run open-remote "$work/or"
-fresh tg && run tags "$work/tg"
-if [ -n "$large" ]; then
-  run large-repo "$large"
-  run collapse "$large"
-fi
+for file in "$here"/*.mjs; do
+  name=$(basename "$file" .mjs)
+  if [ -n "$only" ] && ! [[ $name =~ $only ]]; then continue; fi
+  if grep -q '^// e2e: large repository' "$file"; then
+    if [ -n "$large" ]; then run "$name" "$large"; fi
+    continue
+  fi
+  fresh "$name" || { failed+=("$name"); continue; }
+  if [ -f "$here/$name.prep.sh" ] && ! (cd "$work/$name" && "$here/$name.prep.sh"); then
+    failed+=("$name")
+    continue
+  fi
+  run "$name" "$work/$name"
+done
 if [ ${#failed[@]} -gt 0 ]; then
   echo "FAILED: ${failed[*]}"
   exit 1

@@ -32,7 +32,7 @@ const sidebarText = () => page.textContent(".sidebar-list");
 // The dialog on top: a form can open over the Remotes dialog.
 const top = ".overlay >> nth=-1";
 
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".sidebar .branch", { timeout: 30000 });
 
 // Add a remote from the Remotes dialog, and fetch it.

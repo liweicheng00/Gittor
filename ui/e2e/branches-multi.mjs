@@ -32,7 +32,7 @@ const within = async (what, fn, ms = 10000) => {
 const local = (name) => `.group-header:has-text('Local') ~ .branch:has(.branch-name:text-is('${name}')) >> nth=0`;
 const selected = () => page.$$eval(".sidebar .branch.selected .branch-name", (els) => [...new Set(els.map((e) => e.textContent))].sort().join(","));
 
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".sidebar .branch", { timeout: 30000 });
 await page.click(".group-header:has-text('Tags')");
 

@@ -28,7 +28,7 @@ const within = async (what, fn, ms = 8000) => {
 const text = async (sel) => ((await page.textContent(sel).catch(() => "")) ?? "");
 const files = () => page.$$eval(".review-window .review-file .rebase-subject", (els) => els.map((e) => e.textContent).join(","));
 
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".sidebar .branch", { timeout: 30000 });
 
 // Start a review from the context menu of a branch.

@@ -36,7 +36,7 @@ const openMerge = async (name) => {
   await page.waitForSelector(".dialog:has-text('Merge feature/cli into main')");
 };
 
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".sidebar .branch", { timeout: 30000 });
 
 // Squash: the changes of feature/cli become local changes; HEAD stays.

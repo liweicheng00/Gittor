@@ -39,7 +39,7 @@ const within = async (what, fn, ms = 8000) => {
 };
 const rows = async () => (await page.$$eval(".merged-row .merged-name", (els) => els.map((e) => e.textContent))).sort().join(",");
 
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".sidebar .branch", { timeout: 30000 });
 
 // The Local group header has the action.

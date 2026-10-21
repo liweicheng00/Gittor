@@ -1,9 +1,10 @@
 // UI scenario for Settings › Global Ignore: add a common pattern, save the file, check a path, add a file
 // from the Changes tab, and refuse a save over a change from outside.
-// The scenario starts its own dev server on port 5175 with a new HOME, so the global ignore file of the
+// The scenario starts its own dev server on a free port with a new HOME, so the global ignore file of the
 // user stays as it is. Build the dev server and the UI first (see README). Build a fresh repository with
 // make-demo-repo.sh, then: node e2e/global-ignore.mjs <repo> <screenshot-dir>.
 // Set CHROMIUM to a Chromium binary when Playwright has no downloaded browser.
+import { createServer } from "node:net";
 import { chromium } from "playwright";
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -23,7 +24,14 @@ writeFileSync(join(repo, ".DS_Store"), "x");
 
 const env = { ...process.env, HOME: home, GIT_CONFIG_NOSYSTEM: "1", GITTOR_CONFIG_DIR: join(home, "gittor") };
 delete env.XDG_CONFIG_HOME;
-const server = spawn(join(top, "target", "debug", "gittor-devserver"), [join(top, "ui", "dist"), "5175"], { env, stdio: "ignore" });
+// A free port, so that several runs can share one machine.
+const port = await new Promise((done) => {
+  const probe = createServer().listen(0, "127.0.0.1", () => {
+    const p = probe.address().port;
+    probe.close(() => done(p));
+  });
+});
+const server = spawn(join(top, "target", "debug", "gittor-devserver"), [join(top, "ui", "dist"), String(port)], { env, stdio: "ignore" });
 const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
 const page = await (await browser.newContext({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1.5 })).newPage();
 const errors = [];
@@ -53,7 +61,7 @@ const openIgnorePage = async () => {
 try {
   for (let i = 0; ; i++) {
     try {
-      await page.goto(`http://127.0.0.1:5175/?repo=${encodeURIComponent(repo)}`);
+      await page.goto(`http://127.0.0.1:${port}/?repo=${encodeURIComponent(repo)}`);
       break;
     } catch (e) {
       if (i > 50) throw e;

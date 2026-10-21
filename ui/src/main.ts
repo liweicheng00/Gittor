@@ -7,18 +7,15 @@ import "./repo";
 import "./watch";
 import "./selection";
 import "./operations";
-import "./commit-flow";
 import "./sync";
-import "./stash-flow";
-import "./submodule-flow";
-import "./review-flow";
-import "./history-flow";
 import "./conflicts";
 import "./menus";
 import "./remotes";
 import "./welcome";
 import "./keyboard";
-import "./settings-flow";
+// Each feature module `*-flow.ts` loads here by itself: a new feature needs no line in this file. The
+// modules import what they use, so the order of the files does not count.
+import.meta.glob("./*-flow.ts", { eager: true });
 import { initialPath } from "./api";
 import { openRepo, renderTabs, resetWindowRoots, switchTab } from "./repo";
 import { settings, soloWindow } from "./settings";

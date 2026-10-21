@@ -1,3 +1,4 @@
+// e2e: large repository. run-all.sh runs this scenario only with a large repository.
 // UI scenario. Start the dev server first (see README), then: node e2e/large-repo.mjs <repo> <screenshot-dir>
 // Set CHROMIUM to a Chromium binary when Playwright has no downloaded browser.
 import { chromium } from "playwright";
@@ -11,7 +12,7 @@ page.on("console", (m) => m.type() === "error" && errors.push("console: " + m.te
 const shot = async (name) => { await page.waitForTimeout(700); await page.screenshot({ path: `${outDir}/${name}.png` }); console.log("shot", name); };
 const log = (...a) => console.log(...a);
 
-await page.goto("http://127.0.0.1:5174/");
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/`);
 await page.waitForSelector(".welcome-card");
 await shot("01-welcome");
 

@@ -26,7 +26,7 @@ const within = async (what, fn, ms = 8000) => {
 const groups = () => page.$$eval(".compare-group-title", (e) => e.map((x) => x.textContent));
 const fileNames = () => page.$$eval(".compare-file", (e) => e.map((x) => x.textContent));
 
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".sidebar .branch", { timeout: 30000 });
 
 // main and feature/cli.

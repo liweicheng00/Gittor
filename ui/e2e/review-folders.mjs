@@ -35,7 +35,7 @@ const title = async () => ((await page.textContent(".review-window .review-files
 const dirBox = (name) => `.review-window .review-dir:has(.dir-name:text-is('${name}')) input.review-viewed`;
 const state = (sel) => page.$eval(sel, (b) => (b.indeterminate ? "half" : b.checked ? "on" : "off"));
 
-await page.goto(`http://127.0.0.1:5174/?repo=${encodeURIComponent(repo)}`);
+await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".sidebar .branch", { timeout: 30000 });
 await page.click(".sidebar .branch:has-text('folders') >> nth=0", { button: "right" });
 await page.waitForTimeout(400);
