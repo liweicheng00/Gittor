@@ -165,6 +165,9 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
 - A mouse drag in WebKitGTK (the Linux app) selects text and starts a native drag; then the page gets
   no `mousemove`. Call `preventDefault()` on `mousedown` for a custom drag. Chromium does not show this
   problem, so test a drag in the real app too.
+- The scenarios that measure text expect Inter for `system-ui`. This machine maps it in
+  `/etc/fonts/conf.d/56-prefer-inter.conf`; the CI workflow writes the same file. With the wider
+  default font of Ubuntu, all left tab labels are cut.
 - The left tabs share about 280 px at the default width. A new tab needs a short label; measure the
   `scrollWidth` of each `.lp-tab` against its `clientWidth`.
 
