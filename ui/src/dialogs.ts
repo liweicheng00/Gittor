@@ -145,14 +145,15 @@ export async function messageDialog(title: string, message: string, okLabel: str
   return r && m ? m : null;
 }
 
+/** The actions of the interactive rebase editor. A squash gets its message after Start Rebasing. */
 const ACTIONS: [PlanAction, string][] = [
   ["pick", "Pick"],
-  ["reword", "Reword"],
-  ["edit", "Edit"],
   ["squash", "Squash"],
-  ["fixup", "Fixup"],
   ["drop", "Drop"],
 ];
+
+/** A "fixup!" commit adds no text to the message of a squash, as in git rebase --autosquash. */
+const isFixup = (message: string) => /^(fixup|amend)! /.test(message);
 
 /**
  * The interactive rebase editor. Rows show newest first, like the log; the plan it returns is oldest first.
@@ -164,12 +165,13 @@ export async function interactiveRebaseDialog(range: RewriteRange): Promise<Plan
     message: string;
     author: string;
     action: PlanAction;
-    newMessage: string;
   }
   // Oldest first, as git rebase --autosquash orders them: fixup! and squash! commits go after their commit.
-  const oldest: Line[] = range.entries.map((e) => ({ ...e, action: "pick" as PlanAction, newMessage: e.message }));
+  const oldest: Line[] = range.entries.map((e) => ({ ...e, action: "pick" as PlanAction }));
   const squashes = oldest.filter((l) => /^(fixup|squash|amend)! /.test(l.subject)).length;
   if (squashes) autosquash(oldest);
+  // The editor has no Fixup: a fixup! commit is a squash, and its message stays out of the new message.
+  for (const l of oldest) if (l.action === "fixup") l.action = "squash";
   let lines: Line[] = oldest.reverse();
   const list = h("div", { class: "rebase-list" });
   const error = h("div", { class: "dialog-error" });
@@ -201,11 +203,6 @@ export async function interactiveRebaseDialog(range: RewriteRange): Promise<Plan
           h("span", { class: "rebase-subject" }, l.subject),
           h("span", { class: "rebase-author" }, l.author),
         );
-        if (l.action === "reword") {
-          const ta = h("textarea", { class: "dialog-input rebase-message", rows: 3, spellcheck: false }, l.newMessage);
-          ta.addEventListener("input", () => (l.newMessage = ta.value));
-          return h("div", {}, row, ta);
-        }
         return row;
       }),
     );
@@ -214,7 +211,7 @@ export async function interactiveRebaseDialog(range: RewriteRange): Promise<Plan
   const note = h(
     "p",
     { class: "dialog-note" },
-    "The top row is the newest commit. Squash and Fixup join a commit into the commit below it. Without Edit, the rebase runs in memory: a conflict stops it before anything changes. With Edit, git rebase runs and stops at that commit, so you can change it, amend, and continue.",
+    "The top row is the newest commit. Squash joins a commit into the commit below it: after Start Rebasing, you write the message of the joined commit. Drop removes a commit. The rebase runs in memory: a conflict stops it before anything changes.",
   );
   const auto = squashes ? h("p", { class: "dialog-note" }, `Autosquash: ${squashes} fixup! or squash! commit(s) are after their commits. Change the rows to undo it.`) : "";
   const warn = range.published ? h("p", { class: "dialog-note danger-text" }, "Some of these commits are on a remote branch already. After the rebase you must force-push.") : "";
@@ -223,11 +220,32 @@ export async function interactiveRebaseDialog(range: RewriteRange): Promise<Plan
     if (r !== "ok") return null;
     const plan = [...lines].reverse();
     const first = plan.find((l) => l.action !== "drop");
-    if (first && (first.action === "squash" || first.action === "fixup")) {
+    if (first && first.action === "squash") {
       error.textContent = "The oldest kept commit cannot be squashed: there is no commit below it.";
       continue;
     }
-    return plan.map((l) => ({ oid: l.oid, action: l.action, message: l.action === "reword" ? l.newMessage.trim() : undefined }));
+    // Each group of a kept commit and the squashes on it becomes one commit: ask for its message.
+    const groups: number[][] = [];
+    plan.forEach((l, i) => {
+      if (l.action === "pick") groups.push([i]);
+      else if (l.action === "squash") groups[groups.length - 1].push(i);
+    });
+    const joined = groups.filter((g) => g.length > 1);
+    const messages = new Map<number, string>();
+    let cancelled = false;
+    for (const [k, g] of joined.entries()) {
+      const text = g.map((i) => plan[i].message).filter((m, n) => n === 0 || !isFixup(m)).join("\n\n");
+      const of = joined.length > 1 ? ` (${k + 1} of ${joined.length})` : "";
+      const m = await messageDialog(`Message of the squashed commit${of}`, text, "Squash", `${g.length} commits become one commit. Edit the message, then Squash.`);
+      if (!m) {
+        cancelled = true;
+        break;
+      }
+      for (const i of g) messages.set(i, m);
+    }
+    // Cancel in a message goes back to the editor of the plan.
+    if (cancelled) continue;
+    return plan.map((l, i) => ({ oid: l.oid, action: l.action, message: messages.get(i) }));
   }
 }
 

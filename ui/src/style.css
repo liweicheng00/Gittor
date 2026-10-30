@@ -275,7 +275,6 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .rebase-list { display: flex; flex-direction: column; max-height: 50vh; overflow: auto; border: 1px solid var(--border); border-radius: 5px; }
 .rebase-row { display: grid; grid-template-columns: auto auto 96px 76px minmax(0, 1fr) auto; gap: 6px; align-items: center; padding: 3px 6px; border-bottom: 1px solid var(--border); }
 .rebase-row:last-child { border-bottom: 0; }
-.rebase-row .rebase-message { grid-column: 1 / -1; }
 .rebase-action { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; padding: 2px; }
 .rebase-hash { color: var(--muted); }
 .rebase-subject { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

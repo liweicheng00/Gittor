@@ -84,10 +84,18 @@ await menu("Interactively Rebase from Here");
 await page.waitForSelector(".rebase-row");
 check("the dialog says that it autosquashed", ((await page.textContent(".dialog")) ?? "").includes("Autosquash: 1"));
 const order = await page.$$eval(".rebase-row", (els) => els.map((e) => `${e.querySelector("select").value} ${e.querySelector(".rebase-subject").textContent}`));
-check("the fixup is right above Mixed work", JSON.stringify(order) === JSON.stringify(["pick Top work", "pick Add z", "fixup fixup! Mixed work", "pick Mixed work"]));
+check("the fixup is a squash right above Mixed work", JSON.stringify(order) === JSON.stringify(["pick Top work", "pick Add z", "squash fixup! Mixed work", "pick Mixed work"]));
+check("the actions are Pick, Squash and Drop only", JSON.stringify(await page.$$eval(".rebase-row >> nth=0 >> option", (o) => o.map((x) => x.textContent))) === JSON.stringify(["Pick", "Squash", "Drop"]));
 await shot("he1-autosquash");
 await page.click(".dialog-buttons button:has-text('Start Rebasing')");
+// After Start Rebasing, the message of the squashed commit opens. The fixup! message is not in it.
+await page.waitForSelector(".dialog:has-text('Message of the squashed commit') textarea");
+check("the message has the message of Mixed work only", (await page.inputValue(".dialog textarea")) === "Mixed work");
+await shot("he1b-squash-message");
+await page.fill(".dialog textarea", "Mixed work\n\nWith the fix of x.");
+await page.click(".dialog-buttons button:has-text('Squash')");
 await within("the fixup joined Mixed work", async () => git("log", "--format=%s", "-3") === "Top work\nAdd z\nMixed work");
+check("the commit has the edited message", git("log", "-1", "--format=%b", "HEAD~2") === "With the fix of x.");
 check("Mixed work has the fixed x", git("show", "HEAD~2:x.txt") === "x fixed");
 
 // Push All up to Here: only the commits up to Mixed work go to origin/main.
