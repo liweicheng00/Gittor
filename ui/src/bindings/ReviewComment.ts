@@ -5,7 +5,7 @@
  */
 export type ReviewComment = { id: string, path: string, 
 /**
- * The line in the branch version, 1-based.
+ * The line in the branch version, 1-based. 0 is a note on the whole file.
  */
 line: number, text: string, time: number, 
 /**

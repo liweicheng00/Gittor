@@ -75,6 +75,10 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   window writes its tabs to `gittor.windows` every 3 s, and `openRepo` brings the other window to the
   front (`inOtherWindow`, the Tauri command `focus_window`) instead. An entry older than 10 s belongs
   to a closed window.
+- Review notes in a diff: `note-layer.ts` (cards at the right of their lines in an overlay widget, the
+  note icon in the gutter, a double click adds a note). `DiffView.setNotes(notes, handlers)` turns it
+  on; without handlers it is off, so the History window does not get it. Line 0 is a note on the whole
+  file. `note-format.ts` makes the text for the clipboard.
 - Windows (Compare, History, Review, Show Repository): `windows.ts`. A window calls
   `registerWindow(close, kind, show)`, and listens with `onRepoChange`. `watch.ts` calls
   `notifyRepoChange("files" | "repo")`.

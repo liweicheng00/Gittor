@@ -7,6 +7,7 @@ import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
 import type { Blame, Change, FileContent, RevSpec } from "./api";
 import { statusName } from "./changes-panel";
 import { copyText, h, icon } from "./dom";
+import { NoteLayer, type NoteHandlers, type NoteItem } from "./note-layer";
 import { save, settings } from "./settings";
 
 (self as unknown as { MonacoEnvironment: object }).MonacoEnvironment = { getWorker: () => new EditorWorker() };
@@ -63,8 +64,9 @@ export class DiffView {
   /** A file in more than one changelist: the changes of the other changelists, marked in the diff. */
   private listHunks: { start: number; lines: number; label: string }[] = [];
   private listDeco: string[] = [];
-  /** Review notes: marked lines of the right side. */
-  private notes: { line: number; text: string }[] = [];
+  /** Review notes: marked lines of the right side, and their cards. */
+  private notes: NoteItem[] = [];
+  private readonly noteLayer = new NoteLayer(() => this.rightEditor());
   private noteDeco: string[] = [];
   private singleNoteDeco: string[] = [];
   private menuAt = { x: 0, y: 0 };
@@ -139,6 +141,7 @@ export class DiffView {
       renderOverviewRuler: true,
       ...editorFont(),
     });
+    this.noteLayer.attach(this.editor.getModifiedEditor());
     views.add(this);
     this.applyOptions();
     this.editor.onDidUpdateDiff(() => {
@@ -263,6 +266,7 @@ export class DiffView {
       });
       this.listenForBlameClicks(this.singleEditor);
       this.trackCursor(this.singleEditor);
+      this.noteLayer.attach(this.singleEditor);
     }
     return this.singleEditor;
   }
@@ -368,10 +372,13 @@ export class DiffView {
     this.listDeco = ed.deltaDecorations(this.listDeco, deco);
   }
 
-  /** Marks the lines that have review notes. show() clears them, so call it after show(). */
-  setNotes(notes: { line: number; text: string }[]) {
+  /** Shows review notes on the right side: a mark on each line and a card at its right. With handlers,
+   * the user can add a note with the note icon in the gutter or with a double click on a line. show()
+   * clears the notes and the handlers, so call it after show(). */
+  setNotes(notes: NoteItem[], handlers: NoteHandlers | null = null) {
     this.notes = notes;
     this.renderNotes();
+    this.noteLayer.set(notes, handlers);
   }
 
   /** The editor of the right side: the modified side, or the one editor of an added file. */
@@ -427,7 +434,7 @@ export class DiffView {
         .filter((n) => n.line >= 1 && n.line <= count)
         .map((n) => ({
           range: new monaco.Range(n.line, 1, n.line, 1),
-          options: { isWholeLine: true, className: "review-note-line", linesDecorationsClassName: "review-note-bar", hoverMessage: { value: n.text } },
+          options: { isWholeLine: true, className: "review-note-line", linesDecorationsClassName: "review-note-bar" },
         }));
     };
     const onSingle = !this.singleHost.hidden;
@@ -560,6 +567,7 @@ export class DiffView {
 
   message(text: string, title = "") {
     this.clearBlame();
+    this.noteLayer.clear();
     this.setSource(null);
     this.path = "";
     this.userPos = null;
@@ -574,6 +582,7 @@ export class DiffView {
   show(change: Change, left: FileContent, right: FileContent) {
     this.clearBlame();
     this.notes = [];
+    this.noteLayer.clear();
     queueMicrotask(() => void this.annotate());
     // The same file again (for example after it changed on disk): keep the scroll position.
     const same = change.path === this.path && this.notice.hidden && this.singleHost.hidden;

@@ -24,7 +24,7 @@ use std::path::PathBuf;
 pub struct ReviewComment {
     pub id: String,
     pub path: String,
-    /// The line in the branch version, 1-based.
+    /// The line in the branch version, 1-based. 0 is a note on the whole file.
     pub line: u32,
     pub text: String,
     pub time: i64,
@@ -267,7 +267,8 @@ impl Repo {
         let blobs = self.blobs(&head, &paths);
         let blob_of = |p: &str| blobs.get(p).cloned().unwrap_or_else(|| "deleted".into());
         let comments: Vec<ReviewComment> =
-            s.comments.iter().map(|c| ReviewComment { outdated: blob_of(&c.path) != c.blob, ..c.clone() }).collect();
+            // A note on the whole file has no line that can move, so it does not get old.
+            s.comments.iter().map(|c| ReviewComment { outdated: c.line > 0 && blob_of(&c.path) != c.blob, ..c.clone() }).collect();
         let file_list: Vec<ReviewFile> = changes
             .into_iter()
             .map(|c| ReviewFile {

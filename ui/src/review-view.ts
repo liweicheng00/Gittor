@@ -5,10 +5,11 @@ import { visit } from "./nav";
 import { onRepoChange, registerWindow } from "./windows";
 import type { Change, FileContent, ReviewComment, ReviewDetail, ReviewEdit, ReviewSummary, RevSpec } from "./api";
 import { statusName } from "./changes-panel";
-import { dragResize, formatDate, h, icon, rowSplitter, twisty } from "./dom";
+import { copyText, dragResize, formatDate, h, icon, rowSplitter, twisty } from "./dom";
 import { fileIcon } from "./file-icon";
 import { buildTree, treeOrder, walkTree } from "./file-tree";
 import { sharedDiff } from "./history-view";
+import { formatNote, formatNotes } from "./note-format";
 import { save, settings } from "./settings";
 
 export interface ReviewCallbacks {
@@ -66,13 +67,21 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
   const filesEl = h("div", { class: "history-list review-files", tabIndex: 0 });
   const notesTitle = h("div", { class: "review-notes-title" });
   const notesList = h("div", { class: "review-notes-list" });
-  const noteText = h("textarea", { class: "dialog-input review-note-text", rows: 2, placeholder: "A note on the line of the cursor (Ctrl+Enter adds it)", spellcheck: false });
-  const noteBtn = h("button", { class: "tb-button" }, "Add Note");
-  const notes = h("div", { class: "review-notes" }, notesTitle, notesList, h("div", { class: "review-note-form" }, noteText, noteBtn));
+  const notes = h("div", { class: "review-notes" }, notesTitle, notesList);
+  // The notes on the whole file, above the diff. A note on a line has its card in the diff.
+  const fileNotesEl = h("div", { class: "review-file-note-list" });
+  const fileNoteText = h("input", { class: "review-file-note-input", placeholder: "A note on the whole file (Enter adds it)", spellcheck: false });
+  const fileNoteBtn = h("button", { class: "tb-button" }, "Add");
+  const fileNoteBar = h(
+    "div",
+    { class: "review-file-note-bar" },
+    h("div", { class: "review-file-note-form" }, icon("note"), fileNoteText, fileNoteBtn),
+    fileNotesEl,
+  );
   const side = h("div", { class: "compare-side" });
   const sideGrip = rowSplitter(side, commitsEl, () => settings.reviewCommitsHeight, (px) => (settings.reviewCommitsHeight = px), save);
   side.append(h("div", { class: "compare-files-title" }, "Commits"), commitsEl, sideGrip, filesTitle, filesEl);
-  const right = h("div", { class: "review-right" }, d.el, notes);
+  const right = h("div", { class: "review-right" }, fileNoteBar, d.el, notes);
   const grip = h("div", { class: "vgrip" });
   const body = h("div", { class: "history-body" }, side, grip, right);
   const win = h(
@@ -111,6 +120,8 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
   closeBtn.addEventListener("click", close);
   const onKey = (e: KeyboardEvent) => {
     if (document.querySelector(".overlay")) return;
+    // The text field of a new note handles its keys: Esc cancels the note, and does not close the window.
+    if ((e.target as HTMLElement | null)?.closest?.(".note-card, .review-file-note-input")) return;
     if (e.key === "Escape") {
       e.preventDefault();
       close();
@@ -256,55 +267,97 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
     filesEl.replaceChildren(...out);
   };
 
+  const deleteNote = async (id: string) => {
+    await cb.edit({ action: "deleteComment", branch: current, id });
+    await reload();
+  };
+  const addNote = async (line: number, text: string) => {
+    const f = rows[selected];
+    if (!f || !text.trim() || scope !== "all") return;
+    await cb.edit({ action: "comment", branch: current, path: f.path, line, text: text.trim() });
+    await reload();
+  };
+
   const renderNotes = () => {
     const f = rows[selected];
-    const can = scope === "all" && !!f && f.status !== "D";
-    noteText.disabled = !can;
-    noteBtn.disabled = !can;
+    const canFile = scope === "all" && !!f;
+    fileNoteText.disabled = !canFile;
+    fileNoteBtn.disabled = !canFile;
     if (!f) {
       notesTitle.textContent = "Notes";
       notesList.replaceChildren();
+      fileNotesEl.replaceChildren();
       return;
     }
     const list = fileNotes(f.path);
-    notesTitle.textContent = scope === "all" ? `Notes in ${f.path}` : "Notes are on the changes of the whole branch. Choose All changes to add one.";
+    const copyAll = h("button", { class: "tb-button review-notes-copy", title: "Copy all notes of the file, with the file and the lines", disabled: !list.length }, icon("copy"), "Copy All");
+    copyAll.addEventListener("click", () => void copyText(formatNotes(f.path, list)));
+    notesTitle.replaceChildren(
+      h("span", {}, scope === "all" ? `Notes in ${f.path}` : "Notes are on the changes of the whole branch. Choose All changes to add one."),
+      h("span", { class: "spacer" }),
+      copyAll,
+    );
+    const copy = (c: ReviewComment) => {
+      const b = h("button", { class: "icon-button review-note-copy", title: "Copy the file, the line and the note" }, icon("copy"));
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        void copyText(formatNote(f.path, c));
+      });
+      return b;
+    };
+    const del = (id: string) => {
+      const b = h("button", { class: "icon-button", title: "Delete the note" }, icon("close"));
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        void deleteNote(id);
+      });
+      return b;
+    };
     notesList.replaceChildren(
       ...list.map((c) => {
-        const del = h("button", { class: "icon-button", title: "Delete the note" }, icon("close"));
-        del.addEventListener("click", async (e) => {
-          e.stopPropagation();
-          await cb.edit({ action: "deleteComment", branch: current, id: c.id });
-          await reload();
-        });
+        const onFile = c.line === 0;
         const row = h(
           "div",
-          { class: "review-note" + (c.outdated ? " outdated" : ""), title: c.outdated ? "The file changed after this note. The line can be another line now." : "Go to the line" },
-          h("span", { class: "review-note-line-no" }, `L${c.line}`),
+          {
+            class: "review-note" + (c.outdated ? " outdated" : ""),
+            title: c.outdated ? "The file changed after this note. The line can be another line now." : onFile ? "A note on the whole file" : "Go to the line",
+          },
+          h("span", { class: "review-note-line-no" }, onFile ? "File" : `L${c.line}`),
           h("span", { class: "review-note-body" }, c.text),
           c.outdated ? h("span", { class: "muted-inline" }, "outdated") : "",
           h("span", { class: "muted-inline" }, formatDate(c.time)),
-          del,
+          copy(c),
+          del(c.id),
         );
-        row.addEventListener("click", () => scope === "all" && d.revealLine(c.line));
+        if (!onFile) row.addEventListener("click", () => scope === "all" && d.revealLine(c.line));
         return row;
       }),
     );
-    if (scope === "all") d.setNotes(list.map((c) => ({ line: c.line, text: c.text })));
+    fileNotesEl.replaceChildren(
+      ...list
+        .filter((c) => c.line === 0)
+        .map((c) => h("div", { class: "review-file-note" }, h("span", { class: "review-note-body" }, c.text), h("span", { class: "muted-inline" }, formatDate(c.time)), copy(c), del(c.id))),
+    );
+    // A note on a line: only on a file that the branch has. A deleted file takes notes on the whole file.
+    const handlers = { add: addNote, remove: deleteNote, copy: (n: { line: number; text: string }) => void copyText(formatNote(f.path, n)) };
+    if (scope === "all") d.setNotes(list, f.status === "D" ? null : handlers);
   };
 
-  const addNote = async () => {
-    const f = rows[selected];
-    const text = noteText.value.trim();
-    if (!f || !text || scope !== "all") return;
-    await cb.edit({ action: "comment", branch: current, path: f.path, line: d.cursorLine(), text });
-    noteText.value = "";
-    await reload();
+  const addFileNote = async () => {
+    const text = fileNoteText.value.trim();
+    if (!text) return;
+    fileNoteText.value = "";
+    await addNote(0, text);
   };
-  noteBtn.addEventListener("click", () => void addNote());
-  noteText.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+  fileNoteBtn.addEventListener("click", () => void addFileNote());
+  fileNoteText.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
       e.preventDefault();
-      void addNote();
+      void addFileNote();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      fileNoteText.value = "";
+      fileNoteText.blur();
     }
   });
 

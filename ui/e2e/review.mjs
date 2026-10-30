@@ -46,11 +46,64 @@ await within("no conflicts", async () => (await text(".review-status")).includes
 // Viewed, and a note on the line of the cursor.
 await page.click(".review-window .review-file input.review-viewed");
 await within("the file is viewed", async () => (await text(".review-window .compare-files-title >> nth=1")).includes("1/1 viewed"));
-await page.fill(".review-note-text", "Use a logger here");
-await page.press(".review-note-text", "Control+Enter");
-await within("the note shows", async () => (await text(".review-notes-list")).includes("Use a logger here"));
+// A note with the icon in the gutter: the icon shows at the line under the mouse.
+// The editor of the right side: the modified editor of a diff, or the one editor of an added file.
+const modified = ".review-window .diff-host:not([hidden]) .monaco-editor:not(.original)";
+const lineNumber = (n) => page.locator(`${modified} .line-numbers`).filter({ hasText: new RegExp(`^${n}$`) }).first();
+await lineNumber(3).hover();
+await within("the note icon shows at the line under the mouse", async () => (await page.$$(`${modified} .note-add-icon`)).length === 1);
+await page.click(`${modified} .note-add-icon`);
+await page.waitForSelector(".review-window .note-card.draft textarea");
+check("the new note is on line 3", (await page.getAttribute(".review-window .note-card.draft", "data-line")) === "3");
+await page.fill(".review-window .note-card.draft textarea", "Use a logger here");
+await page.keyboard.press("Escape");
+await within("Esc cancels the note", async () => (await page.$(".review-window .note-card.draft")) === null);
+check("Esc in the note does not close the review", (await page.$(".review-window")) !== null);
+await lineNumber(3).hover();
+await page.click(`${modified} .note-add-icon`);
+await page.fill(".review-window .note-card.draft textarea", "Use a logger here");
+await page.press(".review-window .note-card.draft textarea", "Control+Enter");
+await within("the note shows in the list", async () => (await text(".review-notes-list")).includes("Use a logger here"));
+await within("the note shows as a card in the diff", async () => (await text(".review-window .note-card")).includes("Use a logger here"));
 await within("the diff marks the line", async () => (await page.$$(".review-window .review-note-bar")).length > 0);
+
+// The card floats at the right of its line.
+const card = await page.locator(".review-window .note-card").first().boundingBox();
+const editorBox = await page.locator(modified).boundingBox();
+const line3 = await lineNumber(3).boundingBox();
+check("the card is at the right of the diff", card.x > editorBox.x + editorBox.width / 2 && card.x + card.width <= editorBox.x + editorBox.width);
+check("the card is at the height of its line", Math.abs(card.y - line3.y) < 6);
+
+// A double click on a line adds a note there too.
+await page.locator(`${modified} .view-line`).filter({ hasText: "fn" }).first().dblclick();
+await page.waitForSelector(".review-window .note-card.draft textarea");
+await page.fill(".review-window .note-card.draft textarea", "Second note");
+await page.click(".review-window .note-card.draft button:has-text('Add Note')");
+await within("the second note shows", async () => (await page.$$(".review-window .note-card:not(.draft)")).length === 2);
+
+// A note on the whole file, above the diff.
+await page.fill(".review-file-note-input", "The file needs tests");
+await page.press(".review-file-note-input", "Enter");
+await within("the file note shows above the diff", async () => (await text(".review-file-note-list")).includes("The file needs tests"));
+await within("the list labels it File", async () => (await text(".review-notes-list")).includes("FileThe file needs tests"));
 await shot("rv1-review");
+
+// Copy: one note from its card, one from the list, and all notes of the file.
+await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+const clipboard = () => page.evaluate(() => navigator.clipboard.readText());
+await page.locator(".review-window .note-card:has-text('Use a logger here') .note-card-copy").click();
+await within("the card copies the file, the line and the note", async () => (await clipboard()) === "cli.rs:3\nUse a logger here");
+await page.locator(".review-notes-list .review-note:has-text('The file needs tests') .review-note-copy").click();
+await within("a file note copies the file and the note", async () => (await clipboard()) === "cli.rs\nThe file needs tests");
+await page.click(".review-notes-copy");
+const lineOf = await page.getAttribute(".review-window .note-card:has-text('Second note')", "data-line");
+await within("Copy All copies all notes of the file", async () =>
+  (await clipboard()) === `cli.rs\nThe file needs tests\n\ncli.rs:${lineOf}\nSecond note\n\ncli.rs:3\nUse a logger here`
+    || (await clipboard()) === `cli.rs\nThe file needs tests\n\ncli.rs:3\nUse a logger here\n\ncli.rs:${lineOf}\nSecond note`);
+
+// Delete the second note with its card.
+await page.locator(".review-window .note-card:has-text('Second note') .note-card-delete").click();
+await within("the card is gone", async () => (await page.$$(".review-window .note-card")).length === 1);
 
 // One commit only.
 await page.click(".review-window .review-commit >> nth=1");

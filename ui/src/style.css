@@ -634,9 +634,10 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .review-file { display: grid; grid-template-columns: auto auto minmax(0, auto) minmax(0, 1fr) auto; gap: 6px; align-items: center; }
 .review-file.viewed .rebase-subject { color: var(--muted); }
 .review-file-notes { font-size: 11px; color: var(--muted); }
-.review-right { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-height: 0; min-width: 0; }
+.review-right { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0; min-width: 0; }
 .review-notes { border-top: 1px solid var(--border); max-height: 220px; display: flex; flex-direction: column; min-height: 0; }
-.review-notes-title { padding: 4px 10px; font-size: 12px; color: var(--muted); }
+.review-notes-title { display: flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 12px; color: var(--muted); }
+.review-notes-copy { padding: 1px 6px; font-size: 11px; }
 .review-notes-list { overflow: auto; flex: 1; min-height: 0; }
 .review-note { display: flex; gap: 8px; align-items: baseline; padding: 3px 10px; cursor: pointer; font-size: 12px; }
 .review-note:hover { background: var(--hover); }
@@ -647,6 +648,28 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .review-note-text { flex: 1; resize: vertical; }
 .review-note-line { background: rgba(230, 170, 30, 0.12); }
 .review-note-bar { border-left: 3px solid #e6aa1e; margin-left: 2px; }
+/* review notes in the diff: the icon in the gutter, and the cards at the right of their lines */
+.note-add-icon { cursor: pointer; }
+.note-add-icon::before { content: "+"; display: block; width: 14px; height: 14px; margin: 2px 0 0 2px; border-radius: 3px; background: var(--accent); color: #fff; font: 600 12px/14px sans-serif; text-align: center; }
+.note-layer { position: absolute; top: 0; left: 0; pointer-events: none; overflow: hidden; }
+.note-card { position: absolute; width: 300px; max-width: 45%; pointer-events: auto; padding: 4px 8px 6px; border: 1px solid var(--border); border-left: 3px solid #e6aa1e; border-radius: 4px; background: var(--panel); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); font-size: 12px; color: var(--fg); }
+.note-card.outdated { opacity: 0.7; }
+.note-card-head { display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 11px; }
+.note-card-head .icon-button { padding: 0 2px; }
+.note-card-tag { padding: 0 4px; border-radius: 3px; background: var(--hover); }
+.note-card-text { white-space: pre-wrap; overflow: hidden; max-height: 4.6em; overflow-wrap: anywhere; }
+.note-card:hover { z-index: 1; }
+.note-card:hover .note-card-text { max-height: none; }
+.note-card.draft { z-index: 2; border-left-color: var(--accent); }
+.note-card-input { width: 100%; box-sizing: border-box; margin-top: 4px; resize: vertical; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: 3px; padding: 4px; }
+.note-card-buttons { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+/* the notes on the whole file, above the diff of the review */
+.review-file-note-bar { border-bottom: 1px solid var(--border); padding: 4px 10px; display: flex; flex-direction: column; gap: 3px; }
+.review-file-note-bar[hidden] { display: none; }
+.review-file-note-form { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.review-file-note-input { flex: 1; min-width: 0; font: inherit; font-size: 12px; color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: 3px; padding: 3px 6px; }
+.review-file-note-list { display: flex; flex-direction: column; gap: 2px; }
+.review-file-note { display: flex; gap: 8px; align-items: baseline; padding: 2px 6px; border-left: 3px solid #e6aa1e; background: var(--hover); border-radius: 3px; font-size: 12px; }
 .review-mode { align-items: flex-start; margin: 4px 0; }
 .review-merge-message { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .review-commit { grid-template-columns: auto minmax(0, 1fr) auto; }
