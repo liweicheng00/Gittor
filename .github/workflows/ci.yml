@@ -1,0 +1,93 @@
+# Tests each push to main and each pull request: the Rust tests, clippy, the types of the UI, the unit
+# tests of the UI, and all UI scenarios in Chromium.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install WebKitGTK for the Tauri app
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Git user for the tests
+        run: |
+          git config --global user.name "CI"
+          git config --global user.email "ci@example.com"
+          git config --global init.defaultBranch main
+      - run: npm --prefix ui ci
+      # tauri::generate_context!() needs ui/dist.
+      - run: npm --prefix ui run build
+      - run: cargo test -q
+      - name: The types of the UI are current
+        run: git diff --exit-code ui/src/bindings
+      - run: cargo clippy -q --all-targets
+      - run: npx tsc --noEmit -p .
+        working-directory: ui
+      - run: npm test
+        working-directory: ui
+
+  e2e:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Git user for the scenarios
+        run: |
+          git config --global user.name "CI"
+          git config --global user.email "ci@example.com"
+          git config --global init.defaultBranch main
+      - run: npm --prefix ui ci
+      - run: npx playwright install --with-deps chromium
+        working-directory: ui
+      - run: npm --prefix ui run build
+      - run: cargo build -q -p gittor-devserver
+      - name: Run all scenarios
+        run: |
+          GITTOR_CONFIG_DIR="$RUNNER_TEMP/config" target/debug/gittor-devserver ui/dist 5174 &
+          sleep 2
+          set +e
+          ui/e2e/run-all.sh "$RUNNER_TEMP/e2e" | tee "$RUNNER_TEMP/run.log"
+          status=${PIPESTATUS[0]}
+          # Some scenarios are flaky under load (see AGENTS.md): the failed ones run once more alone.
+          if [ "$status" -ne 0 ]; then
+            failed=$(sed -n 's/^FAILED: //p' "$RUNNER_TEMP/run.log")
+            echo "Run these scenarios again: $failed"
+            GITTOR_E2E_ONLY="^($(echo "$failed" | tr ' ' '|'))\$" ui/e2e/run-all.sh "$RUNNER_TEMP/e2e-again"
+            status=$?
+          fi
+          exit "$status"
+      - name: Keep the logs and the screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e
+          path: |
+            ${{ runner.temp }}/e2e/*.log
+            ${{ runner.temp }}/e2e/shots
+            ${{ runner.temp }}/e2e-again/*.log
+            ${{ runner.temp }}/e2e-again/shots
+          if-no-files-found: ignore

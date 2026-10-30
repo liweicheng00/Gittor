@@ -383,6 +383,85 @@ export async function openWindow(path: string, at: WindowPlace): Promise<void> {
   window.open(`${location.pathname}?solo=1&repo=${encodeURIComponent(path)}`, "_blank", features);
 }
 
+/** A new version of the app that the updater found. */
+export interface UpdateInfo {
+  version: string;
+  notes: string;
+  /** Downloads the update and installs it. It calls `progress` with the bytes so far and the size. */
+  install: (progress: (done: number, total: number | null) => void) => Promise<void>;
+}
+
+/** A fake update for the e2e tests in a browser: `window.__GITTOR_FAKE_UPDATE__`. */
+interface FakeUpdate {
+  version: string;
+  notes?: string;
+  /** The window sets it when the app restarts. */
+  restarted?: boolean;
+}
+
+const fakeUpdate = (): FakeUpdate | undefined => (window as unknown as { __GITTOR_FAKE_UPDATE__?: FakeUpdate }).__GITTOR_FAKE_UPDATE__;
+
+/** True when this build can check for updates: a release build of the app, or a test with a fake update. */
+export async function updatesEnabled(): Promise<boolean> {
+  if (!inTauri) return !!fakeUpdate();
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<boolean>("updates_enabled");
+}
+
+/** The version of the app. */
+export async function appVersion(): Promise<string> {
+  if (!inTauri) return "dev";
+  const { getVersion } = await import("@tauri-apps/api/app");
+  return getVersion();
+}
+
+/** Asks the update server for a newer version. Null when the app is up to date. */
+export async function checkForUpdate(): Promise<UpdateInfo | null> {
+  if (!inTauri) {
+    const fake = fakeUpdate();
+    if (!fake) return null;
+    return {
+      version: fake.version,
+      notes: fake.notes ?? "",
+      install: async (progress) => {
+        for (let done = 0; done <= 100; done += 25) {
+          progress(done, 100);
+          await new Promise((r) => setTimeout(r, 50));
+        }
+      },
+    };
+  }
+  const { check } = await import("@tauri-apps/plugin-updater");
+  const update = await check();
+  if (!update) return null;
+  return {
+    version: update.version,
+    notes: update.body ?? "",
+    install: async (progress) => {
+      let total: number | null = null;
+      let done = 0;
+      await update.downloadAndInstall((e) => {
+        if (e.event === "Started") total = e.data.contentLength ?? null;
+        else if (e.event === "Progress") {
+          done += e.data.chunkLength;
+          progress(done, total);
+        }
+      });
+    },
+  };
+}
+
+/** Starts the app again, for example after an update. */
+export async function restartApp(): Promise<void> {
+  if (!inTauri) {
+    const fake = fakeUpdate();
+    if (fake) fake.restarted = true;
+    return;
+  }
+  const { relaunch } = await import("@tauri-apps/plugin-process");
+  await relaunch();
+}
+
 /** The label of the app window, or null in a browser. */
 export function windowLabel(): string | null {
   const internals = (window as unknown as { __TAURI_INTERNALS__?: { metadata?: { currentWindow?: { label?: string } } } }).__TAURI_INTERNALS__;

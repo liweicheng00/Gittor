@@ -27,6 +27,15 @@ export interface SettingsContext {
   };
   /** The page that shows first. */
   page?: Page;
+  /** Updates of the app: the version, and a check for a new version. */
+  updates: {
+    status: () => Promise<{ version: string; enabled: boolean }>;
+    /** Checks now and returns the result as a short text. */
+    check: () => Promise<string>;
+    /** The page with the releases and their notes. */
+    releasesUrl: string;
+    openUrl: (url: string) => void;
+  };
 }
 
 export type Page = "general" | "git" | "ignore" | "editor" | "commit" | "diff" | "history" | "keymap";
@@ -131,7 +140,33 @@ export function openSettingsDialog(ctx: SettingsContext): Promise<Settings | nul
       row("Update", select<"merge" | "rebase">([["merge", "Merge the tracked branch"], ["rebase", "Rebase onto the tracked branch"]], () => draft.updateMode, (v) => (draft.updateMode = v)), "The default of the Update dialog."),
       row("Refresh", check("Refresh when files or refs change outside the app", () => draft.autoRefresh, (v) => (draft.autoRefresh = v))),
       row("Auto fetch", h("span", { class: "settings-inline" }, "Every ", number(() => draft.autoFetchMinutes, (v) => (draft.autoFetchMinutes = v), 0, 1440), " minutes"), "0 turns it off. Fetch asks for a password when a remote needs one."),
+      row("Updates", updatesControl()),
     ];
+
+    const updatesControl = () => {
+      const version = h("span", { class: "settings-update-version" }, "Version …");
+      const status = h("span", { class: "settings-hint" }, "");
+      const checkBtn = h("button", { class: "settings-update-check", disabled: true }, "Check Now");
+      const notes = h("a", { href: "#", class: "settings-update-notes" }, "Release Notes");
+      notes.addEventListener("click", (e) => {
+        e.preventDefault();
+        ctx.updates.openUrl(ctx.updates.releasesUrl);
+      });
+      checkBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        checkBtn.disabled = true;
+        status.textContent = "Checking…";
+        status.textContent = await ctx.updates.check();
+        checkBtn.disabled = false;
+      });
+      const auto = check("Check for updates automatically", () => draft.autoCheckUpdates, (v) => (draft.autoCheckUpdates = v));
+      void ctx.updates.status().then((s) => {
+        version.textContent = `Version ${s.version}`;
+        checkBtn.disabled = !s.enabled;
+        if (!s.enabled) status.textContent = "This build does not check for updates: only a release build from GitHub does.";
+      });
+      return h("div", { class: "settings-update" }, h("div", { class: "dialog-field-row" }, version, checkBtn, notes), auto, status);
+    };
 
     const git = () => {
       const status = h("span", { class: "settings-hint" }, "");

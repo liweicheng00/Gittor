@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Permissions for the main window and the windows of one repository",
   "windows": ["main", "repo-*"],
-  "permissions": ["core:default", "dialog:allow-open"]
+  "permissions": ["core:default", "dialog:allow-open", "process:allow-restart", "updater:default"]
 }

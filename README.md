@@ -78,8 +78,35 @@ export APPLE_TEAM_ID="TEAMID"
 scripts/build-dmg.sh --universal
 ```
 
-An app that starts from Finder does not get the `PATH` of your shell and uses `/usr/bin/git`. Set
-another git, for example Homebrew git, in Settings.
+An app that starts from Finder does not get the `PATH` of your shell. It takes the first git that
+works, for example Homebrew git or the git of the Command Line Tools. Settings › Git can set another one.
+
+A local build does not check for updates. Only a release build does.
+
+### Release
+
+```sh
+scripts/release.sh 0.2.0
+```
+
+The script sets the version in all files, commits, tags `v0.2.0` and pushes. The tag starts the
+`Release` workflow on GitHub (`.github/workflows/release.yml`). It builds the universal app with
+`scripts/build-dmg.sh --universal --updater`, signs and notarizes it, and publishes a release with the
+`.dmg`, `Gittor.app.tar.gz`, its `.sig` and `latest.json`. The apps that run find the update at their
+next check: a few seconds after the start, then every 6 hours, or with Settings › General › Check Now.
+
+The workflow needs these repository settings (Settings › Secrets and variables › Actions):
+
+| Name | Kind | Value |
+|---|---|---|
+| `TAURI_UPDATER_PUBKEY` | variable | the public key from `tauri signer generate` |
+| `TAURI_SIGNING_PRIVATE_KEY` | secret | the private key |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | secret | its password |
+| `APPLE_CERTIFICATE` | secret | the Developer ID Application certificate as a `.p12`, in base64 |
+| `APPLE_CERTIFICATE_PASSWORD` | secret | the password of the `.p12` |
+| `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` | secrets | as for a signed build above |
+
+Keep a copy of the private key. Without it, no update can reach the apps that users have now.
 
 ## Develop
 

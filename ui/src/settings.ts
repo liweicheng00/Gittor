@@ -64,6 +64,8 @@ export interface Settings {
   cloneDir: string;
   /** Fetch all remotes of the active repository every this many minutes; 0 turns it off. */
   autoFetchMinutes: number;
+  /** Check for a new version of the app at the start and every few hours. */
+  autoCheckUpdates: boolean;
   diffFontSize: number;
   /** Empty means the default monospace font. */
   diffFontFamily: string;
@@ -134,6 +136,7 @@ const DEFAULTS: Settings = {
   editor: "",
   cloneDir: "",
   autoFetchMinutes: 0,
+  autoCheckUpdates: true,
   diffFontSize: 12,
   diffFontFamily: "",
   historyDays: 5,

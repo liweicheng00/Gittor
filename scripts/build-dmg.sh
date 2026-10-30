@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
 # Builds "Gittor.app" and a .dmg on macOS. Run it from any directory.
-# Usage: scripts/build-dmg.sh [--universal] [--unsigned]
+# Usage: scripts/build-dmg.sh [--universal] [--unsigned] [--updater]
 #   --universal  one app for Apple silicon and Intel Macs.
 #   --unsigned   a build without the Apple signature, for a test on this Mac. Other Macs block it.
+#   --updater    a release build: the app checks for updates, and the build makes Gittor.app.tar.gz
+#                and its .sig for the updater. The release workflow on GitHub uses it. It needs:
+#                  TAURI_UPDATER_PUBKEY                the public key of the updater
+#                  TAURI_SIGNING_PRIVATE_KEY           the private key (the text or the path of the file)
+#                  TAURI_SIGNING_PRIVATE_KEY_PASSWORD  its password, when it has one
+#                A build without --updater is the same as before: it does not check for updates.
 #
 # A signed build needs these variables (see README, "Sign and notarize"):
 #   APPLE_SIGNING_IDENTITY  "Developer ID Application: Name (TEAMID)", from: security find-identity -v -p codesigning
@@ -19,13 +25,35 @@ fi
 
 universal=0
 unsigned=0
+updater=0
 for arg in "$@"; do
   case "$arg" in
     --universal) universal=1 ;;
     --unsigned) unsigned=1 ;;
-    *) echo "Unknown option: $arg. Usage: scripts/build-dmg.sh [--universal] [--unsigned]" >&2; exit 1 ;;
+    --updater) updater=1 ;;
+    *) echo "Unknown option: $arg. Usage: scripts/build-dmg.sh [--universal] [--unsigned] [--updater]" >&2; exit 1 ;;
   esac
 done
+
+config=()
+if [ "$updater" = 1 ]; then
+  for v in TAURI_UPDATER_PUBKEY TAURI_SIGNING_PRIVATE_KEY; do
+    [ -n "${!v:-}" ] || { echo "--updater needs the variable $v (see the top of this script)." >&2; exit 1; }
+  done
+  # The updater settings go into a second config file that Tauri merges with tauri.conf.json.
+  repo=${GITTOR_RELEASE_REPO:-liweicheng00/Gittor}
+  mkdir -p target
+  release_config="$(pwd)/target/tauri.release.conf.json"
+  node -e '
+    const [file, key, repo] = process.argv.slice(1);
+    const config = {
+      bundle: { createUpdaterArtifacts: true },
+      plugins: { updater: { pubkey: key.trim(), endpoints: [`https://github.com/${repo}/releases/latest/download/latest.json`] } },
+    };
+    require("fs").writeFileSync(file, JSON.stringify(config, null, 2));
+  ' "$release_config" "$TAURI_UPDATER_PUBKEY" "$repo"
+  config=(--config "$release_config")
+fi
 
 if [ "$unsigned" = 1 ]; then
   # Tauri signs when the identity is set; an unsigned build must not see it.
@@ -58,7 +86,7 @@ fi
 npm --prefix ui install
 # The Tauri CLI reads crates/app/tauri.conf.json, which builds the UI first. With the APPLE_ variables set,
 # it signs the app with the hardened runtime, notarizes it, and staples the ticket to it.
-(cd crates/app && ../../ui/node_modules/.bin/tauri build --bundles app,dmg ${target[@]+"${target[@]}"})
+(cd crates/app && ../../ui/node_modules/.bin/tauri build --bundles app,dmg ${target[@]+"${target[@]}"} ${config[@]+"${config[@]}"})
 
 dir=target/release/bundle
 [ "$universal" = 1 ] && dir=target/universal-apple-darwin/release/bundle
@@ -93,3 +121,7 @@ fi
 echo
 echo "App: $(pwd)/$app"
 echo "DMG: $(pwd)/$dmg"
+if [ "$updater" = 1 ]; then
+  echo "Update: $(pwd)/$app.tar.gz"
+  echo "Signature: $(pwd)/$app.tar.gz.sig"
+fi

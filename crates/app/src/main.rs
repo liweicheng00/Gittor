@@ -27,6 +27,16 @@ fn set_zoom(webview: tauri::Webview, level: f64) -> Result<(), String> {
     webview.set_zoom(level.clamp(0.5, 3.0)).map_err(|e| e.to_string())
 }
 
+/// The app checks for updates only when the build has the public key of the updater. A release build
+/// on GitHub gets it from `tauri.release.conf.json`; a local build has none.
+struct Updates(bool);
+
+/// True when this build can check for updates and install them.
+#[tauri::command]
+fn updates_enabled(updates: State<'_, Updates>) -> bool {
+    updates.0
+}
+
 /// Opens a repository in a new window at a place on the screen, for a tab that the user drags out of
 /// the tab bar. The window gets the path from an initialization script, and it does not keep the tabs
 /// of the session. The command is async: a window made on the main thread of a
@@ -79,8 +89,15 @@ fn main() {
     use_software_rendering_without_gpu();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_process::init())
         .manage(Service::with_askpass(&std::env::current_exe().expect("current executable")))
         .setup(|app| {
+            let pubkey = app.config().plugins.0.get("updater").and_then(|u| u.get("pubkey")).and_then(|k| k.as_str()).unwrap_or("");
+            let updates = !pubkey.trim().is_empty();
+            if updates {
+                app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+            }
+            app.manage(Updates(updates));
             // The backend events go to the window as "backend-event".
             let events = app.state::<Service>().subscribe();
             let handle = app.handle().clone();
@@ -91,7 +108,7 @@ fn main() {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![initial_path, call, set_zoom, open_window, focus_window])
+        .invoke_handler(tauri::generate_handler![initial_path, call, set_zoom, open_window, focus_window, updates_enabled])
         .run(tauri::generate_context!())
         .expect("error while running Gittor");
 }

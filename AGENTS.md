@@ -79,6 +79,13 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   note icon in the gutter, a double click adds a note). `DiffView.setNotes(notes, handlers)` turns it
   on; without handlers it is off, so the History window does not get it. Line 0 is a note on the whole
   file; its field is under the list of notes. `note-format.ts` makes the text for the clipboard.
+- Updates of the app: `update-flow.ts` (checks 10 s after the start and every 6 h, only in the main
+  window). Only a build with the public key checks: `scripts/build-dmg.sh --updater` merges
+  `target/tauri.release.conf.json`, and `main.rs` registers the updater plugin only then. A local
+  build stays as before. In a browser, `window.__GITTOR_FAKE_UPDATE__` gives a fake update to the
+  `updates` scenario. Releases: `scripts/release.sh <version>` and `.github/workflows/release.yml`.
+- CI: `.github/workflows/ci.yml` runs the tests, clippy, the types, the unit tests and all UI
+  scenarios on each push to main. Failed scenarios run once more alone.
 - Windows (Compare, History, Review, Show Repository): `windows.ts`. A window calls
   `registerWindow(close, kind, show)`, and listens with `onRepoChange`. `watch.ts` calls
   `notifyRepoChange("files" | "repo")`.
@@ -177,7 +184,6 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
 ## Open points
 
 - The mouse buttons Back and Forward are not tested in the macOS app (WKWebView).
-- There is no CI yet. A workflow must build `ui/dist` before `cargo test`.
-- `README.md` still says that an app from Finder uses `/usr/bin/git`; the app now chooses a git that
-  works.
-- The owner postponed: patches (create and apply) and automatic updates.
+- The owner postponed: patches (create and apply).
+- The updater is not tested on a Mac yet: the first release with it must show that an update replaces
+  the app and that the app starts again.
