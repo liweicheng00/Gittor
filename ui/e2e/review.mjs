@@ -81,10 +81,13 @@ await page.fill(".review-window .note-card.draft textarea", "Second note");
 await page.click(".review-window .note-card.draft button:has-text('Add Note')");
 await within("the second note shows", async () => (await page.$$(".review-window .note-card:not(.draft)")).length === 2);
 
-// A note on the whole file, above the diff.
+// A note on the whole file, with the field under the list of notes.
+check("the field is under the list of notes", await page.$eval(".review-file-note-input", (i) => {
+  const list = document.querySelector(".review-notes-list");
+  return !!list && (list.compareDocumentPosition(i) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0 && i.getBoundingClientRect().top > list.getBoundingClientRect().top;
+}));
 await page.fill(".review-file-note-input", "The file needs tests");
 await page.press(".review-file-note-input", "Enter");
-await within("the file note shows above the diff", async () => (await text(".review-file-note-list")).includes("The file needs tests"));
 await within("the list labels it File", async () => (await text(".review-notes-list")).includes("FileThe file needs tests"));
 await shot("rv1-review");
 

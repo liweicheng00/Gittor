@@ -78,7 +78,7 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
 - Review notes in a diff: `note-layer.ts` (cards at the right of their lines in an overlay widget, the
   note icon in the gutter, a double click adds a note). `DiffView.setNotes(notes, handlers)` turns it
   on; without handlers it is off, so the History window does not get it. Line 0 is a note on the whole
-  file. `note-format.ts` makes the text for the clipboard.
+  file; its field is under the list of notes. `note-format.ts` makes the text for the clipboard.
 - Windows (Compare, History, Review, Show Repository): `windows.ts`. A window calls
   `registerWindow(close, kind, show)`, and listens with `onRepoChange`. `watch.ts` calls
   `notifyRepoChange("files" | "repo")`.
@@ -152,7 +152,9 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
   `receive.denyCurrentBranch ignore` on it.
 - Do not draw a whole bar or list again when nothing changed. A new element under the mouse loses
   the click (this broke the tabs scenario).
-- `delete-merged` failed once in a full run and passed alone. It is a known flaky case.
+- `delete-merged`, `remotes` (a click timeout) and `tabs` (the filter of the first tab) failed once
+  in a full run and passed alone. They are known flaky cases. Run them again alone before you look
+  for a bug.
 - A mouse drag in WebKitGTK (the Linux app) selects text and starts a native drag; then the page gets
   no `mousemove`. Call `preventDefault()` on `mousedown` for a custom drag. Chromium does not show this
   problem, so test a drag in the real app too.

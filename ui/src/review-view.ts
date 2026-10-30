@@ -67,21 +67,15 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
   const filesEl = h("div", { class: "history-list review-files", tabIndex: 0 });
   const notesTitle = h("div", { class: "review-notes-title" });
   const notesList = h("div", { class: "review-notes-list" });
-  const notes = h("div", { class: "review-notes" }, notesTitle, notesList);
-  // The notes on the whole file, above the diff. A note on a line has its card in the diff.
-  const fileNotesEl = h("div", { class: "review-file-note-list" });
+  // The field for a note on the whole file, under the list. A note on a line has its card in the diff.
   const fileNoteText = h("input", { class: "review-file-note-input", placeholder: "A note on the whole file (Enter adds it)", spellcheck: false });
   const fileNoteBtn = h("button", { class: "tb-button" }, "Add");
-  const fileNoteBar = h(
-    "div",
-    { class: "review-file-note-bar" },
-    h("div", { class: "review-file-note-form" }, icon("note"), fileNoteText, fileNoteBtn),
-    fileNotesEl,
-  );
+  const fileNoteBar = h("div", { class: "review-file-note-form" }, icon("note"), fileNoteText, fileNoteBtn);
+  const notes = h("div", { class: "review-notes" }, notesTitle, notesList, fileNoteBar);
   const side = h("div", { class: "compare-side" });
   const sideGrip = rowSplitter(side, commitsEl, () => settings.reviewCommitsHeight, (px) => (settings.reviewCommitsHeight = px), save);
   side.append(h("div", { class: "compare-files-title" }, "Commits"), commitsEl, sideGrip, filesTitle, filesEl);
-  const right = h("div", { class: "review-right" }, fileNoteBar, d.el, notes);
+  const right = h("div", { class: "review-right" }, d.el, notes);
   const grip = h("div", { class: "vgrip" });
   const body = h("div", { class: "history-body" }, side, grip, right);
   const win = h(
@@ -286,7 +280,6 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
     if (!f) {
       notesTitle.textContent = "Notes";
       notesList.replaceChildren();
-      fileNotesEl.replaceChildren();
       return;
     }
     const list = fileNotes(f.path);
@@ -332,11 +325,6 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
         if (!onFile) row.addEventListener("click", () => scope === "all" && d.revealLine(c.line));
         return row;
       }),
-    );
-    fileNotesEl.replaceChildren(
-      ...list
-        .filter((c) => c.line === 0)
-        .map((c) => h("div", { class: "review-file-note" }, h("span", { class: "review-note-body" }, c.text), h("span", { class: "muted-inline" }, formatDate(c.time)), copy(c), del(c.id))),
     );
     // A note on a line: only on a file that the branch has. A deleted file takes notes on the whole file.
     const handlers = { add: addNote, remove: deleteNote, copy: (n: { line: number; text: string }) => void copyText(formatNote(f.path, n)) };
