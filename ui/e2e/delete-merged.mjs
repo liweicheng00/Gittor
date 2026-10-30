@@ -1,13 +1,17 @@
 // UI scenario for Delete Merged Branches: merged into a branch (git branch --merged), and merged into the
 // tracked branch (git branch --delete-merged) with the preview, a kept branch, Undo, and a bad pattern.
 // Start the dev server first (see README). Build a fresh repository with make-demo-repo.sh, then:
-// node e2e/delete-merged.mjs <repo> <screenshot-dir>. Set NATIVE=1 when the dev server uses git 2.56 or
-// later. Set CHROMIUM to a Chromium binary when Playwright has no downloaded browser.
+// node e2e/delete-merged.mjs <repo> <screenshot-dir>. The scenario reads the version of git:
+// git 2.56 or later has git branch --delete-merged. Set CHROMIUM to a Chromium binary when Playwright has
+// no downloaded browser.
 import { chromium } from "playwright";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 const [,, repo, outDir] = process.argv;
 const git = (...args) => execFileSync("git", ["-C", repo, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).replace(/\s+$/, "");
+// The dev server runs the same git: 2.56 or later finds the branches itself.
+const [major, minor] = execFileSync("git", ["--version"], { encoding: "utf8" }).match(/(\d+)\.(\d+)/).slice(1).map(Number);
+const native = major > 2 || (major === 2 && minor >= 56);
 const has = (b) => git("branch", "--list", b) !== "";
 git("config", "commit.gpgsign", "false");
 git("fetch", "-q");
@@ -60,7 +64,7 @@ await page.click(".merged-patterns");
 check("no autocorrect in the field", (await page.getAttribute(".merged-patterns", "autocorrect")) === "off" && (await page.getAttribute(".merged-patterns", "autocapitalize")) === "off");
 await within("the preview shows the merged branches only", async () => (await rows()) === "done-1,done-2");
 const note = (await page.textContent(".dialog")) ?? "";
-check("the note says how git finds them", note.includes(process.env.NATIVE ? "Git finds the branches" : "older than 2.56"));
+check("the note says how git finds them", note.includes(native ? "Git finds the branches" : "older than 2.56"));
 await page.click(".merged-row:has-text('done-2') input");
 await within("the summary counts the chosen branches", async () => ((await page.textContent(".merged-summary")) ?? "").startsWith("1 of 2"));
 await shot("dm1-preview");

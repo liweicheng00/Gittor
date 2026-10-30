@@ -63,6 +63,10 @@ jobs:
       - run: npm --prefix ui ci
       - run: npx playwright install --with-deps chromium
         working-directory: ui
+      # The scenarios measure text, for example the left tabs. Inter is the font of the machines that
+      # made the scenarios; the default font of the runner is wider.
+      - name: Install the Inter font
+        run: sudo apt-get install -y fonts-inter
       - run: npm --prefix ui run build
       - run: cargo build -q -p gittor-devserver
       - name: Run all scenarios
