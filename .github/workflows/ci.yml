@@ -1,5 +1,6 @@
 # Tests each push to main and each pull request: the Rust tests, clippy, the types of the UI, the unit
-# tests of the UI, and all UI scenarios in Chromium.
+# tests of the UI, and all UI scenarios in Chromium. Four machines run the scenarios in parallel, each
+# one part (GITTOR_E2E_SHARD); ui/e2e/durations.txt makes the parts about equal in time.
 name: CI
 
 on:
@@ -45,7 +46,14 @@ jobs:
         working-directory: ui
 
   e2e:
+    name: e2e (${{ matrix.shard }}/4)
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      GITTOR_E2E_SHARD: ${{ matrix.shard }}/4
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -92,7 +100,7 @@ jobs:
           if [ "$status" -ne 0 ]; then
             failed=$(sed -n 's/^FAILED: //p' "$RUNNER_TEMP/run.log")
             echo "Run these scenarios again: $failed"
-            GITTOR_E2E_ONLY="^($(echo "$failed" | tr ' ' '|'))\$" ui/e2e/run-all.sh "$RUNNER_TEMP/e2e-again"
+            GITTOR_E2E_SHARD= GITTOR_E2E_ONLY="^($(echo "$failed" | tr ' ' '|'))\$" ui/e2e/run-all.sh "$RUNNER_TEMP/e2e-again"
             status=$?
           fi
           exit "$status"
@@ -100,7 +108,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e
+          name: e2e-${{ matrix.shard }}
           path: |
             ${{ runner.temp }}/e2e/*.log
             ${{ runner.temp }}/e2e/shots

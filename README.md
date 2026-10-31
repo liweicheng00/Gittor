@@ -152,6 +152,8 @@ ui/e2e/run-all.sh /tmp/e2e       # UI scenarios in Chromium on fresh demo reposi
   logs an error; each file says how to run it alone.
 - `GITTOR_E2E_ONLY=<regex>` runs only the matching scenarios. `GITTOR_E2E_URL` names another dev
   server, for example `http://127.0.0.1:5180`, so that several runs can share one machine.
+- `GITTOR_E2E_SHARD=k/n` runs part k of n parts of about the same time (from
+  `ui/e2e/durations.txt`). CI runs the scenarios in 4 parts on 4 machines.
 
 ## License
 

@@ -85,7 +85,8 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   build stays as before. In a browser, `window.__GITTOR_FAKE_UPDATE__` gives a fake update to the
   `updates` scenario. Releases: `scripts/release.sh <version>` and `.github/workflows/release.yml`.
 - CI: `.github/workflows/ci.yml` runs the tests, clippy, the types, the unit tests and all UI
-  scenarios on each push to main. Failed scenarios run once more alone.
+  scenarios on each push to main, the scenarios in 4 parts on 4 machines. Failed scenarios run once
+  more alone.
 - Windows (Compare, History, Review, Show Repository): `windows.ts`. A window calls
   `registerWindow(close, kind, show)`, and listens with `onRepoChange`. `watch.ts` calls
   `notifyRepoChange("files" | "repo")`.
@@ -135,7 +136,14 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
   `<dir>-wt`) makes a worktree test fail. Do not depend on the name of the folder: it is the name of
   the scenario in `run-all.sh`, and any name in a run by hand.
 - Parallel runs: start a dev server on another port, and set `GITTOR_E2E_URL=http://127.0.0.1:<port>`
-  and another work dir. `GITTOR_E2E_ONLY=<regex>` runs some scenarios only.
+  and another work dir. `GITTOR_E2E_ONLY=<regex>` runs some scenarios only. `GITTOR_E2E_SHARD=k/n`
+  runs part k of n: for example two dev servers (5174, 5180) with the parts 1/2 and 2/2. More parts
+  on one machine make the known flaky cases fail more often.
+- `ui/e2e/durations.txt` has the seconds of each scenario, for the parts. Each run writes
+  `<work-dir>/durations.txt`; copy the file of a full run over it when the times change much. A
+  scenario that it does not list counts 8 s.
+- Do not wait for a fixed time when a condition can show the end of a step: use a `within(...)`
+  check. Fixed waits are about 40% of the run time of the scenarios.
 - The full run takes longer than the 10-minute limit of one command. Run it in the background.
 - `global-ignore.mjs` starts its own server from `target/debug` of the repository.
 

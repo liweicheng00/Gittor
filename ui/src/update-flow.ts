@@ -7,8 +7,9 @@ import { toast } from "./notify";
 import { settings, soloWindow } from "./settings";
 import { statusActivity } from "./shell";
 
-/** The first check waits for the app to load its repository. */
-const FIRST_CHECK_MS = 10_000;
+/** The first check waits for the app to load its repository. The updates scenario sets a shorter time
+ * with `window.__GITTOR_FIRST_UPDATE_CHECK_MS__`. */
+const FIRST_CHECK_MS = (window as unknown as { __GITTOR_FIRST_UPDATE_CHECK_MS__?: number }).__GITTOR_FIRST_UPDATE_CHECK_MS__ ?? 10_000;
 const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
 /** A notification that the user must answer stays for a day. */
 const STAY_MS = 24 * 60 * 60 * 1000;

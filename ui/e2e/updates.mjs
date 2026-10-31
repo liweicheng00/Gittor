@@ -10,6 +10,8 @@ const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: p
 const errors = [];
 const open = async (fake) => {
   const context = await browser.newContext({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1.5 });
+  // The first check comes 1 s after the start, not 10 s.
+  await context.addInitScript(() => (window.__GITTOR_FIRST_UPDATE_CHECK_MS__ = 1000));
   if (fake) await context.addInitScript((f) => (window.__GITTOR_FAKE_UPDATE__ = f), fake);
   const page = await context.newPage();
   page.on("pageerror", (e) => errors.push("pageerror: " + e));
@@ -58,7 +60,8 @@ await local.waitForSelector(".settings-update");
 await within(local, "Check Now is off in a build without updates", async () => await local.isDisabled(".settings-update-check"));
 check("Settings says why", ((await local.textContent(".settings-update")) ?? "").includes("only a release build"));
 await local.keyboard.press("Escape");
-await local.waitForTimeout(11000);
+// The first check of a build with updates comes after 1 s: wait longer than that.
+await local.waitForTimeout(2500);
 check("a build without updates shows no notification", (await toastWith(local, "is available")) === null);
 
 console.log("errors:", JSON.stringify(errors));
