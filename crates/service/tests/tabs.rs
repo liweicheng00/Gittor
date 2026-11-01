@@ -42,9 +42,9 @@ fn tabs() {
     std::fs::write(a.join("f.txt"), "local\n").unwrap();
     let v = s.activate(args(&a)).unwrap();
     assert_eq!(v.total_commits, 2);
-    assert_eq!(s.local_changes().unwrap().lists[0].changes.len(), 1);
+    assert_eq!(s.local_changes().unwrap().lists.iter().find(|l| l.name == "Changes").unwrap().changes.len(), 1);
     s.activate(args(&b)).unwrap();
-    assert!(s.local_changes().unwrap().lists[0].changes.is_empty());
+    assert!(s.local_changes().unwrap().lists.iter().find(|l| l.name == "Changes").unwrap().changes.is_empty());
 
     // Closing the active tab leaves no active repository; the other tab stays open.
     s.close(PathArgs { path: b.to_string_lossy().into() }).unwrap();
@@ -64,7 +64,7 @@ fn commands_name_their_repository() {
     let body = |p: &Path| serde_json::json!({ "root": p.to_string_lossy() }).to_string();
     // B is active; a command with the root of A reads A.
     let changes: serde_json::Value = serde_json::from_str(&s.dispatch("local_changes", &body(&a)).unwrap()).unwrap();
-    assert_eq!(changes["lists"][0]["changes"].as_array().unwrap().len(), 1);
+    assert_eq!(changes["lists"][1]["changes"].as_array().unwrap().len(), 1);
     let view: serde_json::Value = serde_json::from_str(&s.dispatch("refresh", &body(&a)).unwrap()).unwrap();
     assert_eq!(view["totalCommits"], 1);
     // The active tab stays B, and a command without a root uses it.

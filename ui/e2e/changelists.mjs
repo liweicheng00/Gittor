@@ -103,6 +103,14 @@ await within("the new change is in Changes", async () => {
 // A file in .ignore cannot be checked, and no commit takes it.
 await page.dragAndDrop(".cl-file:has-text('parser.rs')", ".cl-header:has-text('.ignore')");
 await within("parser.rs is in .ignore", async () => /\.ignore ?1 file ?parser\.rs/.test(await tree()));
+// A mouse drag over the rows selects no text.
+const first = await page.locator(".cl-header:has-text('.ignore') .cl-name").boundingBox();
+const last = await page.locator(".cl-header:has-text('Docs') .cl-name").boundingBox();
+await page.mouse.move(first.x + 2, first.y + first.height / 2);
+await page.mouse.down();
+await page.mouse.move(last.x + last.width, last.y + last.height / 2, { steps: 10 });
+await page.mouse.up();
+check("a drag over the changelists selects no text", (await page.evaluate(() => window.getSelection().toString())) === "");
 check("the box of parser.rs is off", await page.isDisabled(".cl-file:has-text('parser.rs') .cl-check"));
 check("the box of .ignore is off", await page.isDisabled(".cl-header:has-text('.ignore') .cl-check"));
 await page.click(".cl-header:has-text('.ignore')", { button: "right" });
