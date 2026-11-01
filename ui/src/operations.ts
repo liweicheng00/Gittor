@@ -24,7 +24,7 @@ export async function runOp(op: Op, label: string, errorAction?: { label: string
   const r = outcome.result;
   if (r.ok) {
     app.lastUndo = r.undo.length ? { actions: r.undo, message: r.message } : null;
-    toast(r.message, "success", r.undo.length ? { label: "Undo", run: () => void undoLast() } : undefined);
+    toast(r.message, "success", r.undo.length ? { label: "Undo", run: () => void undoLast(), keyAction: "undo" } : undefined);
     const stale = outcome.staleSubmodules;
     if (stale.length) {
       const what = stale.length === 1 ? `Submodule ${stale[0]} is` : `${stale.length} submodules are`;
@@ -35,7 +35,7 @@ export async function runOp(op: Op, label: string, errorAction?: { label: string
     const hint = errorHint(outcome.errorKind);
     // An operation that stopped halfway can still have Undo steps for the part that it did.
     app.lastUndo = r.undo.length ? { actions: r.undo, message: r.message } : app.lastUndo;
-    toast(hint ? `${r.message}\n${hint}` : r.message, "error", errorAction ?? (r.undo.length ? { label: "Undo", run: () => void undoLast() } : undefined));
+    toast(hint ? `${r.message}\n${hint}` : r.message, "error", errorAction ?? (r.undo.length ? { label: "Undo", run: () => void undoLast(), keyAction: "undo" } : undefined));
     statusActivity.textContent = r.message;
     statusActivity.className = "sb-activity error";
   }

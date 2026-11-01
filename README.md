@@ -17,7 +17,8 @@ The design notes (in Chinese) are in [`docs/design-spec.md`](docs/design-spec.md
 
 ## Keyboard
 
-The defaults; change them in Settings › Keymap.
+The defaults; change them in Settings › Keymap. A mouse click on a button that has a shortcut shows
+the shortcut next to the mouse; Settings › General › Shortcut hints turns this off.
 
 | Keys | Action |
 |---|---|

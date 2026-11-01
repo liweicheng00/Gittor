@@ -66,6 +66,8 @@ export interface Settings {
   autoFetchMinutes: number;
   /** Check for a new version of the app at the start and every few hours. */
   autoCheckUpdates: boolean;
+  /** After a click on a button that has a shortcut, show the shortcut next to the mouse. */
+  keyHints: boolean;
   diffFontSize: number;
   /** Empty means the default monospace font. */
   diffFontFamily: string;
@@ -137,6 +139,7 @@ const DEFAULTS: Settings = {
   cloneDir: "",
   autoFetchMinutes: 0,
   autoCheckUpdates: true,
+  keyHints: true,
   diffFontSize: 12,
   diffFontFamily: "",
   historyDays: 5,

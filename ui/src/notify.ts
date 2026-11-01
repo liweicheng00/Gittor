@@ -5,11 +5,19 @@ import { h, icon } from "./dom";
 const host = h("div", { class: "toasts", role: "status", "aria-live": "polite" });
 document.body.append(host);
 
-export function toast(message: string, kind: "info" | "success" | "error" = "info", action?: { label: string; run: () => void }, ms = 7000) {
+/** An action button of a toast. `keyAction` names the keymap action that does the same, for the
+ * shortcut hint. */
+export interface ToastAction {
+  label: string;
+  run: () => void;
+  keyAction?: string;
+}
+
+export function toast(message: string, kind: "info" | "success" | "error" = "info", action?: ToastAction, ms = 7000) {
   const close = h("button", { class: "icon-button", title: "Close" }, icon("close"));
   const el = h("div", { class: `toast toast-${kind}` }, h("span", { class: "toast-text" }, message));
   if (action) {
-    const b = h("button", { class: "toast-action" }, action.label);
+    const b = h("button", { class: "toast-action", "data-key-action": action.keyAction }, action.label);
     b.addEventListener("click", () => {
       el.remove();
       action.run();

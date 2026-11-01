@@ -97,7 +97,10 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
 - Settings: `ui/src/settings.ts` (web view storage) for UI options; `crates/service/src/config.rs`
   (`settings.json`) for what the backend needs before the window opens (git program, editor,
   Local History limits).
-- Keys: actions in `ui/src/keyboard.ts`; the keymap page lists them by themselves.
+- Keys: actions in `ui/src/keyboard.ts`; the keymap page lists them by themselves. A button that
+  does the same as a keymap action gets `data-key-action="<id>"`: a mouse click on it then shows the
+  keys next to the mouse (`key-hint-flow.ts`, the setting `keyHints`). `keyWorksAt` applies the rules
+  of the key handler, so no hint names a key that does nothing there.
 - Icons: add the Lucide file name to the glob and to `NAMES` in `ui/src/icons.ts`.
 - Trees of files: `buildTree`, `treeOrder`, `walkTree` in `file-tree.ts`.
   Unique short names of folders: `pathLabels` in `path-labels.ts`.

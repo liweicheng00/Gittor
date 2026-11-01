@@ -83,8 +83,9 @@ export class DiffView {
   private revertGlyphs: { line: number; change: monaco.editor.ILineChange }[] = [];
 
   constructor() {
-    const btn = (label: string | Node, title: string, fn: () => void) => {
-      const b = h("button", { class: "icon-button", title }, label);
+    // `action` names the keymap action of the button, for the shortcut hint.
+    const btn = (label: string | Node, title: string, fn: () => void, action?: string) => {
+      const b = h("button", { class: "icon-button", title, "data-key-action": action }, label);
       b.addEventListener("click", fn);
       return b;
     };
@@ -105,15 +106,15 @@ export class DiffView {
     this.annotateBox.addEventListener("change", () => void this.annotate());
     const annotate = h("label", { class: "diff-option", title: "Show the commit that last changed each line (git blame). Click an annotation to go to its commit." }, this.annotateBox, "Annotate");
     this.historyBtn = btn(icon("history"), "Show the history of this file", () => this.source && this.onHistory(this.source.path));
-    const editBtn = btn(icon("edit"), "Open in the editor (F4)", () => this.openInEditor());
+    const editBtn = btn(icon("edit"), "Open in the editor (F4)", () => this.openInEditor(), "openInEditor");
     editBtn.classList.add("diff-open-editor");
     const toolbar = h(
       "div",
       { class: "diff-toolbar" },
-      btn(icon("up"), "Previous change (Shift+F7)", () => this.goToDiff("previous")),
-      btn(icon("down"), "Next change (F7)", () => this.goToDiff("next")),
-      btn(icon("prev-file"), "Previous file (Alt+Up)", () => this.onPrevFile()),
-      btn(icon("next-file"), "Next file (Alt+Down)", () => this.onNextFile()),
+      btn(icon("up"), "Previous change (Shift+F7)", () => this.goToDiff("previous"), "previousChange"),
+      btn(icon("down"), "Next change (F7)", () => this.goToDiff("next"), "nextChange"),
+      btn(icon("prev-file"), "Previous file (Alt+Up)", () => this.onPrevFile(), "previousFile"),
+      btn(icon("next-file"), "Next file (Alt+Down)", () => this.onNextFile(), "nextFile"),
       this.title,
       copyPath,
       this.historyBtn,
@@ -125,7 +126,7 @@ export class DiffView {
       toggle("Side by side", "sideBySide", "Show the two versions side by side, or in one column"),
       toggle("Ignore whitespace", "ignoreWhitespace", "Ignore leading and trailing whitespace changes"),
       toggle("Collapse unchanged", "collapseUnchanged", "Hide unchanged regions"),
-      btn(icon("close"), "Hide the diff panel", () => this.onHide()),
+      btn(icon("close"), "Hide the diff panel", () => this.onHide(), "hideDiff"),
     );
     this.notice = h("div", { class: "diff-notice" });
     this.host = h("div", { class: "diff-host" });

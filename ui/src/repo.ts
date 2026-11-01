@@ -103,7 +103,7 @@ export function renderTabs() {
       return tab;
     }),
     (() => {
-      const add = h("button", { class: "tab-add", title: `Open a repository in a new tab (${mod}O)` }, "+");
+      const add = h("button", { class: "tab-add", title: `Open a repository in a new tab (${mod}O)`, "data-key-action": "open" }, "+");
       add.addEventListener("click", () => void askForRepo());
       return add;
     })(),

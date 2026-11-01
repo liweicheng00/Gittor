@@ -91,12 +91,23 @@ for (const a of [
 let openAtKey = { dialog: false, window: false };
 window.addEventListener("keydown", () => (openAtKey = { dialog: !!document.querySelector(".overlay"), window: !!document.querySelector(".merge-overlay") }), true);
 
+/** The actions whose keys work in a window such as Compare or Review. */
+const inWindow = (id: string) => id === "openInEditor" || id.startsWith("zoom") || id.startsWith("navigate");
+
+/** The key of an action works at this element now: the same rules as the key handler below. */
+export function keyWorksAt(id: string, target: HTMLElement): boolean {
+  const a = keymap.actions.find((x) => x.id === id);
+  if (!a || target.closest(".overlay")) return false;
+  if (target.closest(".merge-overlay") && !inWindow(id)) return false;
+  return !a.when || a.when(target);
+}
+
 window.addEventListener("keydown", (e) => {
   // An open dialog handles its own keys. A window, such as Compare or Review, takes Open in Editor only.
   if (openAtKey.dialog || document.querySelector(".overlay")) return;
   // The zoom keys work in every window, as in a browser.
   if (keymap.handle(e, (a) => a.id.startsWith("zoom") || a.id.startsWith("navigate"))) return;
-  if (openAtKey.window || document.querySelector(".merge-overlay")) return void keymap.handle(e, (a) => a.id === "openInEditor");
+  if (openAtKey.window || document.querySelector(".merge-overlay")) return void keymap.handle(e, (a) => inWindow(a.id));
   keymap.handle(e);
 });
 
