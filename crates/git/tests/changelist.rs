@@ -1,6 +1,6 @@
 //! Runs changelists and partial commits against temporary repositories.
 
-use gittor_git::changelist::{ChangeListOp, LocalChanges, DEFAULT_ID};
+use gittor_git::changelist::{ChangeListOp, LocalChanges, DEFAULT_ID, IGNORE_ID};
 use gittor_git::ops::{UndoAction, UndoMode};
 use gittor_git::Repo;
 use std::path::{Path, PathBuf};
@@ -46,38 +46,72 @@ fn changelists_assign_move_and_remove() {
     std::fs::write(dir.join("a.txt"), "a2\n").unwrap();
     let lc = repo.local_changes().unwrap();
     assert_eq!(list(&lc, "Changes"), ["a.txt"]);
+    // .ignore is first and Changes second; both are fixed.
+    let names: Vec<(&str, bool)> = lc.lists.iter().map(|l| (l.name.as_str(), l.fixed)).collect();
+    assert_eq!(names, [(".ignore", true), ("Changes", true)]);
 
-    // A new changelist becomes active: the next new change goes there.
-    repo.changelist_op(ChangeListOp::Create { name: "Feature".into(), comment: String::new(), make_active: true, paths: vec![] }).unwrap();
+    // New changes go to Changes, also when another changelist exists.
+    repo.changelist_op(ChangeListOp::Create { name: "Feature".into(), comment: String::new(), paths: vec![] }).unwrap();
     std::fs::write(dir.join("b.txt"), "b2\n").unwrap();
     let lc = repo.local_changes().unwrap();
-    assert_eq!(list(&lc, "Changes"), ["a.txt"]);
-    assert_eq!(list(&lc, "Feature"), ["b.txt"]);
-    assert!(lc.lists.iter().find(|l| l.name == "Feature").unwrap().active);
+    assert_eq!(list(&lc, "Changes"), ["a.txt", "b.txt"]);
+    assert!(list(&lc, "Feature").is_empty());
 
-    // Move, then a duplicate name is refused.
+    // Move, then a duplicate name is refused. The fixed names are taken too.
     let feature = id(&lc, "Feature");
-    repo.changelist_op(ChangeListOp::Move { paths: strings(&["a.txt"]), to: feature.clone() }).unwrap();
+    repo.changelist_op(ChangeListOp::Move { paths: strings(&["a.txt", "b.txt"]), to: feature.clone() }).unwrap();
     assert_eq!(list(&repo.local_changes().unwrap(), "Feature"), ["a.txt", "b.txt"]);
-    assert!(repo.changelist_op(ChangeListOp::Create { name: "Feature".into(), comment: String::new(), make_active: false, paths: vec![] }).is_err());
+    for name in ["Feature", ".ignore", "Changes"] {
+        assert!(repo.changelist_op(ChangeListOp::Create { name: name.into(), comment: String::new(), paths: vec![] }).is_err());
+    }
 
-    // A file that is not changed any more leaves its changelist; when it changes again it goes to the active one.
-    repo.changelist_op(ChangeListOp::SetActive { id: DEFAULT_ID.into() }).unwrap();
+    // A file that is not changed any more leaves its changelist; when it changes again it goes to Changes.
     std::fs::write(dir.join("a.txt"), "a.txt\n").unwrap();
     assert_eq!(list(&repo.local_changes().unwrap(), "Feature"), ["b.txt"]);
     std::fs::write(dir.join("a.txt"), "a3\n").unwrap();
     assert_eq!(list(&repo.local_changes().unwrap(), "Changes"), ["a.txt"]);
 
-    // Removing a changelist moves its files to the active changelist.
+    // A file in .ignore stays there.
+    repo.changelist_op(ChangeListOp::Move { paths: strings(&["a.txt"]), to: IGNORE_ID.into() }).unwrap();
+    std::fs::write(dir.join("a.txt"), "a4\n").unwrap();
+    assert_eq!(list(&repo.local_changes().unwrap(), ".ignore"), ["a.txt"]);
+
+    // Removing a changelist moves its files to Changes.
     repo.changelist_op(ChangeListOp::Remove { id: feature }).unwrap();
     let lc = repo.local_changes().unwrap();
-    assert_eq!(lc.lists.len(), 1);
-    assert_eq!(list(&lc, "Changes"), ["a.txt", "b.txt"]);
-    assert!(repo.changelist_op(ChangeListOp::Remove { id: DEFAULT_ID.into() }).is_err());
+    assert_eq!(lc.lists.len(), 2);
+    assert_eq!(list(&lc, "Changes"), ["b.txt"]);
+    // The fixed changelists cannot be removed or get another name. The comment of Changes can change.
+    for fixed in [DEFAULT_ID, IGNORE_ID] {
+        assert!(repo.changelist_op(ChangeListOp::Remove { id: fixed.into() }).is_err());
+        assert!(repo.changelist_op(ChangeListOp::Edit { id: fixed.into(), name: "Other".into(), comment: String::new() }).is_err());
+    }
+    repo.changelist_op(ChangeListOp::Edit { id: DEFAULT_ID.into(), name: "Changes".into(), comment: "Note".into() }).unwrap();
 
     // The draft message is kept.
     repo.changelist_op(ChangeListOp::SaveMessage { id: DEFAULT_ID.into(), message: "Draft".into() }).unwrap();
-    assert_eq!(repo.local_changes().unwrap().lists[0].comment, "Draft");
+    assert_eq!(repo.local_changes().unwrap().lists[1].comment, "Draft");
+}
+
+#[test]
+fn an_older_store_gets_the_fixed_changelists() {
+    let dir = temp_repo("older");
+    let repo = Repo::open(&dir).unwrap();
+    std::fs::write(dir.join("a.txt"), "a2\n").unwrap();
+    std::fs::write(dir.join("b.txt"), "b2\n").unwrap();
+    // An older version: Feature first and active, a renamed default changelist, no .ignore.
+    let store = r#"{"lists":[{"id":"cl1","name":"Feature","files":["b.txt"]},{"id":"default","name":"Work","files":["a.txt"]}],"active":"cl1","nextId":1}"#;
+    std::fs::create_dir_all(dir.join(".git/gittor")).unwrap();
+    std::fs::write(dir.join(".git/gittor/changelists.json"), store).unwrap();
+    let lc = repo.local_changes().unwrap();
+    let names: Vec<&str> = lc.lists.iter().map(|l| l.name.as_str()).collect();
+    assert_eq!(names, [".ignore", "Changes", "Feature"]);
+    assert_eq!(list(&lc, "Changes"), ["a.txt"]);
+    assert_eq!(list(&lc, "Feature"), ["b.txt"]);
+    // The old active changelist does not get new changes any more.
+    std::fs::write(dir.join("c.txt"), "c2\n").unwrap();
+    git(&dir, &["add", "c.txt"]);
+    assert_eq!(list(&repo.local_changes().unwrap(), "Changes"), ["a.txt", "c.txt"]);
 }
 
 #[test]
@@ -95,13 +129,12 @@ fn commit_one_changelist_only() {
     let lc = repo.local_changes().unwrap();
     assert_eq!(list(&lc, "Changes"), ["a.txt", "b.txt", "c.txt", "gone.txt", "new.txt"]);
     assert_eq!(lc.unversioned, ["fresh.txt"]);
-    let renamed = &lc.lists[0].changes[4];
+    let renamed = &lc.lists[1].changes[4];
     assert_eq!((renamed.status, renamed.old_path.as_deref()), ('R', Some("old.txt")));
 
     repo.changelist_op(ChangeListOp::Create {
         name: "Later".into(),
         comment: String::new(),
-        make_active: false,
         paths: strings(&["b.txt", "c.txt"]),
     })
     .unwrap();
@@ -180,7 +213,7 @@ fn commit_during_merge_takes_the_whole_index() {
     assert!(!out.status.success());
     let lc = repo.local_changes().unwrap();
     assert_eq!(lc.conflicts, ["a.txt"]);
-    assert_eq!(lc.lists[0].changes[0].status, 'U');
+    assert_eq!(lc.lists[1].changes[0].status, 'U');
     std::fs::write(dir.join("a.txt"), "resolved\n").unwrap();
     repo.commit_paths(&strings(&["a.txt"]), &[], "Merge side", false).unwrap();
     assert_eq!(git(&dir, &["rev-list", "--parents", "-n", "1", "HEAD"]).split(' ').count(), 3);
@@ -235,7 +268,7 @@ fn hunks_in_different_changelists() {
     let edited = base.replace("line 2\n", "line 2 fixed\n").replace("line 18\n", "line 18 debug\n");
     std::fs::write(dir.join("a.txt"), &edited).unwrap();
     repo.local_changes().unwrap();
-    repo.changelist_op(ChangeListOp::Create { name: "Debug".into(), comment: String::new(), make_active: false, paths: vec![] }).unwrap();
+    repo.changelist_op(ChangeListOp::Create { name: "Debug".into(), comment: String::new(), paths: vec![] }).unwrap();
     let lc = repo.local_changes().unwrap();
     let debug = id(&lc, "Debug");
 

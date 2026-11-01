@@ -64,6 +64,9 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
 - Undo (`crates/git/src/undo.rs`): `Reset`, `Checkout`, `CreateRef`, `DeleteRef`, `MoveRef`,
   `RenameBranch`, `StashStore`, `SetConfig`. Each step checks that nothing moved since.
 - Files of the app in a git dir: always `app_dir(git_dir)`.
+- Changelists (`crates/git/src/changelist.rs`): ".ignore" (`IGNORE_ID`) and "Changes" (`DEFAULT_ID`) are
+  always the first two and cannot be removed or renamed. Every new change goes to "Changes"; there is
+  no active changelist. The UI never checks a file in ".ignore", so no commit takes it.
 - Submodules: `Repo::submodules` reads all of them with three git commands (`.gitmodules`, the index,
   `git status --porcelain=v2`). The Submodules tab is `submodule-panel.ts` and `submodule-flow.ts`;
   `loadSubmodules` in `repo.ts` loads it with the local changes, and hides the tab when there are none.

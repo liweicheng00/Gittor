@@ -87,7 +87,7 @@ function moveChangeMenu(f: LocalFile, line: number, at: { x: number; y: number }
     commitPanel.revealFile(path, f.list);
   };
   const items: MenuItem[] = [{ header: "Move Change to Changelist" }];
-  for (const l of commitPanel.lists) items.push({ label: l.name + (l.active ? " (active)" : ""), disabled: l.id === current, action: () => void move(l.id) });
+  for (const l of commitPanel.lists) items.push({ label: l.name, disabled: l.id === current, action: () => void move(l.id) });
   items.push({
     label: "New Changelist…",
     action: async () => {
@@ -104,25 +104,25 @@ export async function newChangeList(paths: string[] = []) {
   const r = await formDialog("New Changelist", [
     { key: "name", label: "Name", placeholder: "Feature work" },
     { key: "comment", label: "Comment (the draft commit message)", type: "textarea" },
-    { key: "active", label: "Set active", type: "checkbox", value: paths.length === 0 },
-  ], "Create", paths.length ? `${paths.length} file(s) move to the new changelist.` : "New changes go to the active changelist.");
+  ], "Create", paths.length ? `${paths.length} file(s) move to the new changelist.` : "New changes go to Changes. Drag files to the new changelist, or move them with the context menu.");
   if (!r || !String(r.name).trim()) return;
-  await changeListOp({ op: "create", name: String(r.name), comment: String(r.comment), makeActive: !!r.active, paths });
+  await changeListOp({ op: "create", name: String(r.name), comment: String(r.comment), paths });
 }
 
 export async function editChangeList(l: ChangeListView) {
+  // .ignore and Changes keep their names: only the comment changes.
   const r = await formDialog(`Edit Changelist ${l.name}`, [
-    { key: "name", label: "Name", value: l.name },
+    ...(l.fixed ? [] : [{ key: "name", label: "Name", value: l.name }]),
     { key: "comment", label: "Comment (the draft commit message)", type: "textarea", value: l.comment },
   ], "Save");
-  if (!r || !String(r.name).trim()) return;
-  await changeListOp({ op: "edit", id: l.id, name: String(r.name), comment: String(r.comment) });
+  const name = l.fixed ? l.name : String(r?.name ?? "");
+  if (!r || !name.trim()) return;
+  await changeListOp({ op: "edit", id: l.id, name, comment: String(r.comment) });
 }
 
 export async function removeChangeList(l: ChangeListView) {
-  if (commitPanel.lists.length === 1) return toast("The last changelist cannot be removed.", "error");
-  const to = commitPanel.lists.find((x) => x.active && x.id !== l.id)?.name ?? commitPanel.lists.find((x) => x.id !== l.id)?.name;
-  if (l.changes.length && !(await confirmDialog("Remove changelist", `Remove ${l.name}? Its ${l.changes.length} file(s) move to ${to}. The changes stay.`, "Remove"))) return;
+  if (l.fixed) return toast(`${l.name} cannot be removed.`, "error");
+  if (l.changes.length && !(await confirmDialog("Remove changelist", `Remove ${l.name}? Its ${l.changes.length} file(s) move to Changes. The changes stay.`, "Remove"))) return;
   await changeListOp({ op: "remove", id: l.id });
 }
 

@@ -259,10 +259,9 @@ export type Op =
   | { op: "writeFile"; path: string; text: string; expected: string };
 
 export type ChangeListOp =
-  | { op: "create"; name: string; comment?: string; makeActive?: boolean; paths?: string[] }
+  | { op: "create"; name: string; comment?: string; paths?: string[] }
   | { op: "edit"; id: string; name: string; comment: string }
   | { op: "remove"; id: string }
-  | { op: "setActive"; id: string }
   | { op: "move"; paths: string[]; to: string }
   | { op: "moveLines"; path: string; lines: number[]; to: string }
   | { op: "saveMessage"; id: string; message: string };
@@ -382,6 +381,11 @@ export async function openWindow(path: string, at: WindowPlace): Promise<void> {
   const features = `popup,left=${Math.round(at.x)},top=${Math.round(at.y)},width=${Math.round(at.width)},height=${Math.round(at.height)}`;
   window.open(`${location.pathname}?solo=1&repo=${encodeURIComponent(path)}`, "_blank", features);
 }
+
+/** The fixed changelists: ".ignore" holds changes that do not go into a commit, and "Changes" gets all
+ * new changes. */
+export const IGNORE_LIST = "ignore";
+export const DEFAULT_LIST = "default";
 
 /** A new version of the app that the updater found. */
 export interface UpdateInfo {

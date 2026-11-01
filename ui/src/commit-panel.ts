@@ -1,7 +1,8 @@
 // Commit panel: local changes grouped by changelist, as in IntelliJ's Commit tool window.
-// The checked files go into the commit. By default the files of the active changelist are checked.
+// The checked files go into the commit. By default the new files in Changes are checked; the files in
+// .ignore cannot be checked.
 
-import type { Change, ChangeListView, LocalChanges } from "./api";
+import { type Change, type ChangeListView, DEFAULT_LIST, IGNORE_LIST, type LocalChanges } from "./api";
 import { statusName } from "./changes-panel";
 import { fileIcon } from "./file-icon";
 import { buildTree, treeOrder, walkTree } from "./file-tree";
@@ -216,15 +217,14 @@ export class CommitPanel {
     for (const l of data.lists) for (const c of l.changes) files.push(this.tracked(l.id, c));
     for (const p of data.unversioned) files.push({ key: `u:${p}`, change: { status: "?", path: p, old_path: null }, list: null });
     const keys = new Set(files.map((f) => f.key));
-    const active = data.lists.find((l) => l.active)?.id;
     for (const k of [...this.included]) if (!keys.has(k)) this.included.delete(k);
     for (const k of [...this.partial.keys()]) if (!keys.has(k)) this.partial.delete(k);
     for (const k of [...this.selection]) if (!keys.has(k)) this.selection.delete(k);
-    // New changes of the active changelist are checked, as in IntelliJ.
+    // New changes in Changes are checked, as in IntelliJ.
     for (const f of files) {
       if (this.seen.has(f.key)) continue;
       this.seen.add(f.key);
-      if (f.list !== null && f.list === active) this.included.add(f.key);
+      if (f.list === DEFAULT_LIST) this.included.add(f.key);
     }
     this.files = files;
     this.render();
@@ -404,7 +404,7 @@ export class CommitPanel {
         best = l.id;
       }
     }
-    return best ?? lists.find((l) => l.active)?.id ?? null;
+    return best ?? (lists.some((l) => l.id === DEFAULT_LIST) ? DEFAULT_LIST : null);
   }
 
   private updateTarget() {
@@ -485,6 +485,12 @@ export class CommitPanel {
       this.updateSummary();
       return;
     }
+    // The files in .ignore never go into a commit.
+    for (const f of this.files) {
+      if (f.list !== IGNORE_LIST) continue;
+      this.included.delete(f.key);
+      this.partial.delete(f.key);
+    }
     for (const l of this.data.lists) {
       frag.append(this.header(l.id, l.name, l.changes.map((c) => this.tracked(l.id, c).key), l));
       if (!this.collapsed.has(l.id)) this.appendFiles(frag, l.id, l.changes.map((c) => this.tracked(l.id, c)));
@@ -521,13 +527,14 @@ export class CommitPanel {
   /** A folder in the tree. Its box checks all of its files, and the menu and a drag take all of them. */
   private dirRow(id: string, label: string, depth: number, open: boolean, files: LocalFile[]): HTMLElement {
     const keys = files.map((f) => f.key);
-    const n = keys.filter((k) => this.included.has(k)).length;
-    const box = h("input", { type: "checkbox", class: "cl-check" });
-    box.checked = n === keys.length;
-    box.indeterminate = n > 0 && n < keys.length;
+    const checkable = files.filter((f) => f.list !== IGNORE_LIST).map((f) => f.key);
+    const n = checkable.filter((k) => this.included.has(k)).length;
+    const box = h("input", { type: "checkbox", class: "cl-check", disabled: checkable.length === 0 });
+    box.checked = checkable.length > 0 && n === checkable.length;
+    box.indeterminate = n > 0 && n < checkable.length;
     box.addEventListener("click", (e) => e.stopPropagation());
     box.addEventListener("change", () => {
-      for (const k of keys) {
+      for (const k of checkable) {
         if (box.checked) this.included.add(k);
         else this.included.delete(k);
         this.partial.delete(k);
@@ -567,7 +574,13 @@ export class CommitPanel {
   private header(id: string, name: string, keys: string[], list: ChangeListView | null): HTMLElement {
     const open = !this.collapsed.has(id);
     const n = keys.filter((k) => this.included.has(k)).length;
-    const box = h("input", { type: "checkbox", class: "cl-check", disabled: keys.length === 0 });
+    const ignored = id === IGNORE_LIST;
+    const box = h("input", {
+      type: "checkbox",
+      class: "cl-check",
+      disabled: keys.length === 0 || ignored,
+      title: ignored ? "The files in .ignore stay out of commits. Move a file to another changelist to commit it." : "",
+    });
     box.checked = keys.length > 0 && n === keys.length;
     box.indeterminate = n > 0 && n < keys.length;
     box.addEventListener("click", (e) => e.stopPropagation());
@@ -583,7 +596,7 @@ export class CommitPanel {
     const twist = twisty(open);
     const row = h(
       "div",
-      { class: "cl-header" + (list?.active ? " active-list" : "") + (list ? "" : " unversioned"), "data-list": id, title: list?.comment || name },
+      { class: "cl-header" + (ignored ? " ignore-list" : "") + (list ? "" : " unversioned"), "data-list": id, title: list?.comment || name },
       twist,
       box,
       h("span", { class: "cl-name" }, name),
@@ -625,7 +638,15 @@ export class CommitPanel {
     const box = h("input", {
       type: "checkbox",
       class: "cl-check",
-      title: this.partial.has(f.key) ? "Some changes of this file stay out of the commit" : f.split ? "The changes of this file in this changelist" : "",
+      disabled: f.list === IGNORE_LIST,
+      title:
+        f.list === IGNORE_LIST
+          ? "A file in .ignore stays out of commits"
+          : this.partial.has(f.key)
+            ? "Some changes of this file stay out of the commit"
+            : f.split
+              ? "The changes of this file in this changelist"
+              : "",
     });
     box.checked = this.included.has(f.key);
     box.indeterminate = this.included.has(f.key) && this.partial.has(f.key);

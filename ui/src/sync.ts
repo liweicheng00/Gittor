@@ -2,7 +2,7 @@
 
 import { openInEditor } from "./editor-flow";
 import { keymap } from "./keyboard";
-import { api } from "./api";
+import { api, IGNORE_LIST } from "./api";
 import { changeListOp, deleteUnversioned, editChangeList, newChangeList, removeChangeList, rollback, showLocalDiff } from "./commit-flow";
 import { mergeFile } from "./conflicts";
 import { type MenuItem, showMenu } from "./context-menu";
@@ -110,7 +110,7 @@ commitPanel.onFileMenu = (files, e) => {
     const paths = tracked.map((f) => f.change.path);
     const from = new Set(tracked.map((f) => f.list));
     for (const l of commitPanel.lists) {
-      items.push({ label: l.name + (l.active ? " (active)" : ""), disabled: from.size === 1 && from.has(l.id), action: () => void changeListOp({ op: "move", paths, to: l.id }) });
+      items.push({ label: l.name, disabled: from.size === 1 && from.has(l.id), action: () => void changeListOp({ op: "move", paths, to: l.id }) });
     }
     items.push({ label: "New Changelist…", action: () => void newChangeList(paths) });
   }
@@ -123,12 +123,11 @@ commitPanel.onFileMenu = (files, e) => {
 };
 commitPanel.onListMenu = (l, e) =>
   showMenu(e.clientX, e.clientY, [
-    { label: "Commit Only This Changelist", disabled: !l.changes.length, action: () => { commitPanel.includeOnly(l.id); commitPanel.focusMessage(); } },
-    { label: "Set Active Changelist", disabled: l.active, action: () => void changeListOp({ op: "setActive", id: l.id }) },
+    { label: "Commit Only This Changelist", disabled: !l.changes.length || l.id === IGNORE_LIST, action: () => { commitPanel.includeOnly(l.id); commitPanel.focusMessage(); } },
     { separator: true },
     { label: "New Changelist…", action: () => void newChangeList() },
     { label: "Edit Changelist…", action: () => void editChangeList(l) },
-    { label: "Remove Changelist…", disabled: commitPanel.lists.length === 1, action: () => void removeChangeList(l) },
+    { label: "Remove Changelist…", disabled: l.fixed, action: () => void removeChangeList(l) },
     { separator: true },
     { label: "Stash Changelist…", disabled: !l.changes.length, action: () => void stashChanges(l.changes.flatMap((c) => (c.old_path ? [c.path, c.old_path] : [c.path])), false, l.name) },
     { label: "Rollback…", disabled: !l.changes.length, action: () => void rollback(l.changes.map((c) => ({ key: `f:${c.path}`, change: c, list: l.id }))) },

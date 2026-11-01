@@ -348,7 +348,7 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .cl-header:hover { background: var(--hover); }
 .cl-header.drop { background: var(--select); outline: 1px dashed var(--accent); }
 .cl-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 3em; }
-.cl-header.active-list .cl-name::after { content: " (active)"; font-weight: normal; color: var(--muted); }
+.cl-header.ignore-list .cl-name { color: var(--muted); font-style: italic; }
 .cl-header.unversioned .cl-name { color: var(--muted); }
 .cl-count { color: var(--muted); font-size: 11px; flex: 0 0 auto; }
 .cl-comment { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 100 auto; font-style: italic; }

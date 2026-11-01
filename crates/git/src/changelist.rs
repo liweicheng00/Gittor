@@ -2,8 +2,10 @@
 //! and leave the other local changes alone.
 //!
 //! The groups live in `<git dir>/gittor/changelists.json`. Each worktree has its own git dir, so each
-//! worktree has its own changelists. A changed file that is in no changelist goes to the active changelist
-//! the first time it is seen. A file that is not changed any more leaves its changelist.
+//! worktree has its own changelists. Two changelists are always there, first in the list: ".ignore" holds
+//! changes that the user does not commit, and "Changes" gets each changed file that is in no changelist
+//! the first time it is seen. The user moves files to other changelists. A file that is not changed any
+//! more leaves its changelist.
 //!
 //! The hunks of a modified file can be in different changelists. The changelist that holds the file owns
 //! its new hunks. Another changelist can hold some hunks of the file; see [`crate::hunks`].
@@ -15,8 +17,12 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::{Component, Path, PathBuf};
 
+/// The changelist of new changes: "Changes".
 pub const DEFAULT_ID: &str = "default";
 const DEFAULT_NAME: &str = "Changes";
+/// The changelist of changes that the user does not commit: ".ignore".
+pub const IGNORE_ID: &str = "ignore";
+const IGNORE_NAME: &str = ".ignore";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -43,6 +49,8 @@ struct StoredHunk {
 #[serde(rename_all = "camelCase")]
 struct Store {
     lists: Vec<StoredList>,
+    /// The changelist of new changes in older files. It is always "Changes" now.
+    #[serde(default)]
     active: String,
     #[serde(default)]
     next_id: u32,
@@ -56,7 +64,8 @@ pub struct ChangeListView {
     pub id: String,
     pub name: String,
     pub comment: String,
-    pub active: bool,
+    /// ".ignore" or "Changes": the user cannot rename or remove it.
+    pub fixed: bool,
     pub changes: Vec<Change>,
 }
 
@@ -86,10 +95,9 @@ pub struct PartialFile {
 #[derive(Debug, Deserialize)]
 #[serde(tag = "op", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ChangeListOp {
-    Create { name: String, #[serde(default)] comment: String, #[serde(default)] make_active: bool, #[serde(default)] paths: Vec<String> },
+    Create { name: String, #[serde(default)] comment: String, #[serde(default)] paths: Vec<String> },
     Edit { id: String, name: String, comment: String },
     Remove { id: String },
-    SetActive { id: String },
     Move { paths: Vec<String>, to: String },
     /// Moves the hunks that cover the working-tree lines of a file.
     MoveLines { path: String, lines: Vec<u32>, to: String },
@@ -97,13 +105,26 @@ pub enum ChangeListOp {
 }
 
 impl Store {
-    fn ensure_default(&mut self) {
-        if self.lists.is_empty() {
-            self.lists.push(StoredList { id: DEFAULT_ID.into(), name: DEFAULT_NAME.into(), comment: String::new(), files: Vec::new(), hunks: Vec::new() });
+    /// Puts ".ignore" and "Changes" first, with their names. A store of an older version gets them.
+    fn ensure_fixed(&mut self) {
+        for (i, (id, name)) in [(IGNORE_ID, IGNORE_NAME), (DEFAULT_ID, DEFAULT_NAME)].into_iter().enumerate() {
+            let list = match self.lists.iter().position(|l| l.id == id) {
+                Some(at) => self.lists.remove(at),
+                None => StoredList { id: id.into(), name: name.into(), comment: String::new(), files: Vec::new(), hunks: Vec::new() },
+            };
+            self.lists.insert(i, StoredList { name: name.into(), ..list });
         }
-        if !self.lists.iter().any(|l| l.id == self.active) {
-            self.active = self.lists[0].id.clone();
+        // Another changelist with a fixed name gets a new name.
+        for l in self.lists.iter_mut().skip(2) {
+            if l.name == IGNORE_NAME || l.name == DEFAULT_NAME {
+                l.name = format!("{} ({})", l.name, l.id);
+            }
         }
+        self.active = DEFAULT_ID.into();
+    }
+
+    fn fixed(id: &str) -> bool {
+        id == IGNORE_ID || id == DEFAULT_ID
     }
 
     fn list_mut(&mut self, id: &str) -> Result<&mut StoredList> {
@@ -134,7 +155,7 @@ impl Store {
 
     /// The changelist of each hunk of a file: its own entry, else the owner of the file.
     fn assign(&self, path: &str, hunks: &mut [Hunk]) {
-        let owner = self.owner(path).unwrap_or(&self.active).to_string();
+        let owner = self.owner(path).unwrap_or(DEFAULT_ID).to_string();
         for h in hunks {
             h.list = self
                 .lists
@@ -175,7 +196,7 @@ impl Repo {
 
     fn load_store(&self) -> Store {
         let mut store: Store = std::fs::read(self.store_path()).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default();
-        store.ensure_default();
+        store.ensure_fixed();
         store
     }
 
@@ -223,8 +244,8 @@ impl Repo {
         Ok(out)
     }
 
-    /// The local changes by changelist. It assigns new changes to the active changelist and forgets files
-    /// that are not changed any more.
+    /// The local changes by changelist. It assigns new changes to "Changes" and forgets files that are not
+    /// changed any more.
     pub fn local_changes(&self) -> Result<LocalChanges> {
         let changes = self.tracked_changes()?;
         let unversioned = self.unversioned()?;
@@ -238,10 +259,9 @@ impl Repo {
             l.files.retain(|f| changed.contains(f.as_str()) && assigned.insert(f.clone()));
             dirty |= l.files.len() != before;
         }
-        let active = store.active.clone();
         for c in &changes {
             if !assigned.contains(&c.path) {
-                store.list_mut(&active)?.files.push(c.path.clone());
+                store.list_mut(DEFAULT_ID)?.files.push(c.path.clone());
                 dirty = true;
             }
         }
@@ -264,7 +284,7 @@ impl Repo {
                     id: l.id.clone(),
                     name: l.name.clone(),
                     comment: l.comment.clone(),
-                    active: l.id == store.active,
+                    fixed: Store::fixed(&l.id),
                     changes: changes.iter().filter(shows).cloned().collect(),
                 }
             })
@@ -310,37 +330,29 @@ impl Repo {
     pub fn changelist_op(&self, op: ChangeListOp) -> Result<()> {
         let mut store = self.load_store();
         match op {
-            ChangeListOp::Create { name, comment, make_active, paths } => {
+            ChangeListOp::Create { name, comment, paths } => {
                 let name = store.check_name(&name, None)?;
                 store.next_id += 1;
                 let id = format!("cl{}", store.next_id);
                 store.remove_paths(&paths.iter().map(String::as_str).collect());
-                store.lists.push(StoredList { id: id.clone(), name, comment, files: paths, hunks: Vec::new() });
-                if make_active {
-                    store.active = id;
-                }
+                store.lists.push(StoredList { id, name, comment, files: paths, hunks: Vec::new() });
             }
             ChangeListOp::Edit { id, name, comment } => {
                 let name = store.check_name(&name, Some(&id))?;
                 let l = store.list_mut(&id)?;
+                if Store::fixed(&id) && name != l.name {
+                    return Err(GitError(format!("{} cannot get another name", l.name)));
+                }
                 l.name = name;
                 l.comment = comment;
             }
             ChangeListOp::Remove { id } => {
-                if store.lists.len() == 1 {
-                    return Err(GitError("The last changelist cannot be removed".into()));
+                if Store::fixed(&id) {
+                    return Err(GitError(format!("{} cannot be removed", store.list_mut(&id)?.name)));
                 }
                 let i = store.lists.iter().position(|l| l.id == id).ok_or_else(|| GitError(format!("no changelist {id}")))?;
                 let removed = store.lists.remove(i);
-                if store.active == id {
-                    store.active = store.lists[0].id.clone();
-                }
-                let active = store.active.clone();
-                store.list_mut(&active)?.files.extend(removed.files);
-            }
-            ChangeListOp::SetActive { id } => {
-                store.list_mut(&id)?;
-                store.active = id;
+                store.list_mut(DEFAULT_ID)?.files.extend(removed.files);
             }
             ChangeListOp::Move { paths, to } => {
                 store.list_mut(&to)?;
@@ -355,8 +367,7 @@ impl Repo {
                     return Err(GitError("There is no change at this line".into()));
                 }
                 if store.owner(&path).is_none() {
-                    let active = store.active.clone();
-                    store.list_mut(&active)?.files.push(path.clone());
+                    store.list_mut(DEFAULT_ID)?.files.push(path.clone());
                 }
                 for l in &mut store.lists {
                     l.hunks.retain(|x| !(x.path == path && hunks.iter().any(|h| h.id == x.id)));

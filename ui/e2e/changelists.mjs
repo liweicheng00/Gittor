@@ -6,6 +6,7 @@
 // Set CHROMIUM to a Chromium binary when Playwright has no downloaded browser.
 import { chromium } from "playwright";
 import { execFileSync } from "node:child_process";
+import { appendFileSync } from "node:fs";
 const [,, repo, outDir] = process.argv;
 const git = (...args) => execFileSync("git", ["-C", repo, ...args], { encoding: "utf8" }).replace(/\s+$/, "");
 const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
@@ -90,6 +91,27 @@ await page.waitForTimeout(500);
 check("amend loads the HEAD message", (await page.inputValue(".commit-message")).length > 0);
 await page.uncheck(".commit-amend input");
 
+// The fixed changelists: .ignore first, Changes second, then the others.
+const names = () => page.$$eval(".cl-header[data-list] .cl-name", (els) => els.map((e) => e.textContent));
+check("the changelists are .ignore, Changes, Docs", JSON.stringify((await names()).slice(0, 3)) === JSON.stringify([".ignore", "Changes", "Docs"]));
+// A new change goes to Changes, also when another changelist exists.
+appendFileSync(`${repo}/parser.rs`, "// local setting\n");
+await within("the new change is in Changes", async () => {
+  const t = await tree();
+  return /Changes.*parser\.rs.*Docs/.test(t) && !/Docs.*parser\.rs/.test(t);
+});
+// A file in .ignore cannot be checked, and no commit takes it.
+await page.dragAndDrop(".cl-file:has-text('parser.rs')", ".cl-header:has-text('.ignore')");
+await within("parser.rs is in .ignore", async () => /\.ignore ?1 file ?parser\.rs/.test(await tree()));
+check("the box of parser.rs is off", await page.isDisabled(".cl-file:has-text('parser.rs') .cl-check"));
+check("the box of .ignore is off", await page.isDisabled(".cl-header:has-text('.ignore') .cl-check"));
+await page.click(".cl-header:has-text('.ignore')", { button: "right" });
+await page.waitForTimeout(400);
+check("the menu cannot remove .ignore", await page.isDisabled(".menu-item:has-text('Remove Changelist')"));
+check("the menu cannot commit .ignore", await page.isDisabled(".menu-item:has-text('Commit Only This Changelist')"));
+await page.keyboard.press("Escape");
+await shot("cl9-ignore");
+
 // Rollback of main.rs.
 await page.click(".cl-file:has-text('main.rs')", { button: "right" });
 await page.click(".menu-item:has-text('Rollback')");
@@ -106,6 +128,7 @@ await page.fill(".commit-message", "Add notes and arith change");
 await page.keyboard.press("Control+Enter");
 await page.waitForTimeout(2000);
 check("commit with unversioned file", git("show", "--name-only", "--format=", "HEAD").includes("NOTES.txt"));
+check("the commit does not take the file in .ignore", !git("show", "--name-only", "--format=", "HEAD").includes("parser.rs") && git("status", "--porcelain").includes("parser.rs"));
 
 // Dark theme.
 await page.click(".tb-button[title='Theme']");

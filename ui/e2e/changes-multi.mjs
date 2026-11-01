@@ -59,7 +59,7 @@ await page.click(file("arith.rs"), { button: "right" });
 check("the menu keeps the selection", (await selected()) === "README.md,arith.rs,parser.rs");
 check("the menu is for many files", (await page.$$(".menu-item:has-text('Copy Paths')")).length === 1);
 await shot("cm2-menu");
-await page.click(".menu-item:has-text('Changes (active)')");
+await page.locator(".menu-item").filter({ hasText: /^\s*Changes\s*$/ }).click();
 await within("the menu moves the three files back", async () => /Changes ?4 files/.test(await tree()));
 
 // A plain click on a file of the selection selects that file only.
