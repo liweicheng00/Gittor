@@ -30,12 +30,11 @@ for (const [el, action] of [
 ] as const) el.dataset.keyAction = action;
 
 /** Shows the keys of an action next to the mouse. */
-function showHint(label: string, keys: string[], x: number, y: number) {
+function showHint(keys: string[], x: number, y: number) {
   document.querySelector(".copy-hint")?.remove();
   const el = h(
     "div",
     { class: "copy-hint key-hint", role: "status" },
-    h("span", { class: "key-hint-label" }, label),
     ...keys.flatMap((k, i) => [i ? h("span", { class: "key-hint-or" }, "or") : "", h("kbd", { class: "key-hint-key" }, formatKey(k))]),
   );
   Object.assign(el.style, { left: `${x + 12}px`, top: `${y + 14}px` });
@@ -61,8 +60,7 @@ window.addEventListener(
     const now = Date.now();
     if (now - (lastShown.get(id) ?? 0) < AGAIN_MS) return;
     lastShown.set(id, now);
-    const label = keymap.actions.find((a) => a.id === id)?.label ?? id;
-    showHint(label, keys, e.clientX, e.clientY);
+    showHint(keys, e.clientX, e.clientY);
   },
   true,
 );

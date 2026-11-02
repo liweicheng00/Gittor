@@ -39,10 +39,10 @@ const clearHint = async () => {
 await page.goto(url);
 await page.waitForSelector(".log-row", { timeout: 30000 });
 
-// A mouse click on Refresh: the hint names the action and its keys, next to the mouse.
+// A mouse click on Refresh: the hint shows its keys, without the name of the action, next to the mouse.
 const refresh = page.locator(".tb-button:has-text('Refresh')");
 await refresh.click();
-await within("the hint shows the keys of Refresh", async () => (await hint()) === "Refresh Ctrl+R or F5");
+await within("the hint shows only the keys of Refresh", async () => (await hint()) === "Ctrl+R or F5");
 const box = await refresh.boundingBox();
 const at = await page.evaluate(() => document.querySelector(".key-hint")?.getBoundingClientRect().toJSON());
 check("the hint is next to the mouse", !!at && Math.abs(at.x - (box.x + box.width / 2 + 12)) < 4 && at.y > box.y);
@@ -63,7 +63,7 @@ await page.keyboard.press("Escape");
 await page.click(".log-row >> nth=0");
 await page.waitForSelector(".diff-toolbar button[data-key-action='nextChange']");
 await page.click(".diff-toolbar button[data-key-action='nextChange']");
-await within("the diff button shows F7", async () => (await hint()) === "Next Change in the Diff F7");
+await within("the diff button shows F7", async () => (await hint()) === "F7");
 await shot("kh2-next-change");
 await clearHint();
 
@@ -76,12 +76,12 @@ await page.evaluate(() => {
 await page.reload();
 await page.waitForSelector(".log-row", { timeout: 30000 });
 await refresh.click();
-await within("the hint shows the key of the keymap", async () => (await hint()) === "Refresh Ctrl+Shift+R");
+await within("the hint shows the key of the keymap", async () => (await hint()) === "Ctrl+Shift+R");
 await clearHint();
 
 // Settings › General turns the hints off.
 await page.click("button[title='Settings']");
-await within("the Settings button shows its key too", async () => (await hint()) === "Settings Ctrl+Alt+S");
+await within("the Settings button shows its key too", async () => (await hint()) === "Ctrl+Alt+S");
 await page.waitForSelector(".settings-row:has-text('Shortcut hints')");
 check("the hints are on by default", await page.isChecked(".settings-row:has-text('Shortcut hints') input"));
 await page.uncheck(".settings-row:has-text('Shortcut hints') input");
