@@ -3,6 +3,7 @@
 import { back, forward } from "./nav";
 import { copyText } from "./dom";
 import { openInEditorHere } from "./editor-flow";
+import { openInTerminal } from "./terminal-flow";
 import { showLocalHistory } from "./history-flow";
 import { isMac, type KeyAction, Keymap } from "./keymap";
 import { undoLast } from "./operations";
@@ -60,6 +61,7 @@ for (const a of [
   { id: "switchProject", label: "Switch Project", defaults: ["Mod+`"], run: () => switchProject(1) },
   { id: "switchProjectBack", label: "Switch Project (back)", defaults: ["Mod+Shift+`"], run: () => switchProject(-1) },
   { id: "openInEditor", label: "Open in Editor", defaults: ["F4"], run: (t: HTMLElement) => app.view && openInEditorHere(t) },
+  { id: "openInTerminal", label: "Open in Terminal", defaults: ["Alt+F12"], run: () => app.view && openInTerminal() },
   { id: "localHistory", label: "Local History", defaults: [], run: () => app.view && showLocalHistory("") },
   { id: "nextTab", label: "Next Tab", defaults: ["Mod+PageDown"], run: () => nextTab(1) },
   { id: "previousTab", label: "Previous Tab", defaults: ["Mod+PageUp"], run: () => nextTab(-1) },

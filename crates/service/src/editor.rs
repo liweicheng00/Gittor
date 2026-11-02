@@ -125,7 +125,7 @@ fn search_dirs() -> Vec<PathBuf> {
 }
 
 /// The full path of a program, or the name as it is when it has a folder in it.
-fn find_program(name: &str) -> Option<PathBuf> {
+pub(crate) fn find_program(name: &str) -> Option<PathBuf> {
     if name.contains('/') || name.contains('\\') {
         return Some(PathBuf::from(name));
     }

@@ -12,6 +12,11 @@ gitPath: string, history: Limits,
  */
 editor: string, 
 /**
+ * The command that opens a terminal in a folder, with `{dir}`. Empty opens the terminal app of the
+ * system.
+ */
+terminal: string, 
+/**
  * False until the settings were saved once. The front end then moves its old copy here.
  */
 stored: boolean, };

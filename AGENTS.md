@@ -105,6 +105,9 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   does the same as a keymap action gets `data-key-action="<id>"`: a mouse click on it then shows the
   keys next to the mouse (`key-hint-flow.ts`, the setting `keyHints`). `keyWorksAt` applies the rules
   of the key handler, so no hint names a key that does nothing there.
+- External apps: Open in Editor (`crates/service/src/editor.rs`, `editor-flow.ts`) and Open in Terminal
+  (`terminal.rs`, `terminal-flow.ts`). Each runs a command of `settings.json` without a shell. The e2e
+  scenarios use a small script in place of the app, and set the command back to empty at the end.
 - Icons: add the Lucide file name to the glob and to `NAMES` in `ui/src/icons.ts`.
 - Trees of files: `buildTree`, `treeOrder`, `walkTree` in `file-tree.ts`.
   Unique short names of folders: `pathLabels` in `path-labels.ts`.
@@ -177,7 +180,8 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
   `receive.denyCurrentBranch ignore` on it.
 - Do not draw a whole bar or list again when nothing changed. A new element under the mouse loses
   the click (this broke the tabs scenario).
-- `delete-merged`, `remotes` (a click timeout) and `tabs` (the filter of the first tab) failed once
+- `delete-merged`, `remotes` (a click timeout), `tabs` (the filter of the first tab) and
+  `compare-revert` (the Monaco menu item "Revert This Change") failed once
   in a full run and passed alone. They are known flaky cases. Run them again alone before you look
   for a bug.
 - A mouse drag in WebKitGTK (the Linux app) selects text and starts a native drag; then the page gets

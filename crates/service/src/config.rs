@@ -19,6 +19,9 @@ pub struct BackendSettings {
     /// The command that opens a file at a line, with `{file}`, `{line}` and `{column}`. Empty opens the
     /// file with the default app of the system.
     pub editor: String,
+    /// The command that opens a terminal in a folder, with `{dir}`. Empty opens the terminal app of the
+    /// system.
+    pub terminal: String,
     /// False until the settings were saved once. The front end then moves its old copy here.
     pub stored: bool,
 }

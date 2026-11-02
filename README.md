@@ -30,6 +30,7 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | `Ctrl/Cmd+T` | Update |
 | `Ctrl/Cmd+R`, `F5` | Refresh |
 | `Ctrl/Cmd+F` | Filter the log |
+| `Alt+F12` | Open a terminal in the folder of the repository (Settings › Terminal sets the app) |
 | `Ctrl/Cmd+Z` | Undo the last operation (outside a text field) |
 | `Ctrl/Cmd+C` | Copy the hash |
 | `Ctrl/Cmd+M` | Recent commit messages (in the message field) |
@@ -45,7 +46,7 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 |---|---|
 | Changelists, Local History, temporary files | `<git dir>/gittor/` of each worktree |
 | Reviews and favorite branches | `<common git dir>/gittor/`, shared by all worktrees |
-| Git program, Local History limits, editor | `settings.json` in `~/.config/gittor` (Linux), `~/Library/Application Support/gittor` (macOS) or `%APPDATA%\gittor` (Windows) |
+| Git program, Local History limits, editor, terminal | `settings.json` in `~/.config/gittor` (Linux), `~/Library/Application Support/gittor` (macOS) or `%APPDATA%\gittor` (Windows) |
 | Other settings and recent repositories | The storage of the window |
 
 Nothing goes to a remote.

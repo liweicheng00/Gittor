@@ -23,7 +23,7 @@ fn settings_file() {
     assert!(!dir.join("settings.json").exists());
 
     // Good settings are applied and written.
-    let good = BackendSettings { git_path: String::new(), history: Limits { days: 9, max_mb: 50 }, editor: "code --goto {file}:{line}".into(), stored: false };
+    let good = BackendSettings { git_path: String::new(), history: Limits { days: 9, max_mb: 50 }, editor: "code --goto {file}:{line}".into(), terminal: "open -a iTerm {dir}".into(), stored: false };
     let version = s.set_backend_settings(good).unwrap();
     assert!(version.chars().next().unwrap().is_ascii_digit());
     assert!(dir.join("settings.json").exists());

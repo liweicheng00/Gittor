@@ -38,7 +38,7 @@ export interface SettingsContext {
   };
 }
 
-export type Page = "general" | "git" | "ignore" | "editor" | "commit" | "diff" | "history" | "keymap";
+export type Page = "general" | "git" | "ignore" | "editor" | "terminal" | "commit" | "diff" | "history" | "keymap";
 
 /** Editors and their commands for Open in Editor. A JetBrains IDE needs its command-line launcher:
  * Tools › Create Command-line Launcher, or the shell scripts of the Toolbox app. */
@@ -56,6 +56,21 @@ export const EDITORS: [string, string][] = [
   ["rustrover --line {line} --column {column} {file}", "RustRover"],
   ["studio --line {line} --column {column} {file}", "Android Studio"],
   ["xed --line {line} {file}", "Xcode"],
+];
+
+/** Terminal apps and their commands for Open in Terminal. */
+export const TERMINALS: [string, string][] = [
+  ["", "The terminal app of the system"],
+  ["open -a Terminal {dir}", "Terminal (macOS)"],
+  ["open -a iTerm {dir}", "iTerm2"],
+  ["open -a Ghostty {dir}", "Ghostty"],
+  ["open -a Warp {dir}", "Warp"],
+  ["wezterm start --cwd {dir}", "WezTerm"],
+  ["kitty --directory {dir}", "kitty"],
+  ["alacritty --working-directory {dir}", "Alacritty"],
+  ["gnome-terminal --working-directory={dir}", "GNOME Terminal"],
+  ["konsole --workdir {dir}", "Konsole"],
+  ["wt -d {dir}", "Windows Terminal"],
 ];
 
 export function openSettingsDialog(ctx: SettingsContext): Promise<Settings | null> {
@@ -101,6 +116,7 @@ export function openSettingsDialog(ctx: SettingsContext): Promise<Settings | nul
       ["git", "Git"],
       ["ignore", "Global Ignore"],
       ["editor", "Editor"],
+      ["terminal", "Terminal"],
       ["commit", "Commit"],
       ["diff", "Diff"],
       ["history", "Local History"],
@@ -362,6 +378,31 @@ export function openSettingsDialog(ctx: SettingsContext): Promise<Settings | nul
       ];
     };
 
+    const terminal = () => {
+      const custom: [string, string] = ["custom", "Other command"];
+      const pick = h("select", { class: "dialog-input terminal-preset" }, ...[...TERMINALS, custom].map(([v, l]) => h("option", { value: v }, l)));
+      const input = text(() => draft.terminal, (v) => (draft.terminal = v), "Empty: the terminal app of the system");
+      input.classList.add("terminal-command");
+      const sync = () => (pick.value = TERMINALS.some(([v]) => v === draft.terminal) ? draft.terminal : "custom");
+      sync();
+      pick.addEventListener("change", () => {
+        if (pick.value === "custom") return input.focus();
+        draft.terminal = pick.value;
+        input.value = pick.value;
+      });
+      input.addEventListener("input", sync);
+      return [
+        row("Terminal", pick),
+        row("Command", input),
+        h(
+          "p",
+          { class: "settings-hint" },
+          "Open in Terminal (the Terminal button) runs this command in the folder of the repository. {dir} is the full path of the folder. " +
+            "No shell runs the command. Gittor also looks for the program in the PATH of your login shell.",
+        ),
+      ];
+    };
+
     const commit = () => [
       row("Subject length", h("span", { class: "settings-inline" }, number(() => draft.subjectLimit, (v) => (draft.subjectLimit = v), 0, 500), " characters at most")),
       row("Body lines", h("span", { class: "settings-inline" }, number(() => draft.bodyLimit, (v) => (draft.bodyLimit = v), 0, 500), " characters at most")),
@@ -444,7 +485,7 @@ export function openSettingsDialog(ctx: SettingsContext): Promise<Settings | nul
           return b;
         }),
       );
-      const body = { general, git, ignore, editor, commit, diff, history, keymap: keymapPage }[page]();
+      const body = { general, git, ignore, editor, terminal, commit, diff, history, keymap: keymapPage }[page]();
       content.replaceChildren(h("h3", { class: "settings-title" }, pages.find((p) => p[0] === page)![1]), ...body);
     };
 
