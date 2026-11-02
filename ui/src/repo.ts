@@ -7,7 +7,7 @@ import { h, icon } from "./dom";
 import { emptyFilter } from "./filter-bar";
 import { loadFavorites } from "./remotes";
 import { clearCompare } from "./selection";
-import { addRecent, save, settings } from "./settings";
+import { addRecent, save, setRecentProject, settings } from "./settings";
 import { authors, banner, commitPanel, details, fetchBtn, filterBar, localHistoryBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, showLeftTab, sidebar, stashPanel, statusActivity, submodulePanel, tabBar, tabCommit, tabReviews, tabStash, tabSubmodules, task, updateBtn, updateStatus } from "./shell";
 import { app } from "./state";
 import { showWorkspace } from "./welcome";
@@ -37,6 +37,7 @@ export async function refreshTabInfo(root: string) {
   if (!info || !settings.tabs.includes(root)) return;
   const old = tabInfo.get(root);
   tabInfo.set(root, info);
+  setRecentProject(root, info.mainRoot);
   // The tab bar draws again only when the tab changes: a new tab bar under the mouse loses a click.
   if (old?.mainRoot !== info.mainRoot || old?.branch !== info.branch) renderTabs();
 }
@@ -215,7 +216,8 @@ async function loadRepo(r: ViewResult, state: TabState | null) {
   save();
   renderTabs();
   filterBar.set(state?.filter ?? emptyFilter(), false);
-  addRecent(r.root);
+  const info = tabInfo.get(r.root);
+  addRecent(r.root, info ? info.mainRoot : undefined);
   authors.clear();
   app.watchSeen = null;
   app.lastUndo = null;

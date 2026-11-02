@@ -90,6 +90,10 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
 - CI: `.github/workflows/ci.yml` runs the tests, clippy, the types, the unit tests and all UI
   scenarios on each push to main, the scenarios in 4 parts on 4 machines. Failed scenarios run once
   more alone.
+- Recent repositories: `settings.recent` and `settings.recentProjects` (the main repository of each path).
+  `recent-groups.ts` puts them in groups by project and keeps 12 projects with 8 worktrees each, so many
+  worktrees do not push other projects out. `recent.ts` gives the rows of the Open menu and the welcome
+  screen, and reads the projects of old entries with `api.repoInfo`.
 - Windows (Compare, History, Review, Show Repository): `windows.ts`. A window calls
   `registerWindow(close, kind, show)`, and listens with `onRepoChange`. `watch.ts` calls
   `notifyRepoChange("files" | "repo")`.

@@ -15,8 +15,8 @@ import { allowRewrite } from "./protected";
 import { openRepoBrowser } from "./repo-browser";
 import { startReview } from "./review-flow";
 import { askForRepo, cloneRepo, fetchAll, jumpToOid, openRepo, refresh, reloadView } from "./repo";
+import { learnRecentProjects, recentRows } from "./recent";
 import { collapse, compare, comparedCommits, compareWithWorktree, fileChangesAction, openFile, short, showSelection } from "./selection";
-import { settings } from "./settings";
 import { changes, commitPanel, diff, fetchBtn, filterBar, log, openBtn, refreshBtn, showLeftTab, sidebar, statusActivity, toggleDiff } from "./shell";
 import { app } from "./state";
 import { pushBranch, updateBranch } from "./sync";
@@ -290,14 +290,17 @@ changes.onContextMenu = (files, e) => {
   ]);
 };
 
-openBtn.addEventListener("click", () =>
+openBtn.addEventListener("click", async () => {
+  await learnRecentProjects();
+  const rows = recentRows();
   menuBelow(openBtn, [
     { label: "Open Repository…", shortcut: keymap.shortcut("open"), action: () => void askForRepo() },
     { label: "Clone Repository…", action: () => void cloneRepo() },
-    ...(settings.recent.length ? [{ separator: true } as MenuItem, { header: "Recent" } as MenuItem] : []),
-    ...settings.recent.map((p) => ({ label: p, action: () => void openRepo(p) })),
-  ]),
-);
+    ...(rows.length ? [{ separator: true } as MenuItem, { header: "Recent" } as MenuItem] : []),
+    // Each project, then its worktrees under it.
+    ...rows.map((r): MenuItem => ({ label: r.name, detail: r.path, icon: r.project ? "worktree" : undefined, indent: !!r.project, action: () => void openRepo(r.path) })),
+  ]);
+});
 refreshBtn.addEventListener("click", () => void refresh());
 fetchBtn.addEventListener("click", async () => {
   const remotes = await api.remotes().catch(() => []);

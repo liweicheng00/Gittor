@@ -1,9 +1,10 @@
 // A popup menu for right-click and toolbar dropdowns.
 
 import { h } from "./dom";
+import { icon, type IconName } from "./icons";
 
 export type MenuItem =
-  | { label: string; action: () => void; disabled?: boolean; shortcut?: string; checked?: boolean }
+  | { label: string; action: () => void; disabled?: boolean; shortcut?: string; checked?: boolean; detail?: string; icon?: IconName; indent?: boolean }
   | { separator: true }
   | { header: string };
 
@@ -25,9 +26,9 @@ export function showMenu(x: number, y: number, items: MenuItem[]) {
     } else {
       const el = h(
         "button",
-        { class: "menu-item", role: "menuitem", disabled: item.disabled },
-        h("span", { class: "menu-check" }, item.checked === undefined ? "" : item.checked ? "✓" : ""),
-        h("span", { class: "menu-label" }, item.label),
+        { class: "menu-item" + (item.indent ? " indent" : ""), role: "menuitem", disabled: item.disabled, title: item.detail ?? "" },
+        h("span", { class: "menu-check" }, item.icon ? icon(item.icon) : item.checked === undefined ? "" : item.checked ? "✓" : ""),
+        h("span", { class: "menu-label" }, item.label, item.detail ? h("span", { class: "menu-detail" }, item.detail) : ""),
         h("span", { class: "menu-shortcut" }, item.shortcut ?? ""),
       );
       el.addEventListener("click", () => {

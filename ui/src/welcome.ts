@@ -2,7 +2,8 @@
 
 import { h, icon } from "./dom";
 import { askForRepo, cloneRepo, openRepo } from "./repo";
-import { removeRecent, settings } from "./settings";
+import { learnRecentProjects, recentRows } from "./recent";
+import { removeRecent } from "./settings";
 import { welcome, workspace } from "./shell";
 
 export function showWorkspace(show: boolean) {
@@ -12,21 +13,29 @@ export function showWorkspace(show: boolean) {
 }
 
 function renderWelcome() {
+  void learnRecentProjects().then((changed) => changed && !welcome.hidden && renderWelcome());
   const open = h("button", { class: "primary big" }, "Open Repository…");
   open.addEventListener("click", () => void askForRepo());
   const clone = h("button", { class: "big" }, "Clone Repository…");
   clone.addEventListener("click", () => void cloneRepo());
   const recentList = h("div", { class: "recent" });
-  for (const p of settings.recent) {
-    const item = h("div", { class: "recent-item", title: p }, h("span", { class: "recent-name" }, p.split(/[\\/]/).pop() ?? p), h("span", { class: "recent-path" }, p));
-    const remove = h("button", { class: "icon-button", title: "Remove from the list" }, icon("close"));
+  const rows = recentRows();
+  for (const r of rows) {
+    const item = h(
+      "div",
+      { class: "recent-item" + (r.project ? " worktree" : ""), title: r.project ? `Worktree of ${r.project}\n${r.path}` : r.path },
+      r.project ? icon("worktree", "recent-icon") : "",
+      h("span", { class: "recent-name" }, r.name),
+      h("span", { class: "recent-path" }, r.path),
+    );
+    const remove = h("button", { class: "icon-button", title: r.project ? "Remove from the list" : "Remove the project and its worktrees from the list" }, icon("close"));
     remove.addEventListener("click", (e) => {
       e.stopPropagation();
-      removeRecent(p);
+      removeRecent(...(r.project ? [r.path] : rows.filter((o) => o.path === r.path || o.project === r.path).map((o) => o.path)));
       renderWelcome();
     });
     item.append(remove);
-    item.addEventListener("click", () => void openRepo(p));
+    item.addEventListener("click", () => void openRepo(r.path));
     recentList.append(item);
   }
   welcome.replaceChildren(
@@ -37,7 +46,7 @@ function renderWelcome() {
       h("h1", {}, "Gittor"),
       h("p", { class: "muted-inline" }, "A light git log viewer with the commit graph of IntelliJ."),
       h("div", { class: "welcome-actions" }, open, clone),
-      settings.recent.length ? h("div", { class: "recent-title" }, "Recent repositories") : "",
+      rows.length ? h("div", { class: "recent-title" }, "Recent repositories") : "",
       recentList,
     ),
   );

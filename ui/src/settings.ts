@@ -1,5 +1,7 @@
 // Per-user preferences, kept in localStorage. Every access is guarded: storage can be unavailable.
 
+import { trimRecent } from "./recent-groups";
+
 export type Theme = "system" | "light" | "dark";
 
 export interface Settings {
@@ -55,6 +57,9 @@ export interface Settings {
   authorWidth: number;
   dateWidth: number;
   recent: string[];
+  /** The main repository of each recent path: "" for a main repository, the main repository for a linked
+   * worktree. The Open menu and the welcome screen put the recent paths in groups by it. */
+  recentProjects: Record<string, string>;
   /** The git program; empty means git from PATH. */
   gitPath: string;
   /** The command of Open in Editor, with {file}, {line} and {column}. Empty uses the default app. The
@@ -132,6 +137,7 @@ const DEFAULTS: Settings = {
   authorWidth: 150,
   dateWidth: 125,
   recent: [],
+  recentProjects: {},
   tabs: [],
   activeTab: null,
   gitPath: "",
@@ -208,12 +214,26 @@ window.addEventListener("storage", (e) => {
   } catch {}
 });
 
-export function addRecent(path: string) {
-  settings.recent = [path, ...settings.recent.filter((p) => p !== path)].slice(0, 12);
-  save();
+/** Puts a path at the top of the recent list. `main` is its main repository ("" for a main repository),
+ * when it is known. */
+export function addRecent(path: string, main?: string | null) {
+  if (main !== undefined) settings.recentProjects = { ...settings.recentProjects, [path]: main ?? "" };
+  setRecent([path, ...settings.recent.filter((p) => p !== path)]);
 }
 
-export function removeRecent(path: string) {
-  settings.recent = settings.recent.filter((p) => p !== path);
+/** Records the main repository of a recent path. */
+export function setRecentProject(path: string, main: string | null) {
+  if (!settings.recent.includes(path) || settings.recentProjects[path] === (main ?? "")) return;
+  settings.recentProjects = { ...settings.recentProjects, [path]: main ?? "" };
+  setRecent(settings.recent);
+}
+
+export function removeRecent(...paths: string[]) {
+  setRecent(settings.recent.filter((p) => !paths.includes(p)));
+}
+
+function setRecent(recent: string[]) {
+  settings.recent = trimRecent(recent, settings.recentProjects);
+  settings.recentProjects = Object.fromEntries(Object.entries(settings.recentProjects).filter(([p]) => settings.recent.includes(p)));
   save();
 }
