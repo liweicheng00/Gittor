@@ -180,8 +180,11 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
   `receive.denyCurrentBranch ignore` on it.
 - Do not draw a whole bar or list again when nothing changed. A new element under the mouse loses
   the click (this broke the tabs scenario).
-- `delete-merged`, `remotes` (a click timeout), `tabs` (the filter of the first tab) and
-  `compare-revert` (the Monaco menu item "Revert This Change") failed once
+- A Monaco menu item with a condition shows only after the diff loaded. A menu that opened before
+  has no item: open it again (`clickMenuItem` in `compare-revert.mjs`).
+- The Settings dialog closes before the backend saves `settings.json`. Wait for the saved value
+  (`savedSetting` in `open-in-editor.mjs`) before a step that uses it.
+- `delete-merged`, `remotes` (a click timeout) and `tabs` (the filter of the first tab) failed once
   in a full run and passed alone. They are known flaky cases. Run them again alone before you look
   for a bug.
 - A mouse drag in WebKitGTK (the Linux app) selects text and starts a native drag; then the page gets

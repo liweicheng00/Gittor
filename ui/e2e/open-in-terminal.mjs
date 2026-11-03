@@ -30,6 +30,10 @@ const within = async (what, fn, ms = 8000) => {
   }
   check(what, false);
 };
+// The dialog closes before the backend saves the setting. Wait for the saved value.
+const savedSetting = (key, value) =>
+  within(`the backend keeps the ${key} command`, async () =>
+    page.evaluate(async ([k, v]) => (await (await fetch("/api/backend_settings", { method: "POST", body: "{}" })).json())[k] === v, [key, value]));
 const setTerminal = async (command) => {
   await page.click(".tb-button[title='Settings']");
   await page.waitForSelector(".settings-dialog");
@@ -38,6 +42,7 @@ const setTerminal = async (command) => {
   await page.fill(".terminal-command", command);
   await page.click(".settings-dialog .dialog-buttons button:has-text('OK')");
   await page.waitForSelector(".settings-dialog", { state: "detached" });
+  await savedSetting("terminal", command);
 };
 
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
@@ -53,6 +58,7 @@ await page.fill(".terminal-command", `${script} --cwd {dir}`);
 check("another command shows as Other command", (await page.$eval(".terminal-preset", (e) => e.selectedOptions[0].textContent)) === "Other command");
 await page.click(".settings-dialog .dialog-buttons button:has-text('OK')");
 await page.waitForSelector(".settings-dialog", { state: "detached" });
+await savedSetting("terminal", `${script} --cwd {dir}`);
 
 // The button opens the terminal in the folder of the repository, and {dir} names the folder.
 await page.click(".tb-terminal");

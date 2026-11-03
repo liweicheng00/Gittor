@@ -38,11 +38,21 @@ const within = async (what, fn, ms = 8000) => {
 const win = ".merge-overlay";
 const glyphs = () => page.$$(`${win} .revert-glyph`);
 // The menu of Monaco ignores a click that comes right after it opens, so the click waits a moment.
-const menuItem = async (label) => {
+// Opens the menu of a diff line and clicks an item. The item shows only after the diff loaded: a menu
+// that opened before that has no item, so the menu opens again.
+const clickMenuItem = async (line, label) => {
   const item = page.locator(".monaco-menu .action-label", { hasText: label });
-  await item.waitFor();
-  await page.waitForTimeout(400);
-  return item;
+  for (let i = 0; i < 6; i++) {
+    await page.click(line, { button: "right" });
+    if (await item.waitFor({ timeout: 2000 }).then(() => true, () => false)) {
+      await page.waitForTimeout(400);
+      return item.click();
+    }
+    // A left click on the line closes the menu. Escape would also close the Compare window.
+    await page.click(line);
+    await page.waitForTimeout(300);
+  }
+  check(`the menu of the diff has ${label}`, false);
 };
 
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
@@ -61,8 +71,7 @@ await within("the button reverts only the first change", async () => read("parse
 await within("the diff shows one change now", async () => (await glyphs()).length === 1);
 
 // Revert This Change in the menu of the diff.
-await page.click(`${win} .editor.modified .view-line:has-text('// bottom')`, { button: "right" });
-await (await menuItem("Revert This Change")).click();
+await clickMenuItem(`${win} .editor.modified .view-line:has-text('// bottom')`, "Revert This Change");
 await within("the menu reverts the other change", async () => read("parser.rs") === original);
 await within("parser.rs leaves the list", async () => !(((await page.textContent(`${win} .compare-files`)) ?? "").includes("parser.rs")));
 
@@ -121,8 +130,7 @@ await page.click(".diff .editor.modified .hunk-on");
 await within("a click on the check box leaves the change out", async () => (await page.$$(".diff .editor.modified .hunk-off")).length === 1);
 check("and reverts nothing", read("main.rs") !== mainAtHead);
 // Revert This Change in the menu rolls back to HEAD.
-await page.click(".diff .editor.modified .view-line:has-text('fn helper')", { button: "right" });
-await (await menuItem("Revert This Change")).click();
+await clickMenuItem(".diff .editor.modified .view-line:has-text('fn helper')", "Revert This Change");
 await within("the Changes diff rolls back the change", async () => read("main.rs") === mainAtHead);
 
 // One column: the button and the check box stay together; a click on the button reverts.

@@ -46,7 +46,7 @@ await page.selectOption(".dialog select", "squash");
 await shot("mo1-merge-dialog");
 await page.click(".dialog-buttons button:has-text('Merge')");
 await within("the squash merge leaves local changes", async () => git("status", "--porcelain").includes("cli.rs") && git("rev-parse", "HEAD") === head);
-check("the message says to commit", (await toasts()).includes("Commit them to finish the squash merge"));
+await within("the message says to commit", async () => (await toasts()).includes("Commit them to finish the squash merge"));
 git("reset", "-q", "--hard");
 
 // --no-ff with a message: a merge commit with that message.

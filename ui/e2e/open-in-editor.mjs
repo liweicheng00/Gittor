@@ -30,6 +30,10 @@ const within = async (what, fn, ms = 8000) => {
   }
   check(what, false);
 };
+// The dialog closes before the backend saves the setting. Wait for the saved value.
+const savedSetting = (key, value) =>
+  within(`the backend keeps the ${key} command`, async () =>
+    page.evaluate(async ([k, v]) => (await (await fetch("/api/backend_settings", { method: "POST", body: "{}" })).json())[k] === v, [key, value]));
 const setEditor = async (command) => {
   await page.click(".tb-button[title='Settings']");
   await page.waitForSelector(".settings-dialog");
@@ -37,6 +41,7 @@ const setEditor = async (command) => {
   if (command === null) return;
   await page.fill(".editor-command", command);
   await page.click(".settings-dialog .dialog-buttons button:has-text('OK')");
+  await savedSetting("editor", command);
 };
 const expectOpened = (what, line) => within(what, async () => opened() === `--goto\n${repo}/main.rs:${line}`);
 
@@ -51,6 +56,7 @@ await shot("oe1-settings");
 await page.fill(".editor-command", `${script} --goto {file}:{line}`);
 check("another command shows as Other command", (await page.$eval(".editor-preset", (e) => e.selectedOptions[0].textContent)) === "Other command");
 await page.click(".settings-dialog .dialog-buttons button:has-text('OK')");
+await savedSetting("editor", `${script} --goto {file}:{line}`);
 
 // F4 in the Changes tab opens the selected file at the first change on the screen. main.rs adds line 4.
 await page.keyboard.press("Control+2");
