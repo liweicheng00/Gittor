@@ -146,7 +146,7 @@ sidebar.onContextMenu = (b, e) => {
     { separator: true },
     { label: "Push…", disabled: b.kind !== "local", action: () => void pushBranch(b.name) },
     {
-      label: isCurrent ? "Update" : "Update (Fast-Forward)",
+      label: isCurrent ? "Update…" : "Update (Fast-Forward)",
       disabled: b.kind !== "local" || !b.upstream,
       action: () => (isCurrent ? void updateBranch() : void runOp({ op: "fastForward", branches: [b.name] }, `Updating ${b.name}`)),
     },
