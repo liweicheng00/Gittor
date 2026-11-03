@@ -52,11 +52,11 @@ export class OpBanner {
           "span",
           { class: "muted-inline" },
           !name
-            ? `${state.conflicts.length} file(s) have conflicts. Fix them, then mark them resolved.`
+            ? `${state.conflicts.length} file(s) have conflicts. Resolve them in the merge window, or fix them in your editor and mark them resolved.`
             : state.editing && !state.conflicts.length
               ? `Stopped at ${state.editing.slice(0, 8)} for editing. Change the files, amend the commit in the Changes tab, then continue.`
               : state.conflicts.length
-              ? `${state.conflicts.length} file(s) have conflicts. Fix them in your editor, mark them resolved, then continue.`
+              ? `${state.conflicts.length} file(s) have conflicts. Resolve them in the merge window, then continue.`
               : "No conflicts are left. Continue to finish.",
         ),
         h("span", { class: "spacer" }),

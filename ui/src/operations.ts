@@ -3,7 +3,7 @@
 import { allowRewrite } from "./protected";
 import { api, type BranchInfo, errorHint, inTauri, type Op, type OpOutcome, pickFolder, type PlanEntry, type Row, type Worktree } from "./api";
 import { showBranchSwitcher } from "./branch-switcher";
-import { mergeFile } from "./conflicts";
+import { mergeFile, offerContinue, resolveConflicts } from "./conflicts";
 import { showMenu } from "./context-menu";
 import { confirmDialog, deleteMergedDialog, formDialog, interactiveRebaseDialog, messageDialog, removeWorktreeDialog, resetDialog } from "./dialogs";
 import { copyText } from "./dom";
@@ -31,6 +31,7 @@ export async function runOp(op: Op, label: string, errorAction?: { label: string
       toast(`${what} not at the commit that this revision records.`, "info", { label: "Update Submodules", run: () => void updateSubmodules(stale) });
     }
     statusActivity.textContent = r.message;
+    if (op.op === "resolveSide" || op.op === "resolveText" || op.op === "markResolved") void offerContinue();
   } else {
     const hint = errorHint(outcome.errorKind);
     // An operation that stopped halfway can still have Undo steps for the part that it did.
@@ -38,6 +39,8 @@ export async function runOp(op: Op, label: string, errorAction?: { label: string
     toast(hint ? `${r.message}\n${hint}` : r.message, "error", errorAction ?? (r.undo.length ? { label: "Undo", run: () => void undoLast(), keyAction: "undo" } : undefined));
     statusActivity.textContent = r.message;
     statusActivity.className = "sb-activity error";
+    // An operation that stopped with conflicts opens the Conflicts dialog.
+    if (r.conflicts.length) void resolveConflicts();
   }
   return outcome;
 }

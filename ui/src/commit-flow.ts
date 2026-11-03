@@ -4,6 +4,7 @@ import { visit } from "./nav";
 import { api, type ChangeListView } from "./api";
 import { type LocalFile } from "./commit-panel";
 import { menuBelow, type MenuItem, showMenu } from "./context-menu";
+import { mergeFile } from "./conflicts";
 import { confirmDialog, formDialog } from "./dialogs";
 import { toast } from "./notify";
 import { currentBranch, runOp } from "./operations";
@@ -235,4 +236,5 @@ commitPanel.onCommit = (files, message, amend, list, push, signOff) => void comm
 
 // A double click on a local change opens the compare window: the current branch and the working tree,
 // with this file first. The window lists all local changes, so the user can go through them there.
-commitPanel.onActivate = (f) => compareBranches(currentBranch() ?? "HEAD", WORKTREE, f.change.path);
+// A double click on a file with conflicts opens the merge window.
+commitPanel.onActivate = (f) => (f.change.status === "U" ? void mergeFile(f.change.path) : compareBranches(currentBranch() ?? "HEAD", WORKTREE, f.change.path));

@@ -443,6 +443,13 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .merge-col-title.result { text-align: center; }
 .merge-footer { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--border); }
 .merge-footer .primary { padding: 4px 18px; }
+/* The zones of the merge window lie above the text, so a click reaches the buttons of a bar. Other clicks pass through. */
+.merge-editor .view-zones { z-index: 1; pointer-events: none; }
+.merge-editor .view-zones .m-actions { pointer-events: auto; }
+.m-actions { display: flex; align-items: center; gap: 4px; height: 100%; padding-left: 6px; font: 12px/1 system-ui, sans-serif; color: var(--muted); white-space: nowrap; }
+.m-action { padding: 1px 2px; border: 0; background: none; color: var(--accent); font: inherit; cursor: pointer; }
+.m-action:hover { text-decoration: underline; }
+.m-action-sep { opacity: 0.5; }
 .m-zone { background: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--border) 60%, transparent) 6px 7px); }
 .m-ours, .m-theirs, .m-both { background: color-mix(in srgb, var(--renamed) 16%, transparent); }
 .m-conflict { background: color-mix(in srgb, var(--deleted) 18%, transparent); }

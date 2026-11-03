@@ -74,8 +74,10 @@ await clearToasts();
 await page.click(".branch:has-text('origin/main'), .branch:has(.branch-name:text-is('main'))  >> nth=-1", { button: "right" });
 await page.click(".menu-item:has-text('Merge into topic/readme')");
 await page.click(".dialog-buttons button:has-text('Merge')");
-await page.waitForTimeout(2000);
+// A merge that stops with conflicts opens the Conflicts dialog.
+await page.waitForSelector(".conflict-row", { timeout: 10000 });
 console.log("merge:", await toastText());
+await page.click(".dialog-buttons button:has-text('Cancel')");
 console.log("banner:", (await page.textContent(".op-banner")).replace(/\s+/g, " "));
 await shot("v8-conflict-banner");
 await clearToasts();

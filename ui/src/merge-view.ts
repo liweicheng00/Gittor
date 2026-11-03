@@ -1,6 +1,7 @@
 // The three-way merge window, as in IntelliJ: yours on the left, the result in the middle, theirs on the right.
-// The result starts as the base version. Apply (» or «) or ignore (✕) each change, or apply all
-// non-conflicting changes at once. The result stays editable.
+// The result starts as the base version with all non-conflicting changes. Each open change has a bar of
+// actions above it in the result (Accept Yours, Accept Theirs, Accept Both, Ignore), the » « ✕ buttons in
+// the gutter, and keys: Alt+Left, Alt+Right and Alt+Down. The result stays editable.
 
 import * as monaco from "./monaco";
 import { editorFont } from "./diff-view";
@@ -44,6 +45,8 @@ class MergeWindow {
   private chunks: MChunk[];
   private deco = { ours: [] as string[], result: [] as string[], theirs: [] as string[] };
   private zones = { ours: [] as string[], result: [] as string[], theirs: [] as string[] };
+  /** The zones of the action bars, and of the space that keeps the other sides in line with them. */
+  private barZones = { ours: [] as string[], result: [] as string[], theirs: [] as string[] };
   private suppress = false;
   private syncing = false;
   private dirty = false;
@@ -104,7 +107,7 @@ class MergeWindow {
         btn("Accept Theirs", "Take their whole version and close", () => this.close({ kind: "side", side: "theirs" })),
         h("span", { class: "spacer" }),
         btn("Cancel", "Close without changes (Escape)", () => void this.cancel()),
-        btn("Apply", "Save the result and mark the file resolved", () => void this.apply(), "primary"),
+        btn("Apply", "Save the result, mark the file resolved, and go to the next file with conflicts", () => void this.apply(), "primary merge-apply"),
       ),
     );
     this.overlay = h("div", { class: "merge-overlay" }, win);
@@ -150,6 +153,20 @@ class MergeWindow {
       clearTimeout(this.refreshTimer);
       this.refreshTimer = window.setTimeout(() => this.refresh(), 60);
     });
+    // The capture phase comes before Monaco, which moves lines with Alt+Up and Alt+Down.
+    this.overlay.addEventListener(
+      "keydown",
+      (e) => {
+        if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+        const action = { ArrowLeft: "ours", ArrowRight: "theirs", ArrowDown: "both" }[e.key] as "ours" | "theirs" | "both" | undefined;
+        if (!action) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const c = this.target();
+        if (c) this.accept(c, action);
+      },
+      true,
+    );
     this.overlay.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         e.preventDefault();
@@ -159,6 +176,9 @@ class MergeWindow {
         this.go(e.shiftKey ? -1 : 1);
       }
     });
+    // The non-conflicting changes go into the result at once. Only the conflicts are left to the user.
+    this.applyNonConflicting("all", false);
+    this.dirty = false;
     this.refresh();
     requestAnimationFrame(() => {
       this.go(1);
@@ -228,13 +248,32 @@ class MergeWindow {
     this.refresh();
   }
 
-  private applyNonConflicting(which: "ours" | "theirs" | "all") {
+  private applyNonConflicting(which: "ours" | "theirs" | "all", move = true) {
     for (const c of [...this.chunks]) {
       if (resolved(c) || c.kind === "conflict") continue;
       if (c.kind === "both" || (c.kind === "ours" && which !== "theirs")) this.applySide(c, "ours");
       else if (c.kind === "theirs" && which !== "ours") this.applySide(c, "theirs");
     }
-    this.go(1);
+    if (move) this.go(1);
+  }
+
+  /** The change of the keys: the current change when it is open, else the next open change. */
+  private target(): MChunk | null {
+    const open = (c: MChunk) => c.kind !== "same" && !resolved(c);
+    const cur = this.chunks[this.current];
+    if (cur && open(cur)) return cur;
+    return this.chunks.find((c, i) => i > this.current && open(c)) ?? this.chunks.find(open) ?? null;
+  }
+
+  /** Takes one side, or both sides, of a change, then goes to the next open change. */
+  private accept(c: MChunk, action: "ours" | "theirs" | "both" | "ignore") {
+    this.current = this.chunks.indexOf(c);
+    if (action === "ignore") this.ignore(c);
+    else if (action === "both") {
+      if (this.canApply(c, "ours")) this.applySide(c, "ours");
+      if (this.canApply(c, "theirs")) this.applySide(c, "theirs");
+    } else if (this.canApply(c, action)) this.applySide(c, action);
+    if (this.chunks.some((o) => o.kind !== "same" && !resolved(o))) this.go(1);
   }
 
   private canApply(c: MChunk, side: "ours" | "theirs") {
@@ -336,6 +375,48 @@ class MergeWindow {
     zonesFor(this.ours, "ours", (c) => c.ours);
     zonesFor(this.result, "result", (c) => c.res);
     zonesFor(this.theirs, "theirs", (c) => c.theirs);
+    this.bars();
+  }
+
+  /** A bar of actions above each open change in the result, and blank space of the same height above
+   * it on the two sides. */
+  private bars() {
+    const open = this.chunks.filter((c) => c.kind !== "same" && !resolved(c));
+    const blank = (e: monaco.editor.IStandaloneCodeEditor, key: "ours" | "theirs", pick: (c: MChunk) => [number, number]) =>
+      e.changeViewZones((acc) => {
+        for (const id of this.barZones[key]) acc.removeZone(id);
+        this.barZones[key] = open.map((c) => acc.addZone({ afterLineNumber: pick(c)[0], heightInLines: 1, domNode: h("div", { class: "m-bar-space" }) }));
+      });
+    blank(this.ours, "ours", (c) => c.ours);
+    blank(this.theirs, "theirs", (c) => c.theirs);
+    this.result.changeViewZones((acc) => {
+      for (const id of this.barZones.result) acc.removeZone(id);
+      this.barZones.result = open.map((c) => acc.addZone({ afterLineNumber: c.res[0], heightInLines: 1, domNode: this.bar(c), suppressMouseDown: true }));
+    });
+  }
+
+  private bar(c: MChunk): HTMLElement {
+    const link = (label: string, title: string, action: "ours" | "theirs" | "both" | "ignore") => {
+      const a = h("button", { class: "m-action", title }, label);
+      // Monaco takes the mouse after a press in the editor: the release and the click go to the text.
+      a.addEventListener("mousedown", (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this.accept(c, action);
+      });
+      return a;
+    };
+    const sep = () => h("span", { class: "m-action-sep" }, "|");
+    const items =
+      c.kind === "conflict"
+        ? [link("Accept Yours", "Take your lines (Alt+Left)", "ours"), sep(), link("Accept Theirs", "Take their lines (Alt+Right)", "theirs"), sep(), link("Accept Both", "Take your lines, then their lines (Alt+Down)", "both")]
+        : c.kind === "ours"
+          ? [link("Accept Yours", "Take your lines (Alt+Left)", "ours")]
+          : c.kind === "theirs"
+            ? [link("Accept Theirs", "Take their lines (Alt+Right)", "theirs")]
+            : [link("Accept", "Take the lines that both sides have", "both")];
+    return h("div", { class: `m-actions m-actions-${c.kind}` }, ...items, sep(), link("Ignore", "Keep the base lines", "ignore"));
   }
 
   private async apply() {

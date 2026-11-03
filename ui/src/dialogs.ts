@@ -387,7 +387,7 @@ export async function conflictsDialog(files: string[], oursLabel: string, theirs
   list.append(...rows);
   mark();
   const body = [
-    h("p", { class: "dialog-note" }, `Yours: ${oursLabel}. Theirs: ${theirsLabel}.`),
+    h("p", { class: "dialog-note" }, `Left: ${oursLabel}. Right: ${theirsLabel}. Double-click a file to merge it.`),
     list,
   ];
   const r = await modal(

@@ -94,6 +94,10 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   `recent-groups.ts` puts them in groups by project and keeps 12 projects with 8 worktrees each, so many
   worktrees do not push other projects out. `recent.ts` gives the rows of the Open menu and the welcome
   screen, and reads the projects of old entries with `api.repoInfo`.
+- Conflicts: `conflicts.ts` (`resolveConflicts`: the Conflicts dialog, then the next file in the merge
+  window; `offerContinue` after the last file) and `merge-view.ts` (the merge window). `runOp` opens the
+  dialog when an operation stops with conflicts. A bar of actions in a Monaco view zone gets the mouse
+  only with `.view-zones { z-index: 1 }`, and it acts on `mousedown`: Monaco takes the mouse after a press.
 - Windows (Compare, History, Review, Show Repository): `windows.ts`. A window calls
   `registerWindow(close, kind, show)`, and listens with `onRepoChange`. `watch.ts` calls
   `notifyRepoChange("files" | "repo")`.

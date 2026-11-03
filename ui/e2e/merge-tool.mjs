@@ -40,6 +40,15 @@ await page.waitForSelector(".op-banner:not([hidden])", { timeout: 30000 });
 check("banner shows the merge", (await page.textContent(".op-banner")).includes("Merge in progress"));
 await page.click(".tb-button[title='Theme']");
 await page.click(".menu-item:has-text('Dark')");
+
+// A double click on a file with conflicts in the Changes tab opens the merge window.
+await page.click(".lp-tab:text-is('Changes')");
+await page.dblclick(".cl-file:has(.path:text-is('calc.rs'))");
+await page.waitForSelector(".merge-window .monaco-editor");
+check("the Changes tab opens the merge window", ((await page.textContent(".merge-header")) ?? "").includes("calc.rs"));
+await page.click(".merge-footer button:has-text('Cancel')");
+await page.waitForSelector(".merge-overlay", { state: "detached" });
+
 await page.click(".op-banner button:has-text('Resolve')");
 await page.waitForSelector(".conflict-row");
 check("conflicts dialog lists both files", (await page.$$(".conflict-row")).length === 2);
@@ -50,20 +59,21 @@ await page.dblclick(".conflict-row:has-text('calc.rs')");
 await page.waitForSelector(".merge-window .monaco-editor");
 await page.waitForTimeout(1200);
 console.log("status:", await status());
-check("3 changes, 1 conflict", (await status()) === "3 changes left, 1 conflict");
+// The window opens with the non-conflicting changes in the result: only the conflict is left.
+check("only the conflict is left", (await status()) === "1 change left, 1 conflict");
+check("the result has the non-conflicting changes", ((await page.textContent(".merge-editor:nth-child(2) .view-lines")) ?? "").replace(/\s/g, "").includes("letd=40;//yours"));
+check("the conflict has a bar of actions", (await page.$$(".merge-editor:nth-child(2) .m-actions-conflict")).length === 1);
 await shot("m2-merge-window");
-await page.click(".merge-toolbar button:text-is('All')");
-await page.waitForTimeout(500);
-check("non-conflicting changes applied", (await status()) === "1 change left, 1 conflict");
-// Apply yours, then append theirs to the conflict.
-await page.click(".merge-editor:nth-child(1) .m-glyph-right");
-await page.waitForTimeout(300);
-await page.click(".merge-editor:nth-child(3) .m-glyph-left");
+// Accept Both: yours, then theirs.
+await page.click(".m-actions-conflict .m-action:text-is('Accept Both')");
 await page.waitForTimeout(500);
 check("all resolved", (await status()) === "All changes are resolved");
+check("no bar is left", (await page.$$(".m-actions")).length === 0);
 await shot("m3-resolved");
 await page.click(".merge-footer button:has-text('Apply')");
-await page.waitForTimeout(1500);
+// Apply opens the next file with conflicts at once.
+await page.waitForFunction(() => document.querySelector(".merge-header")?.textContent?.includes("README.md"), null, { timeout: 10000 });
+check("the next file opens in the merge window", true);
 const merged = readFileSync(`${repo}/calc.rs`, "utf8");
 console.log(merged);
 check(
@@ -71,15 +81,19 @@ check(
   merged === edit(base, { 1: "    let a = 10; // yours\n    let a = 100; // theirs", 4: "    let d = 40; // yours", 7: "    let g = 70; // theirs" }),
 );
 
-// README.md: take theirs from the dialog, which opens again with the file that is left.
-await page.waitForSelector(".conflict-row:has-text('README.md')");
-check("dialog shows the file that is left", (await page.$$(".conflict-row")).length === 1);
-await page.click(".dialog-buttons button:has-text('Accept Theirs')");
-await page.waitForTimeout(1500);
+// README.md: Alt+Right takes theirs.
+await page.waitForTimeout(800);
+await page.keyboard.press("Alt+ArrowRight");
+await page.waitForTimeout(300);
+check("Alt+Right resolves the conflict", (await status()) === "All changes are resolved");
+await page.click(".merge-footer button:has-text('Apply')");
+// The last file: Gittor offers to continue the merge.
+await page.waitForSelector(".dialog:has-text('All Conflicts Are Resolved')", { timeout: 10000 });
 check("no conflicts left", git("diff", "--name-only", "--diff-filter=U") === "");
 check("README has the side note", readFileSync(`${repo}/README.md`, "utf8").includes("- side note"));
-await page.click(".op-banner button:has-text('Continue')");
-await page.waitForTimeout(1500);
+await shot("m3b-continue");
+await page.click(".dialog-buttons button:has-text('Continue')");
+await page.waitForFunction(() => document.querySelector(".op-banner")?.hidden, null, { timeout: 10000 });
 check("merge commit", git("rev-list", "--parents", "-n", "1", "HEAD").split(" ").length === 3);
 await shot("m4-merged");
 console.log("errors:", JSON.stringify(errors));
