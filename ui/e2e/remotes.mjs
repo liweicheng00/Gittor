@@ -36,7 +36,7 @@ await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=
 await page.waitForSelector(".sidebar .branch", { timeout: 30000 });
 
 // Add a remote from the Remotes dialog, and fetch it.
-await page.click(".tb-button:has-text('Fetch')");
+await page.click(".tb-split-menu");
 await page.click(".menu-item:has-text('Manage Remotes')");
 await page.waitForSelector(".remote-row:has-text('origin')");
 await page.click(".dialog-buttons button:has-text('Add Remote')");
@@ -91,7 +91,7 @@ await within("the branch tracks nothing", async () => {
 });
 
 // Fetch one remote from the Fetch menu.
-await page.click(".tb-button:has-text('Fetch')");
+await page.click(".tb-split-menu");
 await within("the Fetch menu lists each remote", async () => (await page.$(".menu-item:has-text('Fetch mirror')")) !== null);
 await page.click(".menu-item:has-text('Fetch origin')");
 await within("fetch of one remote finishes", async () => (await page.textContent(".sb-activity")).includes("Fetched origin"));

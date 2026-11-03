@@ -35,7 +35,7 @@ await page.click(".group-header:has-text('Tags')");
 await within("the tags sort by version", async () => (await tagRows()).join(",") === "v0.10.0,v0.9.0,v0.2.0,v0.1.0");
 
 // After a fetch, the tags that origin does not have show as local.
-await page.click(".tb-button:has-text('Fetch')");
+await page.click(".tb-split-menu");
 await page.click(".menu-item:has-text('Fetch All Remotes')");
 await within("the local tags are marked", async () => (await tagRows()).join(",") === "v0.10.0 local,v0.9.0 local,v0.2.0,v0.1.0");
 

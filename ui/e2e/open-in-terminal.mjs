@@ -42,7 +42,7 @@ const setTerminal = async (command) => {
 
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
-check("the toolbar has the Terminal button", await page.isEnabled(".tb-button:has-text('Terminal')"));
+check("the toolbar has the Terminal button", await page.isEnabled(".tb-terminal"));
 
 // The Terminal page: a preset fills the command.
 await setTerminal(null);
@@ -55,7 +55,7 @@ await page.click(".settings-dialog .dialog-buttons button:has-text('OK')");
 await page.waitForSelector(".settings-dialog", { state: "detached" });
 
 // The button opens the terminal in the folder of the repository, and {dir} names the folder.
-await page.click(".tb-button:has-text('Terminal')");
+await page.click(".tb-terminal");
 await within("the button opens the terminal in the repository", async () => opened() === `${root}\n--cwd\n${repo}`);
 await within("the click shows the key of the button", async () => ((await page.textContent(".key-hint").catch(() => "")) ?? "").includes("Alt+F12"));
 await shot("ot2-button");
@@ -68,7 +68,7 @@ await within("Alt+F12 opens the terminal", async () => opened().startsWith(root)
 
 // A program that does not exist shows an error.
 await setTerminal("no-such-terminal-xyz");
-await page.click(".tb-button:has-text('Terminal')");
+await page.click(".tb-terminal");
 await within("a missing program shows an error", async () => ((await page.textContent(".toasts").catch(() => "")) ?? "").includes("Cannot find the terminal program no-such-terminal-xyz"));
 await setTerminal("");
 rmSync(script, { force: true });

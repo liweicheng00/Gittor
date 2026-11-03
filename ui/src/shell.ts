@@ -38,19 +38,20 @@ export const authors = new Set<string>();
 
 export const openBtn = h("button", { class: "tb-button", title: `Open a repository (${mod}O)` }, icon("open"), "Open", icon("chevron-down", "icon-caret"));
 export const refreshBtn = h("button", { class: "tb-button", title: `Reload commits and branches (${mod}R)`, disabled: true }, icon("refresh"), "Refresh");
-export const fetchBtn = h("button", { class: "tb-button", title: "Fetch all remotes, or one remote", disabled: true }, icon("fetch"), "Fetch", icon("chevron-down", "icon-caret"));
+/** The menu part of the Update button: Fetch of all remotes or of one remote. */
+export const fetchBtn = h("button", { class: "tb-button tb-split-menu", title: "Fetch all remotes, or one remote", "aria-label": "Fetch", disabled: true }, icon("chevron-down", "icon-caret"));
 export const updateBtn = h("button", { class: "tb-button", title: `Update the current branch: fetch, then merge or rebase (${mod}T)`, disabled: true }, icon("update"), "Update");
 export const pushBtn = h("button", { class: "tb-button", title: `Push the current branch (${mod}⇧K)`, disabled: true }, icon("push"), "Push");
-export const remoteBtn = h("button", { class: "tb-button", title: "Open the current branch on the web page of its remote", disabled: true }, icon("remote"), "Remote");
+export const remoteBtn = h("button", { class: "tb-button tb-icon tb-remote", title: "Open the current branch on the web page of its remote", "aria-label": "Remote", disabled: true }, icon("remote"));
 export const localHistoryBtn = h("button", { class: "tb-button", title: "Local History: the recent versions of changed files", disabled: true }, icon("history"), "Local History");
-export const ideBtn = h("button", { class: "tb-button", title: "Open the repository in the editor of Settings › Editor", disabled: true }, icon("ide"), "IDE");
-export const terminalBtn = h("button", { class: "tb-button", title: "Open a terminal in the folder of the repository", disabled: true }, icon("terminal"), "Terminal");
+export const ideBtn = h("button", { class: "tb-button tb-icon tb-ide", title: "Open the repository in the editor of Settings › Editor", "aria-label": "IDE", disabled: true }, icon("ide"));
+export const terminalBtn = h("button", { class: "tb-button tb-icon tb-terminal", title: "Open a terminal in the folder of the repository", "aria-label": "Terminal", disabled: true }, icon("terminal"));
 const repoLabel = h("span", { class: "tb-repo" });
 export const branchBtn = h("button", { class: "tb-button tb-branch-button", title: "Switch branch (recent branches first)", hidden: true }, icon("branch"), icon("chevron-down", "icon-caret"));
 export const viewBtn = h("button", { class: "tb-button", title: "View options" }, "View", icon("chevron-down", "icon-caret"));
-const themeBtn = h("button", { class: "tb-button", title: "Theme" }, icon("theme"));
-export const settingsBtn = h("button", { class: "tb-button", title: "Settings" }, icon("settings"));
-const toolbar = h("header", { class: "toolbar" }, openBtn, refreshBtn, fetchBtn, updateBtn, pushBtn, remoteBtn, localHistoryBtn, ideBtn, terminalBtn, repoLabel, branchBtn, h("span", { class: "spacer" }), viewBtn, themeBtn, settingsBtn);
+const themeBtn = h("button", { class: "tb-button tb-icon", title: "Theme" }, icon("theme"));
+export const settingsBtn = h("button", { class: "tb-button tb-icon", title: "Settings" }, icon("settings"));
+const toolbar = h("header", { class: "toolbar" }, openBtn, refreshBtn, h("span", { class: "tb-split" }, updateBtn, fetchBtn), pushBtn, localHistoryBtn, repoLabel, branchBtn, h("span", { class: "spacer" }), remoteBtn, ideBtn, terminalBtn, viewBtn, themeBtn, settingsBtn);
 
 export const tabBar = h("nav", { class: "tabbar", hidden: true });
 

@@ -54,8 +54,8 @@ await refresh.focus();
 await page.keyboard.press("Enter");
 await noHint("a click from the keyboard shows no hint");
 
-// A button without a shortcut: no hint. Fetch opens its menu.
-await page.click(".tb-button:has-text('Fetch')");
+// A button without a shortcut: no hint. The menu part of Update opens the Fetch menu.
+await page.click(".tb-split-menu");
 await noHint("a button without a shortcut shows no hint");
 await page.keyboard.press("Escape");
 

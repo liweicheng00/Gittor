@@ -97,7 +97,7 @@ await page.waitForSelector(".merge-overlay", { state: "detached" });
 
 // The IDE button opens the folder of the repository, without the line. Shift+F4 does the same.
 rmSync(log, { force: true });
-await page.click(".tb-button:has-text('IDE')");
+await page.click(".tb-ide");
 await within("the IDE button opens the folder of the repository", async () => opened() === repo);
 await within("the click shows the key of the button", async () => ((await page.textContent(".key-hint").catch(() => "")) ?? "").includes("Shift+F4"));
 await shot("oe4-ide");
@@ -114,7 +114,7 @@ await within("a missing program shows an error", async () => ((await page.textCo
 await shot("oe3-error");
 await setEditor("");
 // Without an editor, the IDE button asks for one.
-await page.click(".tb-button:has-text('IDE')");
+await page.click(".tb-ide");
 await within("without an editor, the IDE button asks for one", async () => ((await page.textContent(".toasts").catch(() => "")) ?? "").includes("Choose an editor in Settings › Editor"));
 console.log("errors:", JSON.stringify(errors));
 await browser.close();

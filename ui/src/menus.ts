@@ -304,7 +304,10 @@ openBtn.addEventListener("click", async () => {
 refreshBtn.addEventListener("click", () => void refresh());
 fetchBtn.addEventListener("click", async () => {
   const remotes = await api.remotes().catch(() => []);
-  menuBelow(fetchBtn, [
+  // The menu opens under the whole Update button.
+  menuBelow(fetchBtn.parentElement ?? fetchBtn, [
+    { label: "Update Current Branch…", shortcut: keymap.shortcut("update"), action: () => void updateBranch() },
+    { separator: true },
     { label: "Fetch All Remotes", shortcut: keymap.shortcut("fetch"), disabled: !remotes.length, action: () => void fetchAll() },
     ...(remotes.length > 1 ? [{ separator: true } as MenuItem, ...remotes.map((r) => ({ label: `Fetch ${r.name}`, action: () => void fetchRemote(r.name) }) as MenuItem)] : []),
     { separator: true },

@@ -39,7 +39,7 @@ await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=
 await page.waitForSelector(".sidebar .branch", { timeout: 30000 });
 
 // The toolbar button: main tracks origin/main.
-await page.click(".tb-button:has-text('Remote')");
+await page.click(".tb-remote");
 await within("the button opens the current branch", async () => (await last()) === "https://github.com/acme/demo/tree/main");
 
 // A local branch opens its tracked branch.
@@ -62,7 +62,7 @@ await within("a remote opens its home page", async () => (await last()) === "htt
 // A remote on a local path has no web page.
 git("remote", "set-url", "origin", localUrl);
 const before = (await page.evaluate(() => window.__opened.length));
-await page.click(".tb-button:has-text('Remote')");
+await page.click(".tb-remote");
 await within("a local remote shows a notice", async () => ((await page.textContent(".toasts").catch(() => "")) ?? "").includes("has no web page"));
 check("nothing opens", (await page.evaluate(() => window.__opened.length)) === before);
 console.log("errors:", JSON.stringify(errors));
