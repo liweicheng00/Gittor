@@ -10,7 +10,7 @@ import { filterBar, localHistoryBtn, pushBtn, refreshBtn, settingsBtn, tabBranch
 
 /** The hint of one action shows at most once in this time. */
 const AGAIN_MS = 3000;
-const SHOW_MS = 1800;
+const SHOW_MS = 900;
 
 const lastShown = new Map<string, number>();
 
