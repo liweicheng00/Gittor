@@ -334,6 +334,7 @@ export const api = {
   cloneRepo: (url: string, parent: string, name: string) => call<string>("clone", { url, parent, name }),
   openInEditor: (path: string, line: number, column: number) => call<null>("open_in_editor", { path, line, column }),
   openInTerminal: () => call<null>("open_in_terminal"),
+  openProjectInEditor: () => call<null>("open_project_in_editor"),
   openUrl: (url: string) => (inTauri ? call<null>("open_url", { url }) : Promise.resolve(void window.open(url, "_blank", "noopener")).then(() => null)),
   tagInfo: (name: string) => call<TagInfo>("tag_info", { name }),
   remoteTags: (remote: string) => call<string[]>("remote_tags", { remote }),

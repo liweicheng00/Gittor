@@ -4,7 +4,7 @@ import { api } from "./api";
 import type { DiffView } from "./diff-view";
 import { sharedDiff } from "./history-view";
 import { toast } from "./notify";
-import { commitPanel, diff, statusActivity } from "./shell";
+import { commitPanel, diff, ideBtn, statusActivity } from "./shell";
 
 export async function openInEditor(path: string, line = 1, column = 1) {
   try {
@@ -38,3 +38,16 @@ export function openInEditorHere(target: HTMLElement) {
   }
   diff.openInEditor();
 }
+
+/** Opens the working tree of the repository in the editor, as a project. */
+export async function openProjectInEditor() {
+  try {
+    await api.openProjectInEditor();
+    statusActivity.textContent = "Opened the repository in the editor";
+  } catch (e) {
+    toast(String(e).replace(/^Error: /, ""), "error");
+  }
+}
+
+ideBtn.dataset.keyAction = "openProjectInEditor";
+ideBtn.addEventListener("click", () => void openProjectInEditor());

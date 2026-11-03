@@ -371,7 +371,7 @@ export function openSettingsDialog(ctx: SettingsContext): Promise<Settings | nul
         h(
           "p",
           { class: "settings-hint" },
-          "Open in Editor (F4) runs this command. {file} is the full path of the file, and {line} and {column} are the place of the cursor in the diff. " +
+          "Open in Editor (F4) runs this command. The IDE button (Shift+F4) runs it with the folder of the repository and without the line. {file} is the full path of the file, and {line} and {column} are the place of the cursor in the diff. " +
             "A command without {file} gets the file at its end. No shell runs the command. Gittor also looks for the program in the PATH of your login shell. " +
             "A JetBrains IDE needs its command-line launcher: Tools › Create Command-line Launcher, or the shell scripts of the Toolbox app.",
         ),

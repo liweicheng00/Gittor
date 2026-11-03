@@ -43,13 +43,14 @@ export const updateBtn = h("button", { class: "tb-button", title: `Update the cu
 export const pushBtn = h("button", { class: "tb-button", title: `Push the current branch (${mod}⇧K)`, disabled: true }, icon("push"), "Push");
 export const remoteBtn = h("button", { class: "tb-button", title: "Open the current branch on the web page of its remote", disabled: true }, icon("remote"), "Remote");
 export const localHistoryBtn = h("button", { class: "tb-button", title: "Local History: the recent versions of changed files", disabled: true }, icon("history"), "Local History");
+export const ideBtn = h("button", { class: "tb-button", title: "Open the repository in the editor of Settings › Editor", disabled: true }, icon("ide"), "IDE");
 export const terminalBtn = h("button", { class: "tb-button", title: "Open a terminal in the folder of the repository", disabled: true }, icon("terminal"), "Terminal");
 const repoLabel = h("span", { class: "tb-repo" });
 export const branchBtn = h("button", { class: "tb-button tb-branch-button", title: "Switch branch (recent branches first)", hidden: true }, icon("branch"), icon("chevron-down", "icon-caret"));
 export const viewBtn = h("button", { class: "tb-button", title: "View options" }, "View", icon("chevron-down", "icon-caret"));
 const themeBtn = h("button", { class: "tb-button", title: "Theme" }, icon("theme"));
 export const settingsBtn = h("button", { class: "tb-button", title: "Settings" }, icon("settings"));
-const toolbar = h("header", { class: "toolbar" }, openBtn, refreshBtn, fetchBtn, updateBtn, pushBtn, remoteBtn, localHistoryBtn, terminalBtn, repoLabel, branchBtn, h("span", { class: "spacer" }), viewBtn, themeBtn, settingsBtn);
+const toolbar = h("header", { class: "toolbar" }, openBtn, refreshBtn, fetchBtn, updateBtn, pushBtn, remoteBtn, localHistoryBtn, ideBtn, terminalBtn, repoLabel, branchBtn, h("span", { class: "spacer" }), viewBtn, themeBtn, settingsBtn);
 
 export const tabBar = h("nav", { class: "tabbar", hidden: true });
 

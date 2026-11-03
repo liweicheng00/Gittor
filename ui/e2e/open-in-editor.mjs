@@ -1,6 +1,7 @@
 // UI scenario for Open in Editor: choose the editor in the settings, then open a file with F4, the button of
 // the diff and the file menu, at the line of the cursor. A small script stands in for the editor and writes
-// its arguments to a file. A missing program shows an error.
+// its arguments to a file. The IDE button opens the folder of the repository. A missing program shows an
+// error.
 // Start the dev server first (see README). Build a fresh repository with make-demo-repo.sh, then:
 // node e2e/open-in-editor.mjs <repo> <screenshot-dir>.
 // Set CHROMIUM to a Chromium binary when Playwright has no downloaded browser.
@@ -94,6 +95,17 @@ await within("F4 in the Compare window opens its file", async () => opened().sta
 await page.keyboard.press("Escape");
 await page.waitForSelector(".merge-overlay", { state: "detached" });
 
+// The IDE button opens the folder of the repository, without the line. Shift+F4 does the same.
+rmSync(log, { force: true });
+await page.click(".tb-button:has-text('IDE')");
+await within("the IDE button opens the folder of the repository", async () => opened() === repo);
+await within("the click shows the key of the button", async () => ((await page.textContent(".key-hint").catch(() => "")) ?? "").includes("Shift+F4"));
+await shot("oe4-ide");
+rmSync(log, { force: true });
+await page.click(".log-row >> nth=1");
+await page.keyboard.press("Shift+F4");
+await within("Shift+F4 opens the folder of the repository", async () => opened() === repo);
+
 // A program that does not exist shows an error.
 await setEditor("no-such-editor-xyz {file}");
 await page.click(".cl-file:has(.path:text-is('main.rs'))");
@@ -101,6 +113,9 @@ await page.keyboard.press("F4");
 await within("a missing program shows an error", async () => ((await page.textContent(".toasts").catch(() => "")) ?? "").includes("Cannot find the editor program no-such-editor-xyz"));
 await shot("oe3-error");
 await setEditor("");
+// Without an editor, the IDE button asks for one.
+await page.click(".tb-button:has-text('IDE')");
+await within("without an editor, the IDE button asks for one", async () => ((await page.textContent(".toasts").catch(() => "")) ?? "").includes("Choose an editor in Settings › Editor"));
 console.log("errors:", JSON.stringify(errors));
 await browser.close();
 if (errors.length) process.exit(1);

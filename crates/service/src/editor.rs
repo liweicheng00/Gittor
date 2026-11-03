@@ -70,6 +70,41 @@ pub fn editor_command(template: &str, file: &Path, line: u32, column: u32) -> Re
     Ok((fill(program), args))
 }
 
+/// The program and its arguments that open a folder in the editor. The command of a file at a line
+/// loses its line and column: a word with `{line}` or `{column}` and no `{file}` goes, with the option
+/// before it (`--line {line}`). The word with `{file}` changes to the folder. When that word also has
+/// the line, the option before it goes too (`--goto {file}:{line}`). A command without `{file}` gets
+/// the folder at its end.
+pub fn project_command(template: &str, dir: &Path) -> Result<(String, Vec<String>)> {
+    let words = split_command(template)?;
+    if words.is_empty() {
+        return Err("Choose an editor in Settings › Editor to open the repository in it".into());
+    }
+    let dir = dir.to_string_lossy().to_string();
+    let has_place = |w: &str| w.contains("{line}") || w.contains("{column}");
+    let is_option = |w: &str| w.starts_with('-') && !w.contains('=');
+    let mut out: Vec<String> = Vec::new();
+    for w in &words {
+        if w.contains("{file}") {
+            if has_place(w) && out.len() > 1 && is_option(out.last().unwrap()) {
+                out.pop();
+            }
+            out.push(dir.clone());
+        } else if has_place(w) {
+            if out.len() > 1 && is_option(out.last().unwrap()) {
+                out.pop();
+            }
+        } else {
+            out.push(w.clone());
+        }
+    }
+    if !template.contains("{file}") {
+        out.push(dir);
+    }
+    let program = out.remove(0);
+    Ok((program, out))
+}
+
 /// The default app of the system for a file.
 fn system_open(file: &str) -> (String, Vec<String>) {
     if cfg!(target_os = "macos") {
@@ -148,19 +183,31 @@ impl Service {
         let file = working_tree_file(&root, &args.path)?;
         let template = self.settings.lock().unwrap().editor.clone();
         let (program, list) = editor_command(&template, &file, args.line.max(1), args.column.max(1))?;
-        let exe = find_program(&program).ok_or_else(|| format!("Cannot find the editor program {program}. Set its full path in Settings › Editor"))?;
-        let mut child = Command::new(exe)
-            .args(&list)
-            .current_dir(&root)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()
-            .map_err(|e| format!("Cannot start {program}: {e}"))?;
-        // The launcher of most editors exits soon. The wait frees its process entry.
-        std::thread::spawn(move || child.wait());
-        Ok(())
+        start_editor(&program, &list, &root)
     }
+
+    /// Opens the working tree of the current repository in the editor of the settings, as a project.
+    pub fn open_project_in_editor(&self) -> Result<()> {
+        let root = self.with_repo(|r| Ok(r.root.clone()))?;
+        let template = self.settings.lock().unwrap().editor.clone();
+        let (program, list) = project_command(&template, &root)?;
+        start_editor(&program, &list, &root)
+    }
+}
+
+fn start_editor(program: &str, list: &[String], root: &Path) -> Result<()> {
+    let exe = find_program(program).ok_or_else(|| format!("Cannot find the editor program {program}. Set its full path in Settings › Editor"))?;
+    let mut child = Command::new(exe)
+        .args(list)
+        .current_dir(root)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|e| format!("Cannot start {program}: {e}"))?;
+    // The launcher of most editors exits soon. The wait frees its process entry.
+    std::thread::spawn(move || child.wait());
+    Ok(())
 }
 
 #[cfg(test)]
@@ -187,6 +234,23 @@ mod tests {
         assert_eq!(a, ["/r/x;rm -rf y:1"]);
         let (p, a) = editor_command("", f, 1, 1).unwrap();
         assert!(!p.is_empty() && a.last().unwrap() == "/r/a b.rs");
+    }
+
+    #[test]
+    fn opens_the_folder_without_the_line() {
+        let d = Path::new("/r/my app");
+        let run = |t: &str| {
+            let (p, a) = project_command(t, d).unwrap();
+            std::iter::once(p).chain(a).collect::<Vec<_>>().join("|")
+        };
+        assert_eq!(run("code --goto {file}:{line}:{column}"), "code|/r/my app");
+        assert_eq!(run("zed {file}:{line}:{column}"), "zed|/r/my app");
+        assert_eq!(run("idea --line {line} --column {column} {file}"), "idea|/r/my app");
+        assert_eq!(run("xed --line {line} {file}"), "xed|/r/my app");
+        assert_eq!(run("open -a 'Sublime Text' {file}"), "open|-a|Sublime Text|/r/my app");
+        assert_eq!(run("mate -l {line}"), "mate|/r/my app");
+        assert_eq!(run("code -n"), "code|-n|/r/my app");
+        assert!(project_command("", d).unwrap_err().contains("Settings › Editor"));
     }
 
     #[test]

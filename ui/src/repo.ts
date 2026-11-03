@@ -8,7 +8,7 @@ import { emptyFilter } from "./filter-bar";
 import { loadFavorites } from "./remotes";
 import { clearCompare } from "./selection";
 import { addRecent, save, setRecentProject, settings } from "./settings";
-import { authors, banner, commitPanel, details, fetchBtn, filterBar, localHistoryBtn, terminalBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, showLeftTab, sidebar, stashPanel, statusActivity, submodulePanel, tabBar, tabCommit, tabReviews, tabStash, tabSubmodules, task, updateBtn, updateStatus } from "./shell";
+import { authors, banner, commitPanel, details, fetchBtn, filterBar, ideBtn, localHistoryBtn, terminalBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, showLeftTab, sidebar, stashPanel, statusActivity, submodulePanel, tabBar, tabCommit, tabReviews, tabStash, tabSubmodules, task, updateBtn, updateStatus } from "./shell";
 import { app } from "./state";
 import { showWorkspace } from "./welcome";
 import { formDialog } from "./dialogs";
@@ -194,7 +194,7 @@ async function closeTab(root: string, keepOpen = false) {
     app.view = null;
     commitPanel.clear();
     document.title = "Gittor";
-    refreshBtn.disabled = fetchBtn.disabled = updateBtn.disabled = pushBtn.disabled = remoteBtn.disabled = localHistoryBtn.disabled = terminalBtn.disabled = true;
+    refreshBtn.disabled = fetchBtn.disabled = updateBtn.disabled = pushBtn.disabled = remoteBtn.disabled = localHistoryBtn.disabled = terminalBtn.disabled = ideBtn.disabled = true;
     renderTabs();
     showWorkspace(false);
   }
@@ -244,7 +244,7 @@ export async function applyView(r: ViewResult, keepSelection: boolean) {
   const anchor = keepSelection ? log.viewAnchor() : null;
   app.view = r;
   document.title = `${r.root.split(/[\\/]/).pop()} – Gittor`;
-  refreshBtn.disabled = fetchBtn.disabled = updateBtn.disabled = pushBtn.disabled = remoteBtn.disabled = localHistoryBtn.disabled = terminalBtn.disabled = false;
+  refreshBtn.disabled = fetchBtn.disabled = updateBtn.disabled = pushBtn.disabled = remoteBtn.disabled = localHistoryBtn.disabled = terminalBtn.disabled = ideBtn.disabled = false;
   updateStatus();
   log.setCollapsed(r.collapsed);
   log.reset(r.rowCount, r.recommendedWidth, keepSelection);
