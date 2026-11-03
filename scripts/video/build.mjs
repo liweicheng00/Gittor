@@ -24,21 +24,20 @@ const meta = JSON.parse(readFileSync(join(rec, "scenes.json"), "utf8"));
 /** The scenes in order, with their captions. */
 const scenes = [
   ["log", "The log, with the commit graph of IntelliJ"],
-  ["open", "Recent repositories in groups by project, worktrees under their project"],
+  ["open", "Recent repositories, worktrees under their project"],
   ["changes", "Changelists: check the changes you want, then commit"],
   ["history", "Squash and reword in memory, then one click on Undo"],
-  ["conflicts", "Conflicts: only the real conflict is left. Accept Both, then Continue"],
+  ["conflicts", "Conflicts: only the real conflict is left"],
   ["review", "A local review: notes on lines, then Copy All"],
-  ["tools", "Shortcut hints, IDE and Terminal buttons, a tab to a new window"],
+  ["tools", "Shortcut hints, IDE, Terminal, tabs to new windows"],
 ];
 const SPEED = 1.2; // The scenes play a little faster than they were recorded.
-const TITLE = 3.2;
+const TITLE = 1.6;
 const END = 4;
 const FADE = 0.4;
 const FPS = 30;
-// The app takes most of the frame. The caption has its own band under it, so it covers no part of the app.
-const APP = { x: 96, y: 8, w: 1728, h: 972 };
-const BAND = "0x17191d";
+// The caption is over the lower middle of the app, where the diff panel has no important content.
+const CAPTION_Y = 760;
 
 const ff = (...args) => execFileSync("ffmpeg", ["-loglevel", "error", "-y", ...args], { stdio: "inherit" });
 
@@ -52,9 +51,11 @@ const page = (body, transparent) => `<!doctype html><html><head><meta charset="u
   .name { font-size: 112px; font-weight: 700; letter-spacing: -0.02em; }
   .tag { font-size: 40px; color: #aab0ba; }
   .small { font-size: 30px; color: #7f8794; margin-top: 18px; }
-  .cap { position: absolute; left: 0; right: 0; top: ${APP.y + APP.h}px; bottom: 0; display: flex;
-    align-items: center; justify-content: center; white-space: nowrap; font-size: 36px; font-weight: 500; color: #fff; }
-  .cap b { color: #ffb02e; font-weight: 600; margin-right: 14px; }
+  .cap { position: absolute; left: 50%; top: ${CAPTION_Y}px; transform: translate(-50%, -50%); width: max-content;
+    max-width: 1500px; text-align: center; background: rgba(14, 16, 20, 0.9); border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 22px; padding: 20px 44px; font-size: 54px; line-height: 1.25; font-weight: 600; color: #fff;
+    box-shadow: 0 12px 44px rgba(0, 0, 0, 0.55); }
+  .cap b { color: #ffb02e; font-weight: 700; margin-right: 18px; }
 </style></head><body>${body}</body></html>`;
 const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
 const tab = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
@@ -85,9 +86,8 @@ for (const [i, [name]] of scenes.entries()) {
     "-ss", String(start), "-t", String(duration), "-i", join(rec, `${name}.webm`),
     "-loop", "1", "-i", join(tmp, `cap-${name}.png`),
     "-filter_complex",
-    `[0:v]setpts=PTS/${SPEED},fps=${FPS},scale=${APP.w}:${APP.h}:flags=lanczos,setsar=1,` +
-      `pad=1920:1080:${APP.x}:${APP.y}:color=${BAND}[v];` +
-      `[1:v]format=rgba,fade=in:st=0.5:d=0.35:alpha=1,fade=out:st=${(len - 0.6).toFixed(2)}:d=0.35:alpha=1[c];` +
+    `[0:v]setpts=PTS/${SPEED},fps=${FPS},scale=1920:1080:flags=lanczos,setsar=1[v];` +
+      `[1:v]format=rgba,fade=in:st=0.3:d=0.35:alpha=1,fade=out:st=${(len - 0.6).toFixed(2)}:d=0.35:alpha=1[c];` +
       `[v][c]overlay=0:0:shortest=1,format=yuv420p`,
     "-t", len.toFixed(2), ...enc, file,
   );
