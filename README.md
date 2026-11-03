@@ -38,6 +38,7 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | `F7`, `Shift+F7` | Next and previous change |
 | `Alt+Down`, `Alt+Up` | Next and previous file |
 | `Ctrl/Cmd+PageDown`, `Ctrl/Cmd+PageUp` | Next and previous tab |
+| `Ctrl/Cmd+W` | Close the project tab (`Cmd+Shift+W` closes the window on macOS) |
 | `Ctrl/Cmd+Alt+Left`, `Ctrl/Cmd+Alt+Right` | Back and Forward (also `Cmd+[` and `Cmd+]` on macOS) |
 | `Esc` | Hide the diff panel |
 | `Alt+Left`, `Alt+Right`, `Alt+Down` | In the merge window: take yours, theirs, or both for the current conflict |

@@ -174,6 +174,11 @@ export async function switchTab(root: string) {
 }
 
 /** Closes a tab. With `keepOpen`, the repository stays open in the backend, for a move to a new window. */
+/** Closes the project tab that shows now. The window stays open; without tabs it shows the welcome screen. */
+export async function closeActiveTab() {
+  if (settings.activeTab) await closeTab(settings.activeTab);
+}
+
 async function closeTab(root: string, keepOpen = false) {
   await showing.catch(() => {});
   if (!keepOpen && !shownElsewhere(root)) await api.close(root).catch(() => {});

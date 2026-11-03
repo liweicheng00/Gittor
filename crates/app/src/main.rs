@@ -3,7 +3,8 @@
 
 use gittor_service::Service;
 use serde_json::Value;
-use tauri::{Emitter, Manager, State};
+use tauri::menu::{AboutMetadata, Menu, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::{AppHandle, Emitter, Manager, Runtime, State};
 
 /// Runs a command of the service by name, as the dev server does. The command runs off the UI thread,
 /// because git can take a while on a large repository. `body` holds the arguments, and "root" names the
@@ -83,11 +84,76 @@ fn use_software_rendering_without_gpu() {
     }
 }
 
+/// The id of the menu item that closes the window.
+const CLOSE_WINDOW: &str = "close-window";
+
+/// The menu of macOS: the default menu of Tauri, but Close Window has Cmd+Shift+W. Cmd+W goes to the
+/// page, where it closes the project tab.
+fn app_menu<R: Runtime>(h: &AppHandle<R>) -> tauri::Result<Menu<R>> {
+    let info = h.package_info();
+    let about = AboutMetadata { name: Some(info.name.clone()), version: Some(info.version.to_string()), ..Default::default() };
+    let close = || MenuItem::with_id(h, CLOSE_WINDOW, "Close Window", true, Some("CmdOrCtrl+Shift+W"));
+    Menu::with_items(
+        h,
+        &[
+            &Submenu::with_items(
+                h,
+                info.name.clone(),
+                true,
+                &[
+                    &PredefinedMenuItem::about(h, None, Some(about))?,
+                    &PredefinedMenuItem::separator(h)?,
+                    &PredefinedMenuItem::services(h, None)?,
+                    &PredefinedMenuItem::separator(h)?,
+                    &PredefinedMenuItem::hide(h, None)?,
+                    &PredefinedMenuItem::hide_others(h, None)?,
+                    &PredefinedMenuItem::separator(h)?,
+                    &PredefinedMenuItem::quit(h, None)?,
+                ],
+            )?,
+            &Submenu::with_items(h, "File", true, &[&close()?])?,
+            &Submenu::with_items(
+                h,
+                "Edit",
+                true,
+                &[
+                    &PredefinedMenuItem::undo(h, None)?,
+                    &PredefinedMenuItem::redo(h, None)?,
+                    &PredefinedMenuItem::separator(h)?,
+                    &PredefinedMenuItem::cut(h, None)?,
+                    &PredefinedMenuItem::copy(h, None)?,
+                    &PredefinedMenuItem::paste(h, None)?,
+                    &PredefinedMenuItem::select_all(h, None)?,
+                ],
+            )?,
+            &Submenu::with_items(h, "View", true, &[&PredefinedMenuItem::fullscreen(h, None)?])?,
+            &Submenu::with_items(
+                h,
+                "Window",
+                true,
+                &[&PredefinedMenuItem::minimize(h, None)?, &PredefinedMenuItem::maximize(h, None)?, &PredefinedMenuItem::separator(h)?, &close()?],
+            )?,
+        ],
+    )
+}
+
 fn main() {
     gittor_service::askpass::run_helper_if_requested();
     #[cfg(target_os = "linux")]
     use_software_rendering_without_gpu();
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    #[cfg(target_os = "macos")]
+    let builder = builder.menu(app_menu);
+    #[cfg(not(target_os = "macos"))]
+    let _ = app_menu::<tauri::Wry>;
+    builder
+        .on_menu_event(|app, event| {
+            if event.id() == CLOSE_WINDOW {
+                if let Some(w) = app.webview_windows().into_values().find(|w| w.is_focused().unwrap_or(false)) {
+                    let _ = w.close();
+                }
+            }
+        })
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_process::init())
         .manage(Service::with_askpass(&std::env::current_exe().expect("current executable")))
