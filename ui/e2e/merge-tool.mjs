@@ -63,6 +63,13 @@ console.log("status:", await status());
 check("only the conflict is left", (await status()) === "1 change left, 1 conflict");
 check("the result has the non-conflicting changes", ((await page.textContent(".merge-editor:nth-child(2) .view-lines")) ?? "").replace(/\s/g, "").includes("letd=40;//yours"));
 check("the conflict has a bar of actions", (await page.$$(".merge-editor:nth-child(2) .m-actions-conflict")).length === 1);
+// The » of yours is on the border of the left editor and the result.
+const edges = await page.evaluate(() => {
+  const a = document.querySelector(".merge-editor:nth-child(1) .m-arrow")?.getBoundingClientRect();
+  const r = document.querySelector(".merge-editor:nth-child(2)")?.getBoundingClientRect();
+  return a && r ? [a.right, r.left] : null;
+});
+check("the » of yours is at the border with the result", !!edges && Math.abs(edges[0] - edges[1]) <= 2);
 await shot("m2-merge-window");
 // Accept Both: yours, then theirs.
 await page.click(".m-actions-conflict .m-action:text-is('Accept Both')");

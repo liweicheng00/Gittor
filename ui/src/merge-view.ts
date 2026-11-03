@@ -47,6 +47,9 @@ class MergeWindow {
   private zones = { ours: [] as string[], result: [] as string[], theirs: [] as string[] };
   /** The zones of the action bars, and of the space that keeps the other sides in line with them. */
   private barZones = { ours: [] as string[], result: [] as string[], theirs: [] as string[] };
+  /** The » buttons of yours, at the right edge of the left editor: on the border with the result. */
+  private arrowLayer = h("div", { class: "m-arrow-layer" });
+  private arrows: { line: number; chunk: MChunk }[] = [];
   private suppress = false;
   private syncing = false;
   private dirty = false;
@@ -129,7 +132,10 @@ class MergeWindow {
       this.models.push(m);
       return m;
     };
-    this.ours = monaco.editor.create(oursHost, { ...common, model: model(oursText), readOnly: true });
+    this.ours = monaco.editor.create(oursHost, { ...common, model: model(oursText), readOnly: true, glyphMargin: false, scrollbar: { vertical: "hidden" } });
+    this.ours.addOverlayWidget({ getId: () => "merge-arrows", getDomNode: () => this.arrowLayer, getPosition: () => ({ preference: null }) });
+    this.ours.onDidScrollChange(() => this.placeArrows());
+    this.ours.onDidLayoutChange(() => this.placeArrows());
     this.result = monaco.editor.create(resultHost, { ...common, model: model(base) });
     this.theirs = monaco.editor.create(theirsHost, { ...common, model: model(theirsText), readOnly: true });
 
@@ -338,17 +344,20 @@ class MergeWindow {
     const tc = this.theirs.getModel()!.getLineCount();
     let open = 0;
     let conflicts = 0;
+    const arrows: { line: number; chunk: MChunk }[] = [];
     this.chunks.forEach((c, i) => {
       if (c.kind === "same") return;
       const done = resolved(c);
       if (!done) open++;
       if (!done && c.kind === "conflict") conflicts++;
       const cls = `${done ? "m-done" : ""}${i === this.current ? " m-current" : ""}`;
-      if (c.kind !== "theirs") o.push(...lineDeco(c.ours, c.kind, cls, oc, this.canApply(c, "ours") ? "m-glyph-right" : undefined, c.applied.length ? "Append yours" : "Apply yours"));
+      if (c.kind !== "theirs") o.push(...lineDeco(c.ours, c.kind, cls, oc));
+      if (c.kind !== "theirs" && this.canApply(c, "ours")) arrows.push({ line: this.glyphLine(c.ours, oc), chunk: c });
       if (c.kind !== "ours") t.push(...lineDeco(c.theirs, c.kind, cls, tc, this.canApply(c, "theirs") ? "m-glyph-left" : undefined, c.applied.length ? "Append theirs" : "Apply theirs"));
       r.push(...lineDeco(c.res, c.kind, cls, rc, done ? undefined : "m-glyph-ignore", "Ignore this change"));
     });
     this.deco.ours = this.ours.deltaDecorations(this.deco.ours, o);
+    this.renderArrows(arrows);
     this.deco.result = this.result.deltaDecorations(this.deco.result, r);
     this.deco.theirs = this.theirs.deltaDecorations(this.deco.theirs, t);
     this.align();
@@ -356,6 +365,37 @@ class MergeWindow {
       ? `${open} change${open === 1 ? "" : "s"} left${conflicts ? `, ${conflicts} conflict${conflicts === 1 ? "" : "s"}` : ""}`
       : "All changes are resolved";
     this.status.classList.toggle("done", open === 0);
+  }
+
+  private renderArrows(arrows: { line: number; chunk: MChunk }[]) {
+    this.arrows = arrows;
+    this.arrowLayer.replaceChildren(
+      ...arrows.map(({ chunk }) => {
+        const b = h("button", { class: "m-arrow", title: chunk.applied.length ? "Append yours" : "Apply yours" }, "»");
+        // Monaco takes the mouse after a press in the editor.
+        b.addEventListener("mousedown", (e) => {
+          if (e.button !== 0) return;
+          e.preventDefault();
+          e.stopPropagation();
+          this.applySide(chunk, "ours");
+        });
+        return b;
+      }),
+    );
+    this.placeArrows();
+  }
+
+  /** Puts each » at the top of its line, at the right edge of the left editor. */
+  private placeArrows() {
+    const layout = this.ours.getLayoutInfo();
+    const scroll = this.ours.getScrollTop();
+    const height = this.ours.getOption(monaco.editor.EditorOption.lineHeight);
+    Object.assign(this.arrowLayer.style, { width: `${layout.width}px`, height: `${layout.height}px` });
+    [...this.arrowLayer.children].forEach((el, i) => {
+      const top = this.ours.getTopForLineNumber(this.arrows[i].line) - scroll;
+      Object.assign((el as HTMLElement).style, { top: `${top}px`, height: `${height}px` });
+      (el as HTMLElement).hidden = top < -height || top > layout.height;
+    });
   }
 
   /** Adds blank space under shorter chunks, so the three versions stay side by side. */

@@ -462,6 +462,9 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .m-ours-gap-after, .m-theirs-gap-after, .m-both-gap-after { box-shadow: inset 0 -2px 0 var(--renamed); }
 .m-conflict-gap { box-shadow: inset 0 2px 0 var(--deleted); }
 .m-conflict-gap-after { box-shadow: inset 0 -2px 0 var(--deleted); }
+.m-arrow-layer { position: absolute; top: 0; left: 0; pointer-events: none; }
+.m-arrow { position: absolute; right: 0; width: 18px; padding: 0; border: 0; background: var(--bg); color: var(--accent); font-size: 15px; font-weight: 700; line-height: 1; cursor: pointer; pointer-events: auto; }
+.m-arrow:hover { background: var(--hover); }
 .m-glyph-right, .m-glyph-left, .m-glyph-ignore { cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 700; }
 .m-glyph-right::before { content: "»"; color: var(--accent); font-size: 15px; }
 .m-glyph-left::before { content: "«"; color: var(--accent); font-size: 15px; }
