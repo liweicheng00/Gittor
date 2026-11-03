@@ -302,9 +302,10 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .copy-hint-check { color: var(--added); font-weight: 700; }
 .copy-hint-text { overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 @keyframes copy-hint-in { from { opacity: 0; } to { opacity: 1; } }
-.key-hint { gap: 6px; }
-.key-hint-or { opacity: 0.7; }
-.key-hint-key { padding: 0 5px; border: 1px solid currentColor; border-radius: 4px; font: 600 11px/16px ui-monospace, SFMono-Regular, Menlo, monospace; opacity: 0.95; }
+/* The shortcut hint looks like a key of a keyboard: a small radius and a thicker bottom edge. */
+.key-hint { gap: 6px; padding: 2px 8px 1px; border: 1px solid var(--border); border-bottom-width: 3px; border-radius: 6px; background: var(--bg); color: var(--fg); }
+.key-hint-or { color: var(--muted); }
+.key-hint-key { font: 600 11px/16px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .toasts { position: fixed; right: 16px; bottom: 36px; z-index: 110; display: flex; flex-direction: column; gap: 8px; max-width: min(460px, calc(100vw - 32px)); }
 .toast { display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 12px; border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 6px; background: var(--bg); box-shadow: var(--shadow); }
 .toast-success { border-left-color: var(--added); }
