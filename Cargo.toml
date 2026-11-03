@@ -5,3 +5,9 @@ members = ["crates/graph", "crates/git", "crates/service", "crates/devserver", "
 [workspace.package]
 edition = "2021"
 license = "Apache-2.0"
+
+# A release build removes its symbols and optimizes across crates.
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
