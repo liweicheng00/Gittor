@@ -60,16 +60,14 @@ export function renderTabs() {
   tabBar.hidden = settings.tabs.length < 2;
   // Two folders with the same name get the folders above them: "work/app" and "old/app".
   const names = new Map(settings.tabs.map((r, i) => [r, pathLabels(settings.tabs)[i]]));
-  const mains = [...new Set([...tabInfo.values()].map((i) => i.mainRoot).filter((m): m is string => !!m))];
-  const mainNames = new Map(mains.map((m, i) => [m, pathLabels(mains)[i]]));
   tabBar.replaceChildren(
     ...settings.tabs.map((root) => {
       const name = names.get(root) ?? baseName(root);
       const info = tabInfo.get(root);
-      // A linked worktree shows the worktree icon and the name of its main repository.
+      // A linked worktree shows the worktree icon. Its tooltip names the main repository.
       const worktree = info?.mainRoot ?? null;
       const label = worktree
-        ? [icon("worktree", "tab-icon"), h("span", { class: "tab-name" }, name), h("span", { class: "tab-main" }, `of ${mainNames.get(worktree) ?? baseName(worktree)}`)]
+        ? [icon("worktree", "tab-icon"), h("span", { class: "tab-name" }, name)]
         : [h("span", { class: "tab-name" }, name)];
       const title = [worktree ? `Worktree of ${worktree}` : "", info?.branch ? `Branch: ${info.branch}` : info ? "Detached HEAD" : "", root].filter(Boolean).join("\n");
       const close = h("button", { class: "tab-close", title: "Close the tab" }, icon("close"));

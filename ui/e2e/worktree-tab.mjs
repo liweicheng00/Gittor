@@ -1,5 +1,5 @@
-// UI scenario for the tab of a linked worktree: it shows the worktree icon and the name of its main
-// repository, and its tooltip names the branch. The tab of the main repository stays plain.
+// UI scenario for the tab of a linked worktree: it shows the worktree icon and its own name only, and
+// its tooltip names the main repository and the branch. The tab of the main repository stays plain.
 // Start the dev server first (see README). Build a fresh repository with make-demo-repo.sh, then:
 // node e2e/worktree-tab.mjs <repo> <screenshot-dir>. The scenario makes worktrees next to <repo>.
 // Two worktrees with the same folder name show the folders above them: "<repo>-x/app" and "<repo>-y/app".
@@ -39,9 +39,9 @@ await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=
 await page.waitForSelector(".sidebar .worktree", { timeout: 30000 });
 await page.dblclick(`.sidebar .worktree:has(.branch-name:text-is('${wt.split("/").pop()}'))`);
 await within("two tabs", async () => (await tabs()).length === 2);
-await within("the worktree tab shows its main repository", async () => {
+await within("the worktree tab shows its name, and its tooltip names the main repository", async () => {
   const t = (await tabs()).find((x) => x.text.startsWith(wt.split("/").pop()));
-  return !!t && t.worktree && t.text.includes(`of ${name}`) && t.title.includes(`Worktree of ${repo}`) && t.title.includes("Branch: wt-tab");
+  return !!t && t.worktree && t.text === wt.split("/").pop() && t.title.includes(`Worktree of ${repo}`) && t.title.includes("Branch: wt-tab");
 });
 const main = (await tabs()).find((x) => x.text === name);
 check("the tab of the main repository is plain", !!main && !main.worktree && main.title.includes("Branch: main"));
