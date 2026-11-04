@@ -210,7 +210,7 @@ impl Service {
                 ReviewEdit::Start { branch, base } => r.start_review(&branch, &base),
                 ReviewEdit::Remove { branch } => r.remove_review(&branch),
                 ReviewEdit::Viewed { branch, paths, viewed } => r.set_viewed(&branch, &paths, viewed),
-                ReviewEdit::Comment { branch, path, line, text } => r.add_review_comment(&branch, &path, line, &text),
+                ReviewEdit::Comment { branch, path, line, end_line, text } => r.add_review_comment(&branch, &path, line, end_line, &text),
                 ReviewEdit::DeleteComment { branch, id } => r.delete_review_comment(&branch, &id),
             }
             .map_err(err)

@@ -9,7 +9,7 @@ import { copyText, dragResize, formatDate, h, icon, rowSplitter, twisty } from "
 import { fileIcon } from "./file-icon";
 import { buildTree, treeOrder, walkTree } from "./file-tree";
 import { sharedDiff } from "./history-view";
-import { formatNote, formatNotes } from "./note-format";
+import { formatNote, formatNotes, lineRange } from "./note-format";
 import { save, settings } from "./settings";
 
 export interface ReviewCallbacks {
@@ -265,10 +265,10 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
     await cb.edit({ action: "deleteComment", branch: current, id });
     await reload();
   };
-  const addNote = async (line: number, text: string) => {
+  const addNote = async (line: number, endLine: number, text: string) => {
     const f = rows[selected];
     if (!f || !text.trim() || scope !== "all") return;
-    await cb.edit({ action: "comment", branch: current, path: f.path, line, text: text.trim() });
+    await cb.edit({ action: "comment", branch: current, path: f.path, line, endLine, text: text.trim() });
     await reload();
   };
 
@@ -315,7 +315,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
             class: "review-note" + (c.outdated ? " outdated" : ""),
             title: c.outdated ? "The file changed after this note. The line can be another line now." : onFile ? "A note on the whole file" : "Go to the line",
           },
-          h("span", { class: "review-note-line-no" }, onFile ? "File" : `L${c.line}`),
+          h("span", { class: "review-note-line-no" }, onFile ? "File" : `L${lineRange(c)}`),
           h("span", { class: "review-note-body" }, c.text),
           c.outdated ? h("span", { class: "muted-inline" }, "outdated") : "",
           h("span", { class: "muted-inline" }, formatDate(c.time)),
@@ -327,7 +327,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
       }),
     );
     // A note on a line: only on a file that the branch has. A deleted file takes notes on the whole file.
-    const handlers = { add: addNote, remove: deleteNote, copy: (n: { line: number; text: string }) => void copyText(formatNote(f.path, n)) };
+    const handlers = { add: addNote, remove: deleteNote, copy: (n: { line: number; endLine: number; text: string }) => void copyText(formatNote(f.path, n)) };
     if (scope === "all") d.setNotes(list, f.status === "D" ? null : handlers);
   };
 
@@ -335,7 +335,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
     const text = fileNoteText.value.trim();
     if (!text) return;
     fileNoteText.value = "";
-    await addNote(0, text);
+    await addNote(0, 0, text);
   };
   fileNoteBtn.addEventListener("click", () => void addFileNote());
   fileNoteText.addEventListener("keydown", (e) => {

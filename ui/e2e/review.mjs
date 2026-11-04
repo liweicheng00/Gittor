@@ -81,6 +81,28 @@ await page.fill(".review-window .note-card.draft textarea", "Second note");
 await page.click(".review-window .note-card.draft button:has-text('Add Note')");
 await within("the second note shows", async () => (await page.$$(".review-window .note-card:not(.draft)")).length === 2);
 
+// A note on more lines: a drag of the icon from line 2 to line 4.
+await lineNumber(2).hover();
+await within("the icon shows at line 2", async () => (await page.$$(`${modified} .note-add-icon`)).length === 1);
+const icon2 = await page.locator(`${modified} .note-add-icon`).boundingBox();
+const line4 = await lineNumber(4).boundingBox();
+await page.mouse.move(icon2.x + icon2.width / 2, icon2.y + icon2.height / 2);
+await page.mouse.down();
+await page.mouse.move(icon2.x + icon2.width / 2, line4.y + line4.height / 2, { steps: 5 });
+check("the drag marks the lines", (await page.$$(`${modified} .note-range`)).length > 0);
+await page.mouse.up();
+await page.waitForSelector(".review-window .note-card.draft textarea");
+check("the new note is on lines 2-4", ((await text(".review-window .note-card.draft .note-card-head")) ?? "").includes("L2-4"));
+await page.fill(".review-window .note-card.draft textarea", "Three lines");
+await page.press(".review-window .note-card.draft textarea", "Control+Enter");
+await within("the list shows the lines of the note", async () => (await text(".review-notes-list")).includes("L2-4Three lines"));
+await shot("rv0-range-note");
+await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+await page.locator(".review-window .note-card:has-text('Three lines') .note-card-copy").click();
+await within("the card copies the lines", async () => (await page.evaluate(() => navigator.clipboard.readText())) === "cli.rs:2-4\nThree lines");
+await page.locator(".review-window .note-card:has-text('Three lines') .note-card-delete").click();
+await within("the note on more lines is gone", async () => (await page.$$(".review-window .note-card")).length === 2);
+
 // A note on the whole file, with the field under the list of notes.
 check("the field is under the list of notes", await page.$eval(".review-file-note-input", (i) => {
   const list = document.querySelector(".review-notes-list");

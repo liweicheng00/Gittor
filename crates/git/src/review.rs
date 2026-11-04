@@ -26,6 +26,9 @@ pub struct ReviewComment {
     pub path: String,
     /// The line in the branch version, 1-based. 0 is a note on the whole file.
     pub line: u32,
+    /// The last line of a note on more than one line. 0 is a note on `line` only.
+    #[serde(default)]
+    pub end_line: u32,
     pub text: String,
     pub time: i64,
     /// The blob of the file when the note was made.
@@ -330,7 +333,9 @@ impl Repo {
         })
     }
 
-    pub fn add_review_comment(&self, branch: &str, path: &str, line: u32, text: &str) -> Result<()> {
+    /// Adds a note on the lines `line` to `end_line`. `end_line` 0 (or `line`) is a note on one line,
+    /// and `line` 0 is a note on the whole file.
+    pub fn add_review_comment(&self, branch: &str, path: &str, line: u32, end_line: u32, text: &str) -> Result<()> {
         if text.trim().is_empty() {
             return Err(GitError("The note is empty".into()));
         }
@@ -338,7 +343,8 @@ impl Repo {
         let blob = self.blobs(&head, &[path.to_string()]).remove(path).unwrap_or_else(|| "deleted".into());
         self.edit_review(branch, |r| {
             let n = r.comments.iter().filter_map(|c| c.id.parse::<u64>().ok()).max().unwrap_or(0) + 1;
-            r.comments.push(ReviewComment { id: n.to_string(), path: path.into(), line, text: text.trim().into(), time: now(), blob, outdated: false });
+            let end_line = if line > 0 && end_line > line { end_line } else { 0 };
+            r.comments.push(ReviewComment { id: n.to_string(), path: path.into(), line, end_line, text: text.trim().into(), time: now(), blob, outdated: false });
             Ok(())
         })
     }

@@ -1,21 +1,25 @@
 // Review notes in a diff: cards that float at the right of their lines, a note icon in the gutter of the
-// line under the mouse, and a card with a text field for a new note. The layer is off until a review
+// line under the mouse, and a card with a text field for a new note. A note can be on more than one line:
+// drag the icon over the lines, or select the lines and click the icon. The layer is off until a review
 // gives it its notes and handlers.
 
 import * as monaco from "./monaco";
 import { formatDate, h, icon } from "./dom";
+import { lineRange } from "./note-format";
 
 export interface NoteItem {
   id: string;
   /** The line on the right side, 1-based. */
   line: number;
+  /** The last line of a note on more than one line; 0 is a note on one line. */
+  endLine: number;
   text: string;
   outdated: boolean;
   time: number;
 }
 
 export interface NoteHandlers {
-  add: (line: number, text: string) => Promise<void>;
+  add: (line: number, endLine: number, text: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
   /** Copies the note to the clipboard, with its file and line. */
   copy: (note: NoteItem) => void;
@@ -31,6 +35,10 @@ class EditorLayer {
   private readonly el = h("div", { class: "note-layer" });
   private hoverDeco: string[] = [];
   private hoverLine = 0;
+  /** The lines of the new note, and of a drag on the icon. The diff marks the lines of the notes. */
+  private rangeDeco: string[] = [];
+  private ranges: [number, number][] = [];
+  private dragRange: [number, number] | null = null;
 
   constructor(
     private readonly ed: monaco.editor.ICodeEditor,
@@ -52,11 +60,54 @@ class EditorLayer {
       const line = e.target.position.lineNumber;
       const onIcon = e.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_DECORATIONS && line === this.hoverLine;
       const twice = e.event.detail === 2 && (e.target.type === monaco.editor.MouseTargetType.CONTENT_TEXT || e.target.type === monaco.editor.MouseTargetType.CONTENT_EMPTY);
-      if (onIcon || twice) {
+      if (onIcon) {
+        e.event.preventDefault();
+        // A click on the icon in a selection of more lines: a note on the selected lines.
+        const sel = ed.getSelection();
+        if (sel && sel.endLineNumber > sel.startLineNumber && line >= sel.startLineNumber && line <= sel.endLineNumber) {
+          const end = sel.endColumn === 1 ? sel.endLineNumber - 1 : sel.endLineNumber;
+          return this.owner.startNote(sel.startLineNumber, Math.max(end, sel.startLineNumber));
+        }
+        this.drag(line);
+      } else if (twice) {
         e.event.preventDefault();
         this.owner.startNote(line);
       }
     });
+  }
+
+  /** A drag from the icon over more lines. The release of the mouse opens the note on these lines. */
+  private drag(from: number) {
+    let to = from;
+    const show = () => {
+      this.dragRange = [Math.min(from, to), Math.max(from, to)];
+      this.paintRanges();
+    };
+    const move = (ev: MouseEvent) => {
+      const l = this.ed.getTargetAtClientPoint(ev.clientX, ev.clientY)?.position?.lineNumber;
+      if (l && l !== to) {
+        to = l;
+        show();
+      }
+    };
+    const up = () => {
+      window.removeEventListener("mousemove", move, true);
+      window.removeEventListener("mouseup", up, true);
+      this.dragRange = null;
+      this.owner.startNote(Math.min(from, to), Math.max(from, to));
+    };
+    window.addEventListener("mousemove", move, true);
+    window.addEventListener("mouseup", up, true);
+    show();
+  }
+
+  /** Marks the lines of the new note and of a drag. */
+  private paintRanges() {
+    const all = this.dragRange ? [...this.ranges, this.dragRange] : this.ranges;
+    this.rangeDeco = this.ed.deltaDecorations(
+      this.rangeDeco,
+      all.map(([s, e]) => ({ range: new monaco.Range(s, 1, e, 1), options: { isWholeLine: true, className: "note-range" } })),
+    );
   }
 
   /** The note icon in the gutter of the line under the mouse. */
@@ -71,12 +122,14 @@ class EditorLayer {
   }
 
   /** Draws the cards of the notes, and the card of a new note. */
-  render(notes: NoteItem[], draftLine: number) {
+  render(notes: NoteItem[], draftLine: number, draftEnd: number) {
     const on = this.owner.active() === this.ed;
     this.el.replaceChildren();
+    this.ranges = on && draftLine && draftEnd > draftLine ? [[draftLine, draftEnd]] : [];
+    this.paintRanges();
     if (!on) return;
     for (const n of notes) this.el.append(this.owner.card(n));
-    if (draftLine) this.el.append(this.owner.draftCard(draftLine));
+    if (draftLine) this.el.append(this.owner.draftCard(draftLine, draftEnd));
     this.place();
   }
 
@@ -107,6 +160,7 @@ export class NoteLayer {
   handlers: NoteHandlers | null = null;
   private notes: NoteItem[] = [];
   private draftLine = 0;
+  private draftEnd = 0;
   private draftText = "";
   private readonly layers = new Map<monaco.editor.ICodeEditor, EditorLayer>();
 
@@ -130,17 +184,18 @@ export class NoteLayer {
     this.set([], null);
   }
 
-  /** Opens the card of a new note at a line. */
-  startNote(line: number) {
+  /** Opens the card of a new note on the lines `line` to `end`. */
+  startNote(line: number, end = line) {
     if (!this.handlers) return;
-    if (this.draftLine !== line) this.draftText = "";
+    if (this.draftLine !== line || this.draftEnd !== end) this.draftText = "";
     this.draftLine = line;
+    this.draftEnd = end;
     this.render();
     queueMicrotask(() => document.querySelector<HTMLTextAreaElement>(".note-card.draft textarea")?.focus());
   }
 
   private render() {
-    for (const layer of this.layers.values()) layer.render(this.notes, this.draftLine);
+    for (const layer of this.layers.values()) layer.render(this.notes, this.draftLine, this.draftEnd);
   }
 
   card(n: NoteItem): HTMLElement {
@@ -155,17 +210,19 @@ export class NoteLayer {
         "data-line": n.line,
         title: n.outdated ? "The file changed after this note. The line can be another line now." : "",
       },
-      h("div", { class: "note-card-head" }, icon("note"), h("span", {}, `L${n.line}`), n.outdated ? h("span", { class: "note-card-tag" }, "outdated") : "", h("span", { class: "spacer" }), h("span", {}, formatDate(n.time)), copy, del),
+      h("div", { class: "note-card-head" }, icon("note"), h("span", {}, `L${lineRange(n)}`), n.outdated ? h("span", { class: "note-card-tag" }, "outdated") : "", h("span", { class: "spacer" }), h("span", {}, formatDate(n.time)), copy, del),
       h("div", { class: "note-card-text" }, n.text),
     );
   }
 
-  draftCard(line: number): HTMLElement {
-    const text = h("textarea", { class: "note-card-input", rows: 3, placeholder: `A note on line ${line}`, spellcheck: false });
+  draftCard(line: number, end: number): HTMLElement {
+    const lines = end > line ? `lines ${line}-${end}` : `line ${line}`;
+    const text = h("textarea", { class: "note-card-input", rows: 3, placeholder: `A note on ${lines}`, spellcheck: false });
     text.value = this.draftText;
     text.addEventListener("input", () => (this.draftText = text.value));
     const cancel = () => {
       this.draftLine = 0;
+      this.draftEnd = 0;
       this.draftText = "";
       this.render();
     };
@@ -173,8 +230,9 @@ export class NoteLayer {
       const value = text.value.trim();
       if (!value || !this.handlers) return;
       add.disabled = true;
-      await this.handlers.add(line, value);
+      await this.handlers.add(line, end > line ? end : 0, value);
       this.draftLine = 0;
+      this.draftEnd = 0;
       this.draftText = "";
       this.render();
     };
@@ -195,7 +253,7 @@ export class NoteLayer {
     return h(
       "div",
       { class: "note-card draft", "data-line": line },
-      h("div", { class: "note-card-head" }, icon("note"), h("span", {}, `New note on L${line}`)),
+      h("div", { class: "note-card-head" }, icon("note"), h("span", {}, `New note on L${lineRange({ line, endLine: end })}`)),
       text,
       h("div", { class: "note-card-buttons" }, h("span", { class: "muted-inline" }, "Ctrl+Enter"), h("span", { class: "spacer" }), no, add),
     );

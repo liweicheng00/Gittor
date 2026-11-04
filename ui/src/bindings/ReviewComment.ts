@@ -7,7 +7,11 @@ export type ReviewComment = { id: string, path: string,
 /**
  * The line in the branch version, 1-based. 0 is a note on the whole file.
  */
-line: number, text: string, time: number, 
+line: number, 
+/**
+ * The last line of a note on more than one line. 0 is a note on `line` only.
+ */
+endLine: number, text: string, time: number, 
 /**
  * The blob of the file when the note was made.
  */

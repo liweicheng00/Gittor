@@ -516,5 +516,5 @@ export type ReviewEdit =
   | { action: "start"; branch: string; base: string }
   | { action: "remove"; branch: string }
   | { action: "viewed"; branch: string; paths: string[]; viewed: boolean }
-  | { action: "comment"; branch: string; path: string; line: number; text: string }
+  | { action: "comment"; branch: string; path: string; line: number; endLine?: number; text: string }
   | { action: "deleteComment"; branch: string; id: string };

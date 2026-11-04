@@ -679,6 +679,7 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .note-add-icon { cursor: pointer; }
 .note-add-icon::before { content: "+"; display: block; width: 14px; height: 14px; margin: 2px 0 0 2px; border-radius: 3px; background: var(--accent); color: #fff; font: 600 12px/14px sans-serif; text-align: center; }
 .note-layer { position: absolute; top: 0; left: 0; pointer-events: none; overflow: hidden; }
+.note-range { background: color-mix(in srgb, #e6aa1e 14%, transparent); }
 .note-card { position: absolute; width: 300px; max-width: 45%; pointer-events: auto; padding: 4px 8px 6px; border: 1px solid var(--border); border-left: 3px solid #e6aa1e; border-radius: 4px; background: var(--panel); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); font-size: 12px; color: var(--fg); }
 .note-card.outdated { opacity: 0.7; }
 .note-card-head { display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 11px; }

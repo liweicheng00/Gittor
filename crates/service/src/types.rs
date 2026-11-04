@@ -122,7 +122,15 @@ pub enum ReviewEdit {
     Start { branch: String, base: String },
     Remove { branch: String },
     Viewed { branch: String, paths: Vec<String>, viewed: bool },
-    Comment { branch: String, path: String, line: u32, text: String },
+    /// A note on the lines `line` to `end_line`. Without `end_line`, a note on one line.
+    Comment {
+        branch: String,
+        path: String,
+        line: u32,
+        #[serde(default)]
+        end_line: u32,
+        text: String,
+    },
     DeleteComment { branch: String, id: String },
 }
 

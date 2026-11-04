@@ -6,6 +6,11 @@ test("a note on a line names the file and the line", () => {
   assert.equal(formatNote("src/cli.rs", { line: 3, text: "Use a logger here\n" }), "src/cli.rs:3\nUse a logger here");
 });
 
+test("a note on more lines names the first and the last line", () => {
+  assert.equal(formatNote("src/cli.rs", { line: 3, endLine: 7, text: "Split this" }), "src/cli.rs:3-7\nSplit this");
+  assert.equal(formatNote("src/cli.rs", { line: 3, endLine: 0, text: "One line" }), "src/cli.rs:3\nOne line");
+});
+
 test("a note on the whole file names the file only", () => {
   assert.equal(formatNote("src/cli.rs", { line: 0, text: "The file needs tests" }), "src/cli.rs\nThe file needs tests");
 });

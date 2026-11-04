@@ -59,12 +59,16 @@ fn review_shows_the_changes_of_the_branch() {
     assert!(!d.file_list[0].viewed && d.file_list[1].viewed);
 
     // Notes: a note on a changed file is outdated.
-    repo.add_review_comment("feature", "a.txt", 2, "Why upper case?").unwrap();
-    repo.add_review_comment("feature", "b.txt", 1, "Good").unwrap();
+    repo.add_review_comment("feature", "a.txt", 2, 0, "Why upper case?").unwrap();
+    repo.add_review_comment("feature", "b.txt", 1, 3, "Good").unwrap();
     let d = repo.review("feature").unwrap();
     assert_eq!(d.summary.comments, 2);
     assert_eq!(d.file_list[0].comments, 1);
     assert!(d.comment_list.iter().all(|c| !c.outdated));
+    let b = d.comment_list.iter().find(|c| c.path == "b.txt").unwrap();
+    assert_eq!((b.line, b.end_line), (1, 3), "a note on lines 1 to 3");
+    let a = d.comment_list.iter().find(|c| c.path == "a.txt").unwrap();
+    assert_eq!(a.end_line, 0, "a note on one line");
     git(&dir, &["checkout", "-q", "feature"]);
     commit(&dir, "a.txt", "ONE\nTWO\nTHREE\n", "Change a once more");
     git(&dir, &["checkout", "-q", "main"]);
@@ -183,7 +187,7 @@ fn review_of_a_remote_branch() {
     assert!(d.summary.exists && d.summary.branch_is_remote && !d.summary.base_is_remote);
     assert_eq!((d.summary.commits, d.summary.files), (2, 2));
     repo.set_viewed("origin/feature", &["a.txt".into()], true).unwrap();
-    repo.add_review_comment("origin/feature", "a.txt", 2, "Why?").unwrap();
+    repo.add_review_comment("origin/feature", "a.txt", 2, 0, "Why?").unwrap();
     assert_eq!((repo.review("origin/feature").unwrap().summary.viewed, repo.review("origin/feature").unwrap().summary.comments), (1, 1));
 
     // Merge into the local base. The remote branch stays, also when the user asks to delete it.

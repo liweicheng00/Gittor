@@ -434,7 +434,7 @@ export class DiffView {
       return this.notes
         .filter((n) => n.line >= 1 && n.line <= count)
         .map((n) => ({
-          range: new monaco.Range(n.line, 1, n.line, 1),
+          range: new monaco.Range(n.line, 1, Math.min(Math.max(n.endLine, n.line), count), 1),
           options: { isWholeLine: true, className: "review-note-line", linesDecorationsClassName: "review-note-bar" },
         }));
     };
