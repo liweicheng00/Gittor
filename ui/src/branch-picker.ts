@@ -10,6 +10,8 @@ export interface PickerItem {
   label?: string;
   /** The item that is chosen now. */
   current?: boolean;
+  /** Muted text after the label, for example the author of the last commit. */
+  detail?: string;
 }
 
 export type PickerSection = [title: string, items: PickerItem[]];
@@ -60,6 +62,7 @@ export function showBranchPicker(anchor: HTMLElement, sections: PickerSection[],
           { class: "menu-item" + (item.current ? " current" : ""), title: item.value },
           h("span", { class: "menu-check" }, item.current ? icon("current") : ""),
           h("span", { class: "menu-label" }, item.label ?? item.value),
+          h("span", { class: "menu-detail branch-author" }, item.detail ?? ""),
         );
         el.addEventListener("click", () => pick(item.value));
         frag.append(el);

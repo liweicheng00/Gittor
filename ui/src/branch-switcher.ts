@@ -45,6 +45,7 @@ export function showBranchSwitcher(
           { class: "menu-item" + (b.current ? " current" : ""), title: b.subject },
           h("span", { class: "menu-check" }, b.current ? icon("current") : ""),
           h("span", { class: "menu-label" }, b.name),
+          h("span", { class: "menu-detail branch-author", title: b.author ? `Last commit by ${b.author}` : "" }, b.author),
           h("span", { class: "menu-shortcut" }, b.ahead || b.behind ? `${b.ahead ? `↑${b.ahead}` : ""}${b.behind ? ` ↓${b.behind}` : ""}` : ""),
         );
         el.addEventListener("click", () => {

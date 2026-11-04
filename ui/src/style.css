@@ -334,6 +334,9 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .switcher-list { overflow: auto; max-height: 55vh; }
 .switcher .menu-item.current .menu-label { font-weight: 600; }
 .switcher .muted { padding: 6px 12px; }
+/* The author of the last commit follows the name of the branch; the counts stay at the right. */
+.switcher .menu-label { flex: 0 1 auto; }
+.switcher .branch-author { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .branch-button { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 5px; background: var(--bg); color: var(--fg); cursor: pointer; white-space: nowrap; }
 .branch-button:hover { background: var(--hover); }
 .branch-button-label { flex: 1; overflow: hidden; text-overflow: ellipsis; text-align: left; }

@@ -4,4 +4,8 @@ export type BranchInfo = { name: string, full: string,
 /**
  * local, remote or tag
  */
-kind: "local" | "remote" | "tag", oid: string, current: boolean, upstream: string | null, ahead: number, behind: number, subject: string, };
+kind: "local" | "remote" | "tag", oid: string, current: boolean, upstream: string | null, ahead: number, behind: number, subject: string, 
+/**
+ * The author of the last commit. A tag gives the author of its commit.
+ */
+author: string, };

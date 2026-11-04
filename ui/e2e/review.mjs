@@ -171,6 +171,7 @@ await page.click(".dialog .dialog-branch >> nth=0");
 await page.waitForSelector(".branch-picker");
 const groups = await page.$$eval(".branch-picker .menu-header", (els) => els.map((e) => e.textContent));
 check("the picker groups the branches as the branch switcher", groups.includes("Local") && groups.includes("Remote"));
+check("each branch names the author of its last commit", (await text(".branch-picker .menu-item:has(.menu-label:text-is('feature/cli')) .branch-author")).trim() === "Ada Lovelace");
 await shot("rv1b-branch-picker");
 await page.keyboard.press("Escape");
 await within("Esc closes the picker and not the dialog", async () => (await page.$(".branch-picker")) === null && (await page.$(".dialog")) !== null);

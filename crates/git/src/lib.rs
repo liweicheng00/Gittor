@@ -411,6 +411,8 @@ pub struct BranchInfo {
     pub ahead: u32,
     pub behind: u32,
     pub subject: String,
+    /// The author of the last commit. A tag gives the author of its commit.
+    pub author: String,
 }
 
 #[derive(Clone, Debug, Default, serde::Deserialize)]
@@ -465,7 +467,7 @@ impl Repo {
     pub fn list_refs(&self) -> Result<Vec<BranchInfo>> {
         let raw = self.git(&[
             "for-each-ref",
-            "--format=%(refname)%00%(objectname)%00%(*objectname)%00%(HEAD)%00%(upstream:short)%00%(upstream:track,nobracket)%00%(contents:subject)",
+            "--format=%(refname)%00%(objectname)%00%(*objectname)%00%(HEAD)%00%(upstream:short)%00%(upstream:track,nobracket)%00%(contents:subject)%00%(authorname)%00%(*authorname)",
             "refs/heads",
             "refs/remotes",
             "refs/tags",
@@ -473,7 +475,7 @@ impl Repo {
         let mut out = Vec::new();
         for line in String::from_utf8_lossy(&raw).lines() {
             let f: Vec<&str> = line.split('\0').collect();
-            if f.len() < 7 || (f[0].starts_with("refs/remotes/") && f[0].ends_with("/HEAD")) {
+            if f.len() < 9 || (f[0].starts_with("refs/remotes/") && f[0].ends_with("/HEAD")) {
                 continue;
             }
             let (kind, name) = if let Some(n) = f[0].strip_prefix("refs/heads/") {
@@ -501,6 +503,7 @@ impl Repo {
                 ahead,
                 behind,
                 subject: f[6].to_string(),
+                author: if f[8].is_empty() { f[7] } else { f[8] }.to_string(),
             });
         }
         Ok(out)

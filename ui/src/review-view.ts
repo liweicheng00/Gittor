@@ -25,6 +25,8 @@ export interface ReviewCallbacks {
   showInLog: (oid: string) => void;
   /** The branches without a review, in groups, for the switcher. */
   branches: () => PickerSection[];
+  /** The author of the last commit of a branch. */
+  authorOf: (branch: string) => string | undefined;
   /** Starts a review of a branch: the dialog asks for its base. */
   start: (branch: string) => void;
 }
@@ -56,7 +58,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
   const switcherBtn = branchButton(
     "review-switcher",
     () => [
-      ["Reviews", cb.list().map((r) => ({ value: r.branch, label: `${r.branch} → ${r.base}`, current: r.branch === current }))],
+      ["Reviews", cb.list().map((r) => ({ value: r.branch, label: `${r.branch} → ${r.base}`, current: r.branch === current, detail: cb.authorOf(r.branch) }))],
       ...cb.branches().map(([title, items]): PickerSection => [`Start a Review: ${title}`, items]),
     ],
     (b) => {

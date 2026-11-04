@@ -16,7 +16,8 @@ const remotes = () => app.refs.filter((b) => b.kind === "remote" && !b.name.ends
 /** The groups of a branch picker, as in the branch switcher: Recent, Local and Remote. */
 const branchSections = (skip?: string): PickerSection[] => {
   const cur = app.repoState?.branch;
-  const item = (n: string): PickerItem => ({ value: n, current: n === cur });
+  const author = new Map(app.refs.map((b) => [b.name, b.author]));
+  const item = (n: string): PickerItem => ({ value: n, current: n === cur, detail: author.get(n) });
   const local = locals().filter((n) => n !== skip);
   return [
     ["Recent", app.recent.map((r) => r.name).filter((n) => local.includes(n)).map(item)],
@@ -97,6 +98,7 @@ export async function openReviewWindow(branch: string) {
       return branchSections().map(([title, items]): PickerSection => [title, items.filter((i) => !reviewed.has(i.value)).map((i) => ({ ...i, current: false }))]);
     },
     start: (b) => void startReview(b),
+    authorOf: (b) => app.refs.find((r) => r.name === b)?.author,
   });
 }
 
