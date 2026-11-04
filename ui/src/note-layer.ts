@@ -1,7 +1,7 @@
 // Review notes in a diff: cards that float at the right of their lines, a note icon in the gutter of the
 // line under the mouse, and a card with a text field for a new note. A note can be on more than one line:
-// drag the icon over the lines, or select the lines and click the icon. The layer is off until a review
-// gives it its notes and handlers.
+// drag the icon over the lines, or select the lines with the mouse. The layer is off until a review gives
+// it its notes and handlers.
 
 import * as monaco from "./monaco";
 import { formatDate, h, icon } from "./dom";
@@ -72,8 +72,25 @@ class EditorLayer {
       } else if (twice) {
         e.event.preventDefault();
         this.owner.startNote(line);
+      } else if (e.event.leftButton && (e.target.type === monaco.editor.MouseTargetType.CONTENT_TEXT || e.target.type === monaco.editor.MouseTargetType.CONTENT_EMPTY)) {
+        this.watchSelection();
       }
     });
+  }
+
+  /** A mouse selection of more lines opens a new note on these lines when the mouse button goes up. */
+  private watchSelection() {
+    const up = () => {
+      window.removeEventListener("mouseup", up, true);
+      // Monaco sets the last selection in its own handler of the release.
+      setTimeout(() => {
+        const sel = this.ed.getSelection();
+        if (!sel || sel.endLineNumber <= sel.startLineNumber) return;
+        const end = sel.endColumn === 1 ? sel.endLineNumber - 1 : sel.endLineNumber;
+        if (end > sel.startLineNumber) this.owner.offerNote(sel.startLineNumber, end);
+      });
+    };
+    window.addEventListener("mouseup", up, true);
   }
 
   /** A drag from the icon over more lines. The release of the mouse opens the note on these lines. */
@@ -182,6 +199,12 @@ export class NoteLayer {
 
   clear() {
     this.set([], null);
+  }
+
+  /** Opens the card of a new note after a selection of lines. A new note that has text stays as it is. */
+  offerNote(line: number, end: number) {
+    if (this.draftLine && this.draftText.trim()) return;
+    this.startNote(line, end);
   }
 
   /** Opens the card of a new note on the lines `line` to `end`. */

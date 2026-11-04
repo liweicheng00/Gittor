@@ -103,6 +103,20 @@ await within("the card copies the lines", async () => (await page.evaluate(() =>
 await page.locator(".review-window .note-card:has-text('Three lines') .note-card-delete").click();
 await within("the note on more lines is gone", async () => (await page.$$(".review-window .note-card")).length === 2);
 
+// A mouse selection of more lines opens a new note on these lines when the button goes up.
+const textLeft = (await page.locator(`${modified} .view-lines`).boundingBox()).x;
+const from = await lineNumber(1).boundingBox();
+const to = await lineNumber(3).boundingBox();
+await page.mouse.move(textLeft + 20, from.y + from.height / 2);
+await page.mouse.down();
+await page.mouse.move(textLeft + 60, to.y + to.height / 2, { steps: 5 });
+await page.mouse.up();
+await page.waitForSelector(".review-window .note-card.draft textarea");
+check("a selection of lines 1-3 opens a note on them", ((await text(".review-window .note-card.draft .note-card-head")) ?? "").includes("L1-3"));
+await shot("rv0b-selection-note");
+await page.keyboard.press("Escape");
+await within("Esc closes the note of the selection", async () => (await page.$(".review-window .note-card.draft")) === null);
+
 // A note on the whole file, with the field under the list of notes.
 check("the field is under the list of notes", await page.$eval(".review-file-note-input", (i) => {
   const list = document.querySelector(".review-notes-list");
