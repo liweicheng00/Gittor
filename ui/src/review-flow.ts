@@ -7,7 +7,8 @@ import { confirmDialog, finishReviewDialog, formDialog } from "./dialogs";
 import { runOp } from "./operations";
 import { jumpToOid, loadReviews } from "./repo";
 import { openReview } from "./review-view";
-import { reviewPanel, showLeftTab } from "./shell";
+import { toast } from "./notify";
+import { reviewPanel, showLeftTab, task } from "./shell";
 import { app } from "./state";
 
 const locals = () => app.refs.filter((b) => b.kind === "local").map((b) => b.name);
@@ -36,6 +37,16 @@ function guessBase(branch: string): string {
   return BASES.find((n) => names.includes(n)) ?? remote.find((n) => BASES.includes(baseName(n))) ?? names[0] ?? remote[0] ?? "";
 }
 
+/** Fetches the remote branches among `names`, so that a review shows their newest state. A failed fetch
+ * leaves the last fetched state and says so. */
+async function fetchRemoteBranches(names: string[]) {
+  const remote = new Set(remotes());
+  for (const n of new Set(names.filter((n) => remote.has(n)))) {
+    const out = await task(`Fetching ${n}`, () => api.runOp({ op: "fetchBranch", branch: n })).catch(() => undefined);
+    if (!out?.result.ok) toast(`The fetch of ${n} failed. The review shows its last fetched state.`, "info");
+  }
+}
+
 /** Asks for the branch and the base, starts the review, and opens it. */
 export async function startReview(branch?: string) {
   const names = [...locals(), ...remotes()];
@@ -54,6 +65,7 @@ export async function startReview(branch?: string) {
     "The review shows the changes of the branch from the commit where it started, as a pull request does. A remote branch shows its last fetched state. Merge needs a local base. The notes and the viewed files stay in this repository only.",
   );
   if (!r) return;
+  await fetchRemoteBranches([String(r.branch), String(r.base)]);
   try {
     await api.reviewEdit({ action: "start", branch: String(r.branch), base: String(r.base) });
   } catch (e) {
@@ -98,6 +110,7 @@ export async function openReviewWindow(branch: string) {
       return branchSections().map(([title, items]): PickerSection => [title, items.filter((i) => !reviewed.has(i.value)).map((i) => ({ ...i, current: false }))]);
     },
     start: (b) => void startReview(b),
+    fetch: (b) => fetchRemoteBranches([b, ...reviewPanel.all.filter((r) => r.branch === b).map((r) => r.base)]),
     authorOf: (b) => app.refs.find((r) => r.name === b)?.author,
   });
 }

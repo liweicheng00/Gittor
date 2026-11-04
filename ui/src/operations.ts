@@ -61,7 +61,8 @@ export const currentBranch = () => app.repoState?.branch ?? app.view?.head?.repl
 
 export async function checkoutBranch(b: BranchInfo) {
   if (b.kind === "tag") return checkoutCommit(b.oid, b.name);
-  await runOp({ op: "checkout", target: b.name, kind: b.kind }, `Checking out ${b.name}`);
+  // The checkout of a remote branch fetches it first.
+  await runOp({ op: "checkout", target: b.name, kind: b.kind }, b.kind === "remote" ? `Fetching and checking out ${b.name}` : `Checking out ${b.name}`);
 }
 
 export async function checkoutCommit(oid: string, label = short(oid)) {

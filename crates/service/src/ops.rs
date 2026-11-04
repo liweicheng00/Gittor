@@ -80,6 +80,8 @@ pub enum Op {
     RenameRemote { from: String, to: String },
     SetRemoteUrl { name: String, url: String, #[serde(default)] push_url: String },
     FetchRemote { name: String },
+    /// Fetches one branch of a remote, for example "origin/feature".
+    FetchBranch { branch: String },
     PushTag { remote: String, tag: String },
     PushAllTags { remote: String },
     /// Deletes a branch or a tag on a remote; `name` is a full ref.
@@ -305,6 +307,7 @@ impl Service {
             Op::RenameRemote { from, to } => repo.rename_remote(&from, &to),
             Op::SetRemoteUrl { name, url, push_url } => repo.set_remote_url(&name, &url, &push_url),
             Op::FetchRemote { name } => repo.fetch_remote(&name),
+            Op::FetchBranch { branch } => repo.fetch_branch(&branch),
             Op::PushTag { remote, tag } => repo.push_tag(&remote, &tag),
             Op::PushAllTags { remote } => repo.push_all_tags(&remote),
             Op::DeleteRemoteRef { remote, name } => repo.delete_remote_ref(&remote, &name),

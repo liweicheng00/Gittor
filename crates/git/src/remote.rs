@@ -337,6 +337,21 @@ impl Repo {
         Ok(OpResult::ok_msg(format!("Changed the URL of {name}")))
     }
 
+    /// Splits a remote branch such as "origin/feature/x" into the remote and the branch. The longest
+    /// remote name that matches wins.
+    pub fn split_remote_branch(&self, name: &str) -> Option<(String, String)> {
+        let mut remotes = self.remotes().ok()?;
+        remotes.sort_by_key(|r| std::cmp::Reverse(r.len()));
+        remotes.into_iter().find_map(|r| name.strip_prefix(&format!("{r}/")).filter(|b| !b.is_empty()).map(|b| (r.clone(), b.to_string())))
+    }
+
+    /// Fetches one branch of a remote, and moves its remote branch to the new state.
+    pub fn fetch_branch(&self, remote_branch: &str) -> Result<OpResult> {
+        let (remote, branch) = self.split_remote_branch(remote_branch).ok_or_else(|| GitError(format!("{remote_branch} is not a branch of a remote")))?;
+        let spec = format!("+refs/heads/{branch}:refs/remotes/{remote}/{branch}");
+        self.write(&["fetch", "--no-tags", safe(&remote)?, safe(&spec)?], format!("Fetched {remote_branch}"))
+    }
+
     /// Fetches one remote, and removes its remote branches that are gone.
     pub fn fetch_remote(&self, name: &str) -> Result<OpResult> {
         self.write(&["fetch", "--prune", safe(name)?], format!("Fetched {name}"))

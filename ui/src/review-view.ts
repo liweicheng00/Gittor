@@ -27,6 +27,8 @@ export interface ReviewCallbacks {
   branches: () => PickerSection[];
   /** The author of the last commit of a branch. */
   authorOf: (branch: string) => string | undefined;
+  /** Fetches a remote branch of a review, and its base when that is a remote branch too. */
+  fetch: (branch: string) => Promise<void>;
   /** Starts a review of a branch: the dialog asks for its base. */
   start: (branch: string) => void;
 }
@@ -66,7 +68,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
       if (!cb.list().some((r) => r.branch === b)) return cb.start(b);
       current = b;
       scope = "all";
-      void load();
+      void cb.fetch(b).then(load);
     },
   );
   const switcher = switcherBtn.el;

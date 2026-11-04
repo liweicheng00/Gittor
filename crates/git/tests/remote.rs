@@ -181,3 +181,32 @@ fn compare_two_refs() {
     assert!(repo.compare_refs("topic", "no-such-branch").is_err());
     assert!(repo.compare_refs("-x", "main").is_err());
 }
+
+#[test]
+fn checkout_of_a_remote_branch_fetches_it_first() {
+    let (origin, seed, mine) = setup("fetch-branch");
+    git(&seed, &["checkout", "-q", "-b", "feature/x"]);
+    commit(&seed, "x.txt", "1\n", "First on x");
+    git(&seed, &["push", "-q", "-u", "origin", "feature/x"]);
+    let repo = Repo::open(&mine).unwrap();
+    git(&mine, &["fetch", "-q"]);
+    // A new commit on the remote after the last fetch of mine.
+    commit(&seed, "x.txt", "2\n", "Second on x");
+    git(&seed, &["push", "-q"]);
+    let newest = git(&seed, &["rev-parse", "HEAD"]);
+
+    let r = repo.checkout("origin/feature/x", "remote").unwrap();
+    assert!(r.ok && !r.message.contains("failed"), "{}", r.message);
+    assert_eq!(git(&mine, &["rev-parse", "HEAD"]), newest, "the new local branch has the newest commit");
+    assert_eq!(git(&mine, &["rev-parse", "origin/feature/x"]), newest);
+
+    // fetch_branch alone, and a remote branch that is gone: the checkout uses the last fetched state.
+    assert!(repo.fetch_branch("origin/feature/x").unwrap().ok);
+    assert!(repo.fetch_branch("nothing").is_err());
+    git(&mine, &["checkout", "-q", "main"]);
+    git(&mine, &["branch", "-q", "-D", "feature/x"]);
+    git(&origin, &["branch", "-q", "-D", "feature/x"]);
+    let r = repo.checkout("origin/feature/x", "remote").unwrap();
+    assert!(r.ok && r.message.contains("last fetched state"), "{}", r.message);
+    assert_eq!(git(&mine, &["rev-parse", "HEAD"]), newest);
+}

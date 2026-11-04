@@ -228,6 +228,7 @@ export type Op =
   | { op: "renameRemote"; from: string; to: string }
   | { op: "setRemoteUrl"; name: string; url: string; pushUrl: string }
   | { op: "fetchRemote"; name: string }
+  | { op: "fetchBranch"; branch: string }
   | { op: "pushTag"; remote: string; tag: string }
   | { op: "deleteRemoteRef"; remote: string; name: string }
   | { op: "setUpstream"; branch: string; upstream: string | null }

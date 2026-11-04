@@ -249,12 +249,18 @@ impl Repo {
             "local" => self.run(&["checkout", safe(target)?, "--"], &format!("Checked out {target}")),
             "remote" => {
                 let local = target.split_once('/').map_or(target, |(_, b)| b);
+                // The newest state of the remote branch first. Without a connection, its last fetched state.
+                let fetched = self.fetch_branch(target).is_ok_and(|r| r.ok);
                 let exists = self.git(&["rev-parse", "-q", "--verify", &format!("refs/heads/{local}")]).is_ok();
-                if exists {
-                    self.run(&["checkout", safe(local)?, "--"], &format!("Checked out {local}"))
+                let mut out = if exists {
+                    self.run(&["checkout", safe(local)?, "--"], &format!("Checked out {local}"))?
                 } else {
-                    self.run(&["checkout", "-b", safe(local)?, "--track", safe(target)?, "--"], &format!("Created {local} tracking {target}"))
+                    self.run(&["checkout", "-b", safe(local)?, "--track", safe(target)?, "--"], &format!("Created {local} tracking {target}"))?
+                };
+                if out.ok && !fetched {
+                    out.message.push_str(&format!(". The fetch of {target} failed: this is its last fetched state"));
                 }
+                Ok(out)
             }
             _ => self.run(&["checkout", "--detach", safe(target)?, "--"], &format!("HEAD is now at {}", &target[..target.len().min(8)])),
         }
