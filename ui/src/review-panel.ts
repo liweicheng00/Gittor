@@ -29,7 +29,14 @@ export class ReviewPanel {
     return this.reviews;
   }
 
+  /** The list that the panel shows, to skip a draw of the same list. */
+  private shownKey = "";
+
   set(reviews: ReviewSummary[]) {
+    // No new elements when nothing changed.
+    const key = JSON.stringify(reviews);
+    if (key === this.shownKey) return;
+    this.shownKey = key;
     this.reviews = reviews;
     this.render();
   }

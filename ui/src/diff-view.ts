@@ -567,6 +567,7 @@ export class DiffView {
   }
 
   message(text: string, title = "") {
+    this.shownKey = "";
     this.clearBlame();
     this.noteLayer.clear();
     this.setSource(null);
@@ -581,6 +582,11 @@ export class DiffView {
   }
 
   show(change: Change, left: FileContent, right: FileContent) {
+    // The same file with the same texts, for example after a change of another file on disk: the diff
+    // stays as it is. A new diff would draw both editors again, and the view would flash.
+    const key = JSON.stringify([change.path, change.old_path, change.status, left, right]);
+    if (key === this.shownKey && this.notice.hidden) return;
+    this.shownKey = key;
     this.clearBlame();
     this.notes = [];
     this.noteLayer.clear();
@@ -641,6 +647,8 @@ export class DiffView {
     this.setModels("", "", undefined);
   }
 
+  /** The file and the texts that the diff shows, to skip a show of the same diff. */
+  private shownKey = "";
   private keepView: monaco.editor.ICodeEditorViewState | null = null;
   /** The scroll position of the same file, for after its new diff. */
   private keepScroll: { top: number; left: number } | null = null;
@@ -649,9 +657,16 @@ export class DiffView {
 
   private setModels(a: string, b: string, lang: string | undefined) {
     this.texts = { left: a, right: b };
+    const old = this.editor.getModel();
+    // The same file, changed on disk: new texts in the models that show now. The editors keep their
+    // lines on the screen, so the view does not flash.
+    if (this.keepView && old && !this.host.hidden && old.modified.getLanguageId() === (lang ?? "plaintext")) {
+      for (const [m, t] of [[old.original, a], [old.modified, b]] as const) if (m.getValue() !== t) m.pushEditOperations([], [{ range: m.getFullModelRange(), text: t }], () => null);
+      this.keepView = null;
+      return;
+    }
     this.host.hidden = false;
     this.singleHost.hidden = true;
-    const old = this.editor.getModel();
     this.editor.setModel({ original: monaco.editor.createModel(a, lang), modified: monaco.editor.createModel(b, lang) });
     // A diff of the old models can still run in the worker. It fails with "no diff result available"
     // when its models are gone, so they go a little later.

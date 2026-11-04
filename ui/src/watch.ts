@@ -32,8 +32,31 @@ async function showPrompts(prompts: AskpassPrompt[]) {
 /** The watcher counters that the view shows; changes after a write operation of the app are expected. */
 let filesChangedWhileQuiet = false;
 
-/** Reloads what changed outside the app, from the counters of the watcher. */
+let reloading = false;
+let again = false;
+
+/** Reloads what changed outside the app. One reload runs at a time: a change during a reload gives one
+ * more reload after it, with the newest counters. */
 async function onCounters(c: { repo: number; files: number }) {
+  if (reloading) {
+    again = true;
+    return;
+  }
+  reloading = true;
+  try {
+    await applyCounters(c);
+  } finally {
+    reloading = false;
+  }
+  if (again) {
+    again = false;
+    const next = await api.watchState().catch(() => null);
+    if (next) void onCounters(next);
+  }
+}
+
+/** Reloads what changed outside the app, from the counters of the watcher. */
+async function applyCounters(c: { repo: number; files: number }) {
   if (!app.view || app.busy > 0 || document.hidden || !settings.autoRefresh) return;
   const before = app.watchSeen;
   app.watchSeen = c;

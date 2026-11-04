@@ -212,6 +212,11 @@ export class CommitPanel {
   }
 
   set(data: LocalChanges) {
+    // The same changes again, for example after a write of a file that was changed already: no new
+    // elements, so the list does not flash and a click on a row still works.
+    const key = JSON.stringify(data);
+    if (key === this.shownKey) return;
+    this.shownKey = key;
     this.data = data;
     const files: LocalFile[] = [];
     for (const l of data.lists) for (const c of l.changes) files.push(this.tracked(l.id, c));
@@ -242,8 +247,11 @@ export class CommitPanel {
   }
 
   private emptyText = "Open a repository to see its local changes.";
+  /** The changes that the list shows, to skip a draw of the same list. */
+  private shownKey = "";
 
   clear(message?: string) {
+    this.shownKey = "";
     this.emptyText = message ?? "Open a repository to see its local changes.";
     this.data = null;
     this.files = [];

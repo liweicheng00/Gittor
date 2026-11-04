@@ -34,7 +34,14 @@ export class StashPanel {
     return this.stashes.length;
   }
 
+  /** The list that the panel shows, to skip a draw of the same list. */
+  private shownKey = "";
+
   set(stashes: Stash[]) {
+    // No new elements when nothing changed.
+    const key = JSON.stringify(stashes);
+    if (key === this.shownKey) return;
+    this.shownKey = key;
     const keep = this.selected !== null ? this.stashes[this.selected]?.oid : undefined;
     this.stashes = stashes;
     const i = keep ? stashes.findIndex((s) => s.oid === keep) : -1;
