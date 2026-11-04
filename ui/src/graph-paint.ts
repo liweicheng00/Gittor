@@ -98,8 +98,60 @@ function line(g: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y
   g.stroke();
 }
 
+const FOLD_RADIUS = 4.5;
+
+/** A collapsed linear branch: a mark on its edge at the border of the row of its upper commit and the
+ * next row. Each of the two rows draws its half. A click on the mark expands the branch. */
+export interface FoldMark {
+  x: number;
+  y: number;
+  color: number;
+  fold: [number, number];
+}
+
+/** The fold marks of a row. `row` is the index of the row in the log. */
+export function foldMarks(row: number, elements: El[]): FoldMark[] {
+  const out: FoldMark[] = [];
+  for (const e of elements) {
+    if (e.k !== "e" || !e.x) continue;
+    const top = e.d === "u" && row === e.x[0] + 1;
+    if (!(e.d === "d" && row === e.x[0]) && !top) continue;
+    const x1 = ELEMENT_WIDTH * e.p + ELEMENT_CENTER;
+    const x2 = ELEMENT_WIDTH * e.o + ELEMENT_CENTER;
+    // The edge goes from the center of the row to the center of the next row: the border is halfway.
+    out.push({ x: x1 + (x2 - x1) / 2, y: top ? 0 : ROW_HEIGHT, color: e.c, fold: e.x });
+  }
+  return out;
+}
+
+/** The fold mark under a point of the row, if any. */
+export function foldAt(marks: FoldMark[], x: number, y: number): FoldMark | undefined {
+  return marks.find((m) => Math.hypot(m.x - x, m.y - y) <= FOLD_RADIUS + 3);
+}
+
+/** A ring with a plus: hidden commits that a click shows. The ring clears the edge under it. */
+function paintFold(g: CanvasRenderingContext2D, m: FoldMark, foreground: string) {
+  g.save();
+  g.globalCompositeOperation = "destination-out";
+  g.beginPath();
+  g.arc(m.x, m.y, FOLD_RADIUS + 0.5, 0, Math.PI * 2);
+  g.fill();
+  g.restore();
+  g.setLineDash([]);
+  g.strokeStyle = graphColor(m.color, foreground);
+  g.lineWidth = 1.3;
+  g.beginPath();
+  g.arc(m.x, m.y, FOLD_RADIUS, 0, Math.PI * 2);
+  g.moveTo(m.x - 2.2, m.y);
+  g.lineTo(m.x + 2.2, m.y);
+  g.moveTo(m.x, m.y - 2.2);
+  g.lineTo(m.x, m.y + 2.2);
+  g.stroke();
+  g.lineWidth = LINE_THICKNESS;
+}
+
 /** Paints the elements of one row with its top at y = 0. */
-export function paintRow(g: CanvasRenderingContext2D, elements: El[], foreground: string, selected: boolean) {
+export function paintRow(g: CanvasRenderingContext2D, elements: El[], foreground: string, selected: boolean, folds: FoldMark[] = []) {
   g.lineWidth = LINE_THICKNESS;
   g.lineCap = "round";
   for (const e of elements) {
@@ -119,6 +171,7 @@ export function paintRow(g: CanvasRenderingContext2D, elements: El[], foreground
     }
   }
   g.setLineDash([]);
+  for (const m of folds) paintFold(g, m, foreground);
   for (const e of elements) {
     if (e.k !== "n") continue;
     const r = selected ? CIRCLE_RADIUS + 1 : CIRCLE_RADIUS;

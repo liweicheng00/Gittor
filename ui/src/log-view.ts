@@ -2,7 +2,7 @@
 
 import { api, type Row } from "./api";
 import { dragResize, formatDate, h, icon } from "./dom";
-import { ELEMENT_WIDTH, ROW_HEIGHT, maxPosition, paintRow } from "./graph-paint";
+import { ELEMENT_WIDTH, ROW_HEIGHT, foldAt, foldMarks, maxPosition, paintRow } from "./graph-paint";
 import { save, settings } from "./settings";
 
 const CHUNK = 200;
@@ -234,28 +234,36 @@ export class LogView {
     canvas.style.height = `${ROW_HEIGHT}px`;
     const g = canvas.getContext("2d")!;
     g.scale(dpr, dpr);
-    paintRow(g, r.elements, fg, selected);
+    const folds = foldMarks(r.row, r.elements);
+    paintRow(g, r.elements, fg, selected, folds);
     const arrows = r.elements.filter((e) => e.j !== undefined);
-    const collapsedEdges = r.elements.filter((e) => e.x !== undefined);
-    if (arrows.length || collapsedEdges.length) {
+    if (arrows.length || folds.length) {
       canvas.addEventListener("mousedown", (e) => {
-        const lane = Math.floor(e.offsetX / ELEMENT_WIDTH);
-        const fold = collapsedEdges.find((a) => a.p === lane || a.o === lane);
-        if (fold?.x && e.button === 0) {
+        // Only the fold mark expands a collapsed branch: a click on a commit selects it.
+        const fold = foldAt(folds, e.offsetX, e.offsetY);
+        if (fold && e.button === 0) {
           e.stopPropagation();
-          this.onExpandEdge(fold.x[0], fold.x[1]);
+          this.onExpandEdge(fold.fold[0], fold.fold[1]);
           return;
         }
+        const lane = Math.floor(e.offsetX / ELEMENT_WIDTH);
         const hit = arrows.find((a) => a.p === lane || a.o === lane);
         if (hit && hit.j !== undefined && e.button === 0) {
           e.stopPropagation();
           this.jumpTo(hit.j, true);
         }
       });
-      canvas.title = collapsedEdges.length
-        ? "Click the dotted edge to expand the collapsed branch"
-        : "Click an arrow to go to the other end of the edge";
-      if (collapsedEdges.length) canvas.style.cursor = "pointer";
+      if (folds.length) {
+        // The places of the marks, for the UI tests.
+        canvas.dataset.folds = JSON.stringify(folds.map((m) => [m.x, m.y]));
+        canvas.addEventListener("mousemove", (e) => {
+          const on = !!foldAt(folds, e.offsetX, e.offsetY);
+          canvas.style.cursor = on ? "pointer" : "";
+          canvas.title = on ? "Hidden commits of a linear branch. Click to show them." : arrows.length ? "Click an arrow to go to the other end of the edge" : "";
+        });
+      } else {
+        canvas.title = "Click an arrow to go to the other end of the edge";
+      }
     }
     const subject = h("span", { class: "subject", title: r.subject });
     for (const ref of r.refs) {

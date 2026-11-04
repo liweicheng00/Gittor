@@ -20,23 +20,23 @@ await page.waitForFunction(() => !document.querySelector(".graph-tools button[ti
 await page.waitForTimeout(800);
 console.log("collapse ms:", Date.now() - t, "|", await count());
 await page.screenshot({ path: `${outDir}/c2-collapsed.png` });
-// find a canvas with pointer cursor (collapsed edge) and click it
-const box = await page.evaluate(() => {
-  const c = [...document.querySelectorAll(".log-row canvas")].find((c) => { const r = c.getBoundingClientRect(); return c.style.cursor === "pointer" && r.y > 150 && r.y < 600; });
-  if (!c) return null;
-  const r = c.getBoundingClientRect();
-  return { x: r.x, y: r.y, w: r.width, h: r.height, row: c.parentElement.dataset.row };
-});
-console.log("fold at", JSON.stringify(box));
-if (box) {
-  // try each lane until row count changes
-  const before = await count();
-  for (let x = 7; x < box.w; x += 15) {
-    await page.mouse.click(box.x + x, box.y + box.h / 2);
-    await page.waitForTimeout(700);
-    if ((await count()) !== before) break;
+// A mark of a collapsed branch (data-folds of a row canvas) in the view: a click on it expands the branch.
+const mark = await page.evaluate(() => {
+  for (const c of document.querySelectorAll(".log-row canvas[data-folds]")) {
+    const r = c.getBoundingClientRect();
+    if (r.y < 150 || r.y > 600) continue;
+    const [x, y] = JSON.parse(c.dataset.folds)[0];
+    return { x: r.x + x, y: r.y + y };
   }
-  console.log("after expand:", await count());
+  return null;
+});
+console.log("mark at", JSON.stringify(mark));
+if (mark) {
+  const before = await count();
+  await page.mouse.click(mark.x, mark.y - 1);
+  await page.waitForTimeout(700);
+  console.log("after expand:", await count(), (await count()) !== before ? "(expanded)" : "(NOT expanded)");
+  if ((await count()) === before) errors.push("check: a click on the mark expands the branch");
   await page.screenshot({ path: `${outDir}/c3-edge-expanded.png` });
 }
 console.log("errors:", JSON.stringify(errors));
