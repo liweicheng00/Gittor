@@ -351,3 +351,29 @@ fn commit_template_and_comment_lines() {
     let file = gittor_git::changelist::PartialFile { path: "b.txt".into(), content: "changed\n".into() };
     assert!(repo.commit_partial(&[], &[], &[file], "# only a comment\n", false).is_err());
 }
+
+#[test]
+fn ignore_holds_unversioned_files_without_git_add() {
+    let dir = temp_repo("ignore-untracked");
+    let repo = Repo::open(&dir).unwrap();
+    std::fs::write(dir.join("notes.txt"), "mine\n").unwrap();
+    std::fs::write(dir.join("other.txt"), "other\n").unwrap();
+    assert_eq!(repo.local_changes().unwrap().unversioned, ["notes.txt", "other.txt"]);
+
+    repo.changelist_op(ChangeListOp::Move { paths: strings(&["notes.txt"]), to: IGNORE_ID.into() }).unwrap();
+    let lc = repo.local_changes().unwrap();
+    assert_eq!(list(&lc, ".ignore"), ["notes.txt"], "the file shows in .ignore");
+    let held = lc.lists[0].changes.iter().find(|c| c.path == "notes.txt").unwrap();
+    assert_eq!(held.status, '?');
+    assert_eq!(lc.unversioned, ["other.txt"], "and not in the unversioned files");
+    assert_eq!(git(&dir, &["ls-files", "notes.txt"]), "", "git did not add it");
+
+    // An unversioned file stays out of the other changelists, and a deleted file leaves .ignore.
+    repo.changelist_op(ChangeListOp::Move { paths: strings(&["other.txt"]), to: DEFAULT_ID.into() }).unwrap();
+    assert_eq!(repo.local_changes().unwrap().unversioned, ["other.txt"]);
+    std::fs::remove_file(dir.join("notes.txt")).unwrap();
+    let lc = repo.local_changes().unwrap();
+    assert!(list(&lc, ".ignore").is_empty());
+    std::fs::write(dir.join("notes.txt"), "back\n").unwrap();
+    assert!(repo.local_changes().unwrap().unversioned.contains(&"notes.txt".to_string()), "a new file of the same name is unversioned again");
+}

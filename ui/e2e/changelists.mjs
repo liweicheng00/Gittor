@@ -6,7 +6,7 @@
 // Set CHROMIUM to a Chromium binary when Playwright has no downloaded browser.
 import { chromium } from "playwright";
 import { execFileSync } from "node:child_process";
-import { appendFileSync } from "node:fs";
+import { appendFileSync, writeFileSync } from "node:fs";
 const [,, repo, outDir] = process.argv;
 const git = (...args) => execFileSync("git", ["-C", repo, ...args], { encoding: "utf8" }).replace(/\s+$/, "");
 const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
@@ -144,6 +144,22 @@ await page.click(".menu-item:has-text('Dark')");
 await page.click(".cl-header:has-text('Changes')");
 await page.waitForTimeout(1200);
 await shot("cl7-dark");
+
+// An unversioned file moves to .ignore as it is: git does not add it.
+writeFileSync(`${repo}/scratch.txt`, "my notes\n");
+await page.click(".commit-toolbar button[title^='Refresh']");
+await page.waitForSelector(".cl-file:has-text('scratch.txt')");
+await page.click(".cl-file:has-text('scratch.txt')", { button: "right" });
+await page.waitForTimeout(400);
+await page.click(".menu-item:has(.menu-label:text-is('.ignore'))");
+await within("the unversioned file shows in .ignore", async () =>
+  (await page.evaluate(() => {
+    const head = [...document.querySelectorAll(".cl-header")].find((h) => h.textContent.includes(".ignore"));
+    for (let n = head?.nextElementSibling; n && !n.classList.contains("cl-header"); n = n.nextElementSibling) if (n.textContent.includes("scratch.txt")) return true;
+    return false;
+  })));
+check("git did not add the file", git("ls-files", "scratch.txt") === "" && git("status", "--porcelain", "scratch.txt") === "?? scratch.txt");
+await shot("cl8-ignore-unversioned");
 
 console.log("errors:", JSON.stringify(errors));
 await browser.close();

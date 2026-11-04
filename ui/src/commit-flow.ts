@@ -1,7 +1,7 @@
 // The Changes tab: local changes, changelists, commit, rollback and partial changelists.
 
 import { visit } from "./nav";
-import { api, type ChangeListView } from "./api";
+import { api, type ChangeListView, IGNORE_LIST } from "./api";
 import { type LocalFile } from "./commit-panel";
 import { menuBelow, type MenuItem, showMenu } from "./context-menu";
 import { mergeFile } from "./conflicts";
@@ -223,8 +223,9 @@ commitPanel.onRefresh = () => void loadLocalChanges();
 commitPanel.onRollback = (files) => void rollback(files);
 commitPanel.onNewChangeList = () => void newChangeList();
 commitPanel.onMove = async (paths, to, unversioned) => {
-  // Git adds the unversioned files to the active changelist. Then they move with the other files.
-  if (unversioned.length) {
+  // Git adds the unversioned files, then they move with the other files. ".ignore" holds unversioned
+  // files as they are: nothing in it goes into a commit.
+  if (unversioned.length && to !== IGNORE_LIST) {
     const out = await runOp({ op: "addFiles", paths: unversioned }, "Adding files");
     if (!out?.result.ok) return;
   }

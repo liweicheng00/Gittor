@@ -245,18 +245,21 @@ impl Repo {
     }
 
     /// The local changes by changelist. It assigns new changes to "Changes" and forgets files that are not
-    /// changed any more.
+    /// changed any more. ".ignore" can also hold unversioned files: git does not add them, and they show
+    /// in ".ignore" with the status "?" instead of in the unversioned files.
     pub fn local_changes(&self) -> Result<LocalChanges> {
         let changes = self.tracked_changes()?;
-        let unversioned = self.unversioned()?;
+        let mut unversioned = self.unversioned()?;
         let mut store = self.load_store();
         let changed: HashSet<&str> = changes.iter().map(|c| c.path.as_str()).collect();
+        let untracked: HashSet<String> = unversioned.iter().cloned().collect();
         let mut dirty = false;
         let mut assigned = HashSet::new();
         for l in &mut store.lists {
             let before = l.files.len();
             // A file is in one changelist only: the first one wins.
-            l.files.retain(|f| changed.contains(f.as_str()) && assigned.insert(f.clone()));
+            let keeps_untracked = l.id == IGNORE_ID;
+            l.files.retain(|f| (changed.contains(f.as_str()) || (keeps_untracked && untracked.contains(f))) && assigned.insert(f.clone()));
             dirty |= l.files.len() != before;
         }
         for c in &changes {
@@ -280,15 +283,18 @@ impl Repo {
                     Some(hunks) => hunks.iter().any(|h| h.list == l.id),
                     None => files.contains(c.path.as_str()),
                 };
-                ChangeListView {
-                    id: l.id.clone(),
-                    name: l.name.clone(),
-                    comment: l.comment.clone(),
-                    fixed: Store::fixed(&l.id),
-                    changes: changes.iter().filter(shows).cloned().collect(),
+                let mut list_changes: Vec<Change> = changes.iter().filter(shows).cloned().collect();
+                if l.id == IGNORE_ID {
+                    list_changes.extend(l.files.iter().filter(|f| untracked.contains(*f)).map(|f| Change { status: '?', path: f.clone(), old_path: None }));
                 }
+                ChangeListView { id: l.id.clone(), name: l.name.clone(), comment: l.comment.clone(), fixed: Store::fixed(&l.id), changes: list_changes }
             })
             .collect();
+        // The unversioned files in ".ignore" show there only.
+        if let Some(ignore) = store.lists.iter().find(|l| l.id == IGNORE_ID) {
+            let held: HashSet<&str> = ignore.files.iter().map(String::as_str).collect();
+            unversioned.retain(|p| !held.contains(p.as_str()));
+        }
         let conflicts = changes.iter().filter(|c| c.status == 'U').map(|c| c.path.clone()).collect();
         Ok(LocalChanges { lists, unversioned, conflicts, head: self.resolve("HEAD"), hunks: split })
     }

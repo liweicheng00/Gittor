@@ -3,7 +3,7 @@
 import { openInEditor } from "./editor-flow";
 import { keymap } from "./keyboard";
 import { api, IGNORE_LIST } from "./api";
-import { changeListOp, deleteUnversioned, editChangeList, newChangeList, removeChangeList, rollback, showLocalDiff } from "./commit-flow";
+import { deleteUnversioned, editChangeList, newChangeList, removeChangeList, rollback, showLocalDiff } from "./commit-flow";
 import { mergeFile } from "./conflicts";
 import { type MenuItem, showMenu } from "./context-menu";
 import { confirmDialog, pushDialog, updateDialog } from "./dialogs";
@@ -72,8 +72,9 @@ export async function updateBranch(): Promise<boolean> {
 pushBtn.addEventListener("click", () => void pushBranch());
 updateBtn.addEventListener("click", () => void updateBranch());
 commitPanel.onFileMenu = (files, e) => {
-  const tracked = files.filter((f) => f.list !== null);
-  const untracked = files.filter((f) => f.list === null);
+  // An unversioned file in ".ignore" (status "?") is untracked too.
+  const tracked = files.filter((f) => f.list !== null && f.change.status !== "?");
+  const untracked = files.filter((f) => f.list === null || f.change.status === "?");
   const conflicted = files.filter((f) => f.change.status === "U");
   const items: MenuItem[] = [
     ...(conflicted.length
@@ -105,14 +106,16 @@ commitPanel.onFileMenu = (files, e) => {
       { label: "Delete…", action: () => void deleteUnversioned(untracked) },
     );
   }
-  if (tracked.length) {
+  {
+    // Unversioned files can move too: to ".ignore" as they are, to another changelist after git adds them.
     items.push({ separator: true }, { header: "Move to Changelist" });
     const paths = tracked.map((f) => f.change.path);
-    const from = new Set(tracked.map((f) => f.list));
+    const newPaths = untracked.map((f) => f.change.path);
+    const from = new Set(files.map((f) => f.list));
     for (const l of commitPanel.lists) {
-      items.push({ label: l.name, disabled: from.size === 1 && from.has(l.id), action: () => void changeListOp({ op: "move", paths, to: l.id }) });
+      items.push({ label: l.name, disabled: from.size === 1 && from.has(l.id), action: () => commitPanel.onMove(paths, l.id, newPaths) });
     }
-    items.push({ label: "New Changelist…", action: () => void newChangeList(paths) });
+    if (tracked.length) items.push({ label: "New Changelist…", action: () => void newChangeList(paths) });
   }
   items.push({ separator: true }, {
     label: "Stash Selected Files…",

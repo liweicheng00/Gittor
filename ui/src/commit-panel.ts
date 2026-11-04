@@ -28,8 +28,10 @@ const UNVERSIONED = "Unversioned Files";
 
 /** The data of a drag: the paths of the tracked files, and the paths of the unversioned files. */
 function setDragData(e: DragEvent, files: LocalFile[]) {
-  const paths = files.filter((x) => x.list !== null).map((x) => x.change.path);
-  const unversioned = files.filter((x) => x.list === null).map((x) => x.change.path);
+  // An unversioned file in ".ignore" (status "?") is unversioned too: another changelist adds it first.
+  const isNew = (x: LocalFile) => x.list === null || x.change.status === "?";
+  const paths = files.filter((x) => !isNew(x)).map((x) => x.change.path);
+  const unversioned = files.filter(isNew).map((x) => x.change.path);
   e.dataTransfer?.setData("text/x-gittor-paths", JSON.stringify(paths));
   e.dataTransfer?.setData("text/x-gittor-unversioned", JSON.stringify(unversioned));
   e.dataTransfer?.setData("text/plain", [...paths, ...unversioned].join("\n"));
