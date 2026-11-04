@@ -2,6 +2,7 @@
 // user marks files as viewed, adds notes to lines, and merges the branch from here.
 
 import { visit } from "./nav";
+import { branchButton, type PickerSection } from "./branch-picker";
 import { onRepoChange, registerWindow } from "./windows";
 import type { Change, FileContent, ReviewComment, ReviewDetail, ReviewEdit, ReviewSummary, RevSpec } from "./api";
 import { statusName } from "./changes-panel";
@@ -22,6 +23,10 @@ export interface ReviewCallbacks {
   /** Opens the Merge dialog. True when the branch was merged. */
   finish: (d: ReviewDetail) => Promise<boolean>;
   showInLog: (oid: string) => void;
+  /** The branches without a review, in groups, for the switcher. */
+  branches: () => PickerSection[];
+  /** Starts a review of a branch: the dialog asks for its base. */
+  start: (branch: string) => void;
 }
 
 interface Row {
@@ -47,7 +52,23 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
   let selected = -1;
   let request = 0;
 
-  const switcher = h("select", { class: "dialog-input review-switcher", title: "Switch to another review" });
+  // The switcher: the reviews first, then the branches without a review, which start a new one.
+  const switcherBtn = branchButton(
+    "review-switcher",
+    () => [
+      ["Reviews", cb.list().map((r) => ({ value: r.branch, label: `${r.branch} → ${r.base}`, current: r.branch === current }))],
+      ...cb.branches().map(([title, items]): PickerSection => [`Start a Review: ${title}`, items]),
+    ],
+    (b) => {
+      if (b === current) return;
+      if (!cb.list().some((r) => r.branch === b)) return cb.start(b);
+      current = b;
+      scope = "all";
+      void load();
+    },
+  );
+  const switcher = switcherBtn.el;
+  switcher.title = "Switch to another review, or start one";
   const info = h("span", { class: "muted-inline review-info" });
   const finishBtn = h("button", { class: "tb-button primary review-merge" }, "Merge…");
   const closeBtn = h("button", { class: "tb-button" }, "Close");
@@ -137,15 +158,9 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
   d.onPrevFile = () => void select(Math.max(0, selected - 1));
 
   const fillSwitcher = () => {
-    const list = cb.list();
-    const names = list.some((r) => r.branch === current) ? list : [...list, { branch: current, base: detail?.summary.base ?? "" } as ReviewSummary];
-    switcher.replaceChildren(...names.map((r) => h("option", { value: r.branch, selected: r.branch === current }, `${r.branch} → ${r.base}`)));
+    const base = cb.list().find((r) => r.branch === current)?.base ?? detail?.summary.base ?? "";
+    switcherBtn.set(base ? `${current} → ${base}` : current);
   };
-  switcher.addEventListener("change", () => {
-    current = switcher.value;
-    scope = "all";
-    void load();
-  });
 
   const revs = (): { l: RevSpec; r: RevSpec } | null => {
     if (!detail) return null;

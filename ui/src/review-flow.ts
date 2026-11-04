@@ -1,6 +1,7 @@
 // Review Branch: start a review, open it, switch between reviews, and merge a reviewed branch.
 
 import { api, type ReviewDetail, type ReviewSummary } from "./api";
+import type { PickerItem, PickerSection } from "./branch-picker";
 import { showMenu } from "./context-menu";
 import { confirmDialog, finishReviewDialog, formDialog } from "./dialogs";
 import { runOp } from "./operations";
@@ -12,11 +13,17 @@ import { app } from "./state";
 const locals = () => app.refs.filter((b) => b.kind === "local").map((b) => b.name);
 const remotes = () => app.refs.filter((b) => b.kind === "remote" && !b.name.endsWith("/HEAD")).map((b) => b.name);
 
-/** The choices of a branch field: the local branches first, then the remote branches. */
-const branchOptions = (skip?: string): [string, string][] => [
-  ...locals().filter((n) => n !== skip).map((n): [string, string] => [n, n]),
-  ...remotes().filter((n) => n !== skip).map((n): [string, string] => [n, `${n}  (remote)`]),
-];
+/** The groups of a branch picker, as in the branch switcher: Recent, Local and Remote. */
+const branchSections = (skip?: string): PickerSection[] => {
+  const cur = app.repoState?.branch;
+  const item = (n: string): PickerItem => ({ value: n, current: n === cur });
+  const local = locals().filter((n) => n !== skip);
+  return [
+    ["Recent", app.recent.map((r) => r.name).filter((n) => local.includes(n)).map(item)],
+    ["Local", local.map(item)],
+    ["Remote", remotes().filter((n) => n !== skip).map(item)],
+  ];
+};
 
 const BASES = ["main", "master", "develop"];
 const baseName = (n: string) => n.slice(n.indexOf("/") + 1);
@@ -39,8 +46,8 @@ export async function startReview(branch?: string) {
   const r = await formDialog(
     "Review Branch",
     [
-      { key: "branch", label: "Branch", type: "select", value: b, options: branchOptions() },
-      { key: "base", label: "Into (base)", type: "select", value: guessBase(b), options: branchOptions() },
+      { key: "branch", label: "Branch", type: "branch", value: b, sections: () => branchSections() },
+      { key: "base", label: "Into (base)", type: "branch", value: guessBase(b), sections: () => branchSections() },
     ],
     "Start Review",
     "The review shows the changes of the branch from the commit where it started, as a pull request does. A remote branch shows its last fetched state. Merge needs a local base. The notes and the viewed files stay in this repository only.",
@@ -85,11 +92,16 @@ export async function openReviewWindow(branch: string) {
     pair: (l, r, path, oldPath) => api.filePair(l, r, path, oldPath),
     finish,
     showInLog: (oid) => void jumpToOid(oid, true),
+    branches: () => {
+      const reviewed = new Set(reviewPanel.all.map((r) => r.branch));
+      return branchSections().map(([title, items]): PickerSection => [title, items.filter((i) => !reviewed.has(i.value)).map((i) => ({ ...i, current: false }))]);
+    },
+    start: (b) => void startReview(b),
   });
 }
 
 async function changeBase(r: ReviewSummary) {
-  const f = await formDialog(`Base of ${r.branch}`, [{ key: "base", label: "Into (base)", type: "select", value: r.base, options: branchOptions(r.branch) }], "Change");
+  const f = await formDialog(`Base of ${r.branch}`, [{ key: "base", label: "Into (base)", type: "branch", value: r.base, sections: () => branchSections(r.branch) }], "Change");
   if (!f) return;
   await api.reviewEdit({ action: "start", branch: r.branch, base: String(f.base) });
   await loadReviews();

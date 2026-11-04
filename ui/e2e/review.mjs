@@ -27,6 +27,14 @@ const within = async (what, fn, ms = 8000) => {
 };
 const text = async (sel) => ((await page.textContent(sel).catch(() => "")) ?? "");
 const files = () => page.$$eval(".review-window .review-file .rebase-subject", (els) => els.map((e) => e.textContent).join(","));
+// The branch fields of the Review Branch dialog: buttons that open the branch picker.
+const branchValue = (n) => page.inputValue(`.dialog input[type=hidden] >> nth=${n}`);
+const pickBranch = async (n, name) => {
+  await page.click(`.dialog .dialog-branch >> nth=${n}`);
+  await page.waitForSelector(".branch-picker");
+  await page.click(`.branch-picker .menu-item:has(.menu-label:text-is('${name}')) >> nth=0`);
+  await page.waitForSelector(".branch-picker", { state: "detached" });
+};
 
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".sidebar .branch", { timeout: 30000 });
@@ -35,7 +43,7 @@ await page.waitForSelector(".sidebar .branch", { timeout: 30000 });
 await page.click(".sidebar .branch:has-text('feature/cli') >> nth=0", { button: "right" });
 await page.click(".menu-item:has-text('Review Branch')");
 await page.waitForSelector(".dialog:has-text('Review Branch')");
-check("the base is main", (await page.inputValue(".dialog select >> nth=1")) === "main");
+check("the base is main", (await branchValue(1)) === "main");
 await page.click(".dialog-buttons button:has-text('Start Review')");
 await page.waitForSelector(".review-window");
 // From the merge base: logo.bin came to main later, so it is not a change of the branch.
@@ -159,11 +167,23 @@ for (const [key, panel] of [["2", ".commit-panel"], ["3", ".stash-panel"], ["1",
 await page.keyboard.press("Control+4");
 await page.waitForSelector(".review-panel:not([hidden])");
 await page.click(".review-panel button:has-text('New Review')");
-await page.selectOption(".dialog select >> nth=0", "topic/readme");
-check("a new review proposes main as the base", (await page.inputValue(".dialog select >> nth=1")) === "main");
+await page.click(".dialog .dialog-branch >> nth=0");
+await page.waitForSelector(".branch-picker");
+const groups = await page.$$eval(".branch-picker .menu-header", (els) => els.map((e) => e.textContent));
+check("the picker groups the branches as the branch switcher", groups.includes("Local") && groups.includes("Remote"));
+await shot("rv1b-branch-picker");
+await page.keyboard.press("Escape");
+await within("Esc closes the picker and not the dialog", async () => (await page.$(".branch-picker")) === null && (await page.$(".dialog")) !== null);
+await pickBranch(0, "topic/readme");
+check("the field shows the chosen branch", (await branchValue(0)) === "topic/readme" && (await text(".dialog .dialog-branch >> nth=0")).includes("topic/readme"));
+check("a new review proposes main as the base", (await branchValue(1)) === "main");
 await page.click(".dialog-buttons button:has-text('Start Review')");
 await within("the second review opens", async () => (await files()) === "README.md");
-await page.selectOption(".review-switcher", "feature/cli");
+await page.click(".review-switcher");
+await page.waitForSelector(".branch-picker");
+check("the switcher lists the reviews first", ((await text(".branch-picker .menu-header >> nth=0")) ?? "") === "Reviews");
+await shot("rv1c-review-switcher");
+await page.click(".branch-picker .menu-item:has-text('feature/cli → main')");
 await within("the switcher opens the first review", async () => (await files()) === "cli.rs");
 await page.keyboard.press("Escape");
 await within("the tab lists both reviews", async () => (await page.$$(".review-row")).length === 2);
@@ -206,7 +226,7 @@ await page.waitForSelector(".sidebar .branch:has-text('feature/tree')");
 await page.keyboard.press("Control+4");
 await page.click(".review-panel button:has-text('New Review')");
 await page.waitForSelector(".dialog:has-text('Review Branch')");
-await page.selectOption(".dialog select >> nth=0", "feature/tree");
+await pickBranch(0, "feature/tree");
 await page.click(".dialog-buttons button:has-text('Start Review')");
 await within("the tree has a row for src/app", async () => ((await page.textContent(".review-window .review-dir").catch(() => "")) ?? "").includes("src/app"));
 check("the files under it come first", (await files()) === "one.rs,two.rs,top.txt");
@@ -222,8 +242,8 @@ await page.keyboard.press("Escape");
 const newReview = async (branch, base) => {
   await page.click(".review-panel button:has-text('New Review')");
   await page.waitForSelector(".dialog:has-text('Review Branch')");
-  await page.selectOption(".dialog select >> nth=0", branch);
-  await page.selectOption(".dialog select >> nth=1", base);
+  await pickBranch(0, branch);
+  await pickBranch(1, base);
   await page.click(".dialog-buttons button:has-text('Start Review')");
   await page.waitForSelector(".review-window");
 };

@@ -1,6 +1,7 @@
 // Modal dialogs: forms, confirmations, the reset dialog, the message editor and the interactive rebase editor.
 
 import { autosquash } from "./autosquash";
+import { branchButton, type PickerSection } from "./branch-picker";
 import type { FinishMode, MergedBranches, PlanAction, PlanEntry, PushInfo, ReviewDetail, RewriteRange, WorktreeBlockers } from "./api";
 import { formatDate, h, icon } from "./dom";
 
@@ -68,10 +69,12 @@ export async function confirmDialog(title: string, message: string, okLabel: str
 export interface Field {
   key: string;
   label: string;
-  type?: "text" | "checkbox" | "textarea" | "select";
+  type?: "text" | "checkbox" | "textarea" | "select" | "branch";
   value?: string | boolean;
   /** The choices of a select field: value and label. */
   options?: [string, string][];
+  /** The groups of a branch field, for its picker. */
+  sections?: () => PickerSection[];
   placeholder?: string;
   browse?: () => Promise<string | null>;
 }
@@ -84,6 +87,17 @@ export async function formDialog(title: string, fields: Field[], okLabel: string
       const sel = h("select", { class: "dialog-input" }, ...(f.options ?? []).map(([v, l]) => h("option", { value: v, selected: v === f.value }, l)));
       inputs.set(f.key, sel);
       return h("label", { class: "dialog-field" }, h("span", {}, f.label), sel);
+    }
+    if (f.type === "branch") {
+      // A button that opens the branch picker, as the branch switcher of the toolbar. A hidden input keeps the value.
+      const input = h("input", { type: "hidden", value: String(f.value ?? "") });
+      const btn = branchButton("dialog-input dialog-branch", f.sections ?? (() => []), (v) => {
+        input.value = v;
+        btn.set(v);
+      });
+      btn.set(input.value);
+      inputs.set(f.key, input);
+      return h("div", { class: "dialog-field" }, h("span", {}, f.label), btn.el, input);
     }
     if (f.type === "checkbox") {
       const input = h("input", { type: "checkbox", checked: !!f.value });
