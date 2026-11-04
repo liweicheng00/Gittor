@@ -48,15 +48,20 @@ fn open_window(app: tauri::AppHandle, path: String, x: f64, y: f64, width: f64, 
     let label = format!("repo-{}", NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed));
     let name = std::path::Path::new(&path).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| path.clone());
     let data = serde_json::json!({ "repo": path });
-    tauri::WebviewWindowBuilder::new(&app, label, tauri::WebviewUrl::default())
+    let builder = tauri::WebviewWindowBuilder::new(&app, label, tauri::WebviewUrl::default())
         .title(format!("{name} – Gittor"))
         .position(x, y)
         .inner_size(width.max(600.0), height.max(400.0))
         .min_inner_size(600.0, 400.0)
         .disable_drag_drop_handler()
-        .initialization_script(format!("window.__GITTOR_WINDOW__ = {data};"))
-        .build()
-        .map_err(|e| e.to_string())?;
+        .initialization_script(format!("window.__GITTOR_WINDOW__ = {data};"));
+    // The same title bar as the main window (tauri.conf.json): the tabs go next to the window buttons.
+    #[cfg(target_os = "macos")]
+    let builder = builder
+        .title_bar_style(tauri::TitleBarStyle::Overlay)
+        .hidden_title(true)
+        .traffic_light_position(tauri::LogicalPosition::new(14.0, 13.0));
+    builder.build().map_err(|e| e.to_string())?;
     Ok(())
 }
 

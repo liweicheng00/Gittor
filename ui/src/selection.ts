@@ -84,6 +84,8 @@ async function showCommitFile(oid: string, path: string) {
 }
 
 export function showSelection(rows: Row[]) {
+  // The log can report a selection after its repository closed: there is nothing to show then.
+  if (!app.view) return;
   app.selected = rows;
   stashPanel.clearSelection();
   app.diffSource = "log";

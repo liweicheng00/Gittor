@@ -8,7 +8,7 @@ import { emptyFilter } from "./filter-bar";
 import { loadFavorites } from "./remotes";
 import { clearCompare } from "./selection";
 import { addRecent, save, setRecentProject, settings } from "./settings";
-import { authors, banner, commitPanel, details, fetchBtn, filterBar, ideBtn, localHistoryBtn, terminalBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, showLeftTab, sidebar, stashPanel, statusActivity, submodulePanel, tabBar, tabCommit, tabReviews, tabStash, tabSubmodules, task, updateBtn, updateStatus } from "./shell";
+import { authors, banner, commitPanel, details, fetchBtn, filterBar, ideBtn, localHistoryBtn, terminalBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, showLeftTab, sidebar, stashPanel, statusActivity, submodulePanel, tabBar, tabsInTitleBar, tabCommit, tabReviews, tabStash, tabSubmodules, task, updateBtn, updateStatus } from "./shell";
 import { app } from "./state";
 import { showWorkspace } from "./welcome";
 import { formDialog } from "./dialogs";
@@ -57,7 +57,8 @@ export function renderTabs() {
     asking.add(root);
     void refreshTabInfo(root).finally(() => asking.delete(root));
   }
-  tabBar.hidden = settings.tabs.length < 2;
+  // In the title bar, the tab bar always shows: it also holds the window buttons of macOS.
+  tabBar.hidden = !tabsInTitleBar && settings.tabs.length < 2;
   // Two folders with the same name get the folders above them: "work/app" and "old/app".
   const names = new Map(settings.tabs.map((r, i) => [r, pathLabels(settings.tabs)[i]]));
   tabBar.replaceChildren(
@@ -306,6 +307,14 @@ export async function loadRefs() {
   await loadLocalChanges();
 }
 
+/** Sets the label and the count of a left tab. The same label again makes no new elements. */
+function setTabLabel(tab: HTMLElement, label: string, count: number) {
+  const key = `${label}:${count}`;
+  if (tab.dataset.label === key) return;
+  tab.dataset.label = key;
+  tab.replaceChildren(label, count ? h("span", { class: "lp-count" }, String(count)) : "");
+}
+
 export async function loadLocalChanges() {
   try {
     commitPanel.set(await api.localChanges().catch(async () => {
@@ -317,13 +326,13 @@ export async function loadLocalChanges() {
     commitPanel.clear(`The local changes could not be loaded: ${String(e).replace(/^Error: /, "")}`);
   }
   const n = commitPanel.changeCount;
-  tabCommit.replaceChildren("Changes", n ? h("span", { class: "lp-count" }, String(n)) : "");
+  setTabLabel(tabCommit, "Changes", n);
   try {
     stashPanel.set(await api.stashes());
   } catch {
     stashPanel.set([]);
   }
-  tabStash.replaceChildren("Stash", stashPanel.count ? h("span", { class: "lp-count" }, String(stashPanel.count)) : "");
+  setTabLabel(tabStash, "Stash", stashPanel.count);
   await loadReviews();
   await loadSubmodules();
 }
@@ -335,7 +344,7 @@ export async function loadSubmodules() {
   submodulePanel.set(subs);
   tabSubmodules.hidden = !subs.length;
   const n = submodulePanel.attention;
-  tabSubmodules.replaceChildren("Modules", n ? h("span", { class: "lp-count" }, String(n)) : "");
+  setTabLabel(tabSubmodules, "Modules", n);
   if (!subs.length && settings.leftTab === "submodules") showLeftTab("branches");
   // The commits of the selected submodule load again: its checked-out commit can have changed.
   const s = submodulePanel.selectedSubmodule;
@@ -349,7 +358,7 @@ export async function loadReviews() {
   } catch {
     reviewPanel.set([]);
   }
-  tabReviews.replaceChildren("Reviews", reviewPanel.open ? h("span", { class: "lp-count" }, String(reviewPanel.open)) : "");
+  setTabLabel(tabReviews, "Reviews", reviewPanel.open);
 }
 
 export async function reloadView() {

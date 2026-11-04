@@ -55,6 +55,16 @@ const toolbar = h("header", { class: "toolbar" }, openBtn, refreshBtn, h("span",
 
 export const tabBar = h("nav", { class: "tabbar", hidden: true });
 
+/** On macOS the app draws under a transparent title bar. The tabs then take the free space at the right
+ * of the window buttons, and the empty part of the tab bar moves the window. `?titlebar=mac` shows the
+ * same layout in a browser, for the tests. */
+export const tabsInTitleBar =
+  new URLSearchParams(location.search).get("titlebar") === "mac" || ("__TAURI_INTERNALS__" in window && /Mac/.test(navigator.userAgent));
+if (tabsInTitleBar) {
+  document.documentElement.classList.add("titlebar-tabs");
+  tabBar.setAttribute("data-tauri-drag-region", "");
+}
+
 const statusLeft = h("span", { class: "sb-left" });
 const statusMid = h("span", { class: "sb-mid" });
 /** The running or the last operation. It is at the left end, where the eye looks first. */
@@ -101,7 +111,7 @@ const top = h("div", { class: "top" }, leftPane, sideGrip, center, rightGrip, ri
 export const workspace = h("main", { class: "workspace" }, top, diffGrip, diff.el);
 export const welcome = h("main", { class: "welcome" });
 const appRoot = document.getElementById("app")!;
-appRoot.append(toolbar, tabBar, welcome, workspace, statusBar);
+appRoot.append(...(tabsInTitleBar ? [tabBar, toolbar] : [toolbar, tabBar]), welcome, workspace, statusBar);
 
 export function applyLayout() {
   top.style.gridTemplateColumns = `${settings.showSidebar ? `${settings.sidebarWidth}px 4px` : "0 0"} minmax(300px, 1fr) 4px ${settings.rightWidth}px`;
