@@ -46,7 +46,13 @@ const layout = () => page.evaluate(() => {
 let l = await layout();
 check("the tab bar shows with one project", !l.hidden && l.tabs === 1);
 check("the tab bar is at the top, above the toolbar", l.top === 0 && l.above);
-check("it leaves room for the window buttons", l.padLeft >= 78 && l.height >= 36);
+check("it leaves room for the window buttons", l.padLeft >= 78);
+// The window buttons of macOS are in the middle of the 28 pt title bar: the tabs have the same middle.
+const middle = await page.evaluate(() => {
+  const t = document.querySelector(".tab .tab-name").getBoundingClientRect();
+  return t.top + t.height / 2;
+});
+check("the tabs have the middle of the title bar of macOS", Math.abs(l.height - 29) < 0.5 && Math.abs(middle - 14) <= 1);
 check("its empty part moves the window", l.drag);
 await shot("tb1-one-tab");
 

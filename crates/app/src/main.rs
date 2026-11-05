@@ -56,11 +56,9 @@ fn open_window(app: tauri::AppHandle, path: String, x: f64, y: f64, width: f64, 
         .disable_drag_drop_handler()
         .initialization_script(format!("window.__GITTOR_WINDOW__ = {data};"));
     // The same title bar as the main window (tauri.conf.json): the tabs go next to the window buttons.
+    // The buttons keep the place that macOS gives them; the tab bar has the height of the title bar.
     #[cfg(target_os = "macos")]
-    let builder = builder
-        .title_bar_style(tauri::TitleBarStyle::Overlay)
-        .hidden_title(true)
-        .traffic_light_position(tauri::LogicalPosition::new(14.0, 22.0));
+    let builder = builder.title_bar_style(tauri::TitleBarStyle::Overlay).hidden_title(true);
     builder.build().map_err(|e| e.to_string())?;
     Ok(())
 }

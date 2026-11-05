@@ -60,7 +60,12 @@ input { font: inherit; }
 /* toolbar */
 .tabbar { display: flex; align-items: stretch; gap: 1px; padding: 0 8px; background: var(--panel); border-bottom: 1px solid var(--border); overflow-x: auto; min-height: 30px; user-select: none; -webkit-user-select: none; }
 /* The tabs in the title bar of macOS: room for the window buttons at the left, and the height of the bar. */
-html.titlebar-tabs .tabbar { min-height: 38px; padding-left: 80px; }
+/* macOS centers the window buttons in its title bar, which is 28 pt high without a toolbar. The tab bar has
+   the same height and centers its tabs, so the tabs and the buttons share one middle line. */
+html.titlebar-tabs { --titlebar-height: 28px; }
+html.titlebar-tabs .tabbar { box-sizing: border-box; height: calc(var(--titlebar-height) + 1px); min-height: 0; padding-left: 80px; align-items: stretch; }
+/* The line under the active tab is a border of 2 px: one of the same size above keeps the text in the middle. */
+html.titlebar-tabs .tab { border-top: 2px solid transparent; }
 .tab { display: flex; align-items: center; gap: 6px; padding: 0 6px 0 12px; cursor: default; border-bottom: 2px solid transparent; white-space: nowrap; color: var(--muted); }
 .tab:hover { background: var(--hover); }
 /* A linked worktree: its icon and the name of its main repository. */
