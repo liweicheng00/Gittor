@@ -54,6 +54,8 @@ export const settingsBtn = h("button", { class: "tb-button tb-icon", title: "Set
 const toolbar = h("header", { class: "toolbar" }, openBtn, refreshBtn, h("span", { class: "tb-split" }, updateBtn, fetchBtn), pushBtn, localHistoryBtn, repoLabel, branchBtn, h("span", { class: "spacer" }), remoteBtn, ideBtn, terminalBtn, viewBtn, themeBtn, settingsBtn);
 
 export const tabBar = h("nav", { class: "tabbar", hidden: true });
+/** The tabs, in a part of the tab bar that scrolls without a scroll bar. The + button stays outside it. */
+export const tabScroll = h("div", { class: "tabbar-scroll" });
 
 /** On macOS the app draws under a transparent title bar. The tabs then take the free space at the right
  * of the window buttons, and the empty part of the tab bar moves the window. `?titlebar=mac` shows the

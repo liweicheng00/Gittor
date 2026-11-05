@@ -58,7 +58,13 @@ input { font: inherit; }
 .error { color: var(--deleted); padding: 10px; white-space: pre-wrap; }
 
 /* toolbar */
-.tabbar { display: flex; align-items: stretch; gap: 1px; padding: 0 8px; background: var(--panel); border-bottom: 1px solid var(--border); overflow-x: auto; min-height: 30px; user-select: none; -webkit-user-select: none; }
+.tabbar { display: flex; align-items: stretch; padding: 0 8px; background: var(--panel); border-bottom: 1px solid var(--border); overflow: hidden; min-height: 30px; user-select: none; -webkit-user-select: none; }
+/* The tabs scroll without a scroll bar. A faded edge shows that more tabs are on that side. */
+.tabbar-scroll { display: flex; align-items: stretch; gap: 1px; flex: 0 1 auto; min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.tabbar-scroll::-webkit-scrollbar { display: none; }
+.tabbar-scroll.more-right { -webkit-mask-image: linear-gradient(to left, transparent, #000 32px); mask-image: linear-gradient(to left, transparent, #000 32px); }
+.tabbar-scroll.more-left { -webkit-mask-image: linear-gradient(to right, transparent, #000 32px); mask-image: linear-gradient(to right, transparent, #000 32px); }
+.tabbar-scroll.more-left.more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent); }
 /* The tabs in the title bar of macOS: room for the window buttons at the left, and the height of the bar. */
 /* macOS centers the window buttons in its title bar, which is 28 pt high without a toolbar. The tab bar has
    the same height and centers its tabs, so the tabs and the buttons share one middle line. */
@@ -71,6 +77,7 @@ html.titlebar-tabs .tab { border-top: 2px solid transparent; }
 /* A linked worktree: its icon and the name of its main repository. */
 .tab .tab-icon { color: var(--accent); }
 .tab.on { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
+.tab-add { flex: none; }
 .tab-close, .tab-add { border: none; background: none; color: var(--muted); cursor: pointer; border-radius: 4px; padding: 0 4px; font: inherit; }
 .tab-close { font-size: 10px; visibility: hidden; }
 .tab:hover .tab-close, .tab.on .tab-close { visibility: visible; }

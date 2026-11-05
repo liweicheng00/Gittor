@@ -8,7 +8,7 @@ import { emptyFilter } from "./filter-bar";
 import { loadFavorites } from "./remotes";
 import { clearCompare } from "./selection";
 import { addRecent, save, setRecentProject, settings } from "./settings";
-import { authors, banner, commitPanel, details, fetchBtn, filterBar, ideBtn, localHistoryBtn, terminalBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, showLeftTab, sidebar, stashPanel, statusActivity, submodulePanel, tabBar, tabsInTitleBar, tabCommit, tabReviews, tabStash, tabSubmodules, task, updateBtn, updateStatus } from "./shell";
+import { authors, banner, commitPanel, details, fetchBtn, filterBar, ideBtn, localHistoryBtn, terminalBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, showLeftTab, sidebar, stashPanel, statusActivity, submodulePanel, tabBar, tabScroll, tabsInTitleBar, tabCommit, tabReviews, tabStash, tabSubmodules, task, updateBtn, updateStatus } from "./shell";
 import { app } from "./state";
 import { showWorkspace } from "./welcome";
 import { formDialog } from "./dialogs";
@@ -61,7 +61,8 @@ export function renderTabs() {
   tabBar.hidden = !tabsInTitleBar && settings.tabs.length < 2;
   // Two folders with the same name get the folders above them: "work/app" and "old/app".
   const names = new Map(settings.tabs.map((r, i) => [r, pathLabels(settings.tabs)[i]]));
-  tabBar.replaceChildren(
+  const scroll = tabScroll.scrollLeft;
+  tabScroll.replaceChildren(
     ...settings.tabs.map((root) => {
       const name = names.get(root) ?? baseName(root);
       const info = tabInfo.get(root);
@@ -102,12 +103,11 @@ export function renderTabs() {
       });
       return tab;
     }),
-    (() => {
-      const add = h("button", { class: "tab-add", title: `Open a repository in a new tab (${mod}O)`, "data-key-action": "open" }, "+");
-      add.addEventListener("click", () => void askForRepo());
-      return add;
-    })(),
   );
+  tabScroll.scrollLeft = scroll;
+  const add = h("button", { class: "tab-add", title: `Open a repository in a new tab (${mod}O)`, "data-key-action": "open" }, "+");
+  add.addEventListener("click", () => void askForRepo());
+  tabBar.replaceChildren(tabScroll, add);
 }
 
 function saveTabState() {
