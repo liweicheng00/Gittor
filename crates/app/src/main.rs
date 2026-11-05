@@ -60,7 +60,7 @@ fn open_window(app: tauri::AppHandle, path: String, x: f64, y: f64, width: f64, 
     let builder = builder
         .title_bar_style(tauri::TitleBarStyle::Overlay)
         .hidden_title(true)
-        .traffic_light_position(tauri::LogicalPosition::new(14.0, 13.0));
+        .traffic_light_position(tauri::LogicalPosition::new(14.0, 22.0));
     builder.build().map_err(|e| e.to_string())?;
     Ok(())
 }
