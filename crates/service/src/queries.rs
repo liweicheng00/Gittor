@@ -212,9 +212,22 @@ impl Service {
                 ReviewEdit::Viewed { branch, paths, viewed } => r.set_viewed(&branch, &paths, viewed),
                 ReviewEdit::Comment { branch, path, line, end_line, text } => r.add_review_comment(&branch, &path, line, end_line, &text),
                 ReviewEdit::DeleteComment { branch, id } => r.delete_review_comment(&branch, &id),
+                ReviewEdit::ResolveComment { branch, id, resolved } => r.resolve_review_comment(&branch, &id, resolved),
             }
             .map_err(err)
         })
+    }
+
+    /// The notes on the local changes of a file, or of all files when `path` is empty. The notes of a
+    /// file that changed go away.
+    pub fn local_notes(&self, args: PathArgs) -> Result<Vec<gittor_git::local_notes::LocalNote>> {
+        let path = (!args.path.is_empty()).then_some(args.path.as_str());
+        self.with(|s| s.repo.local_notes(path).map_err(err))
+    }
+
+    /// Adds, deletes or resolves a note on the local changes of a file.
+    pub fn local_note_edit(&self, edit: gittor_git::local_notes::LocalNoteEdit) -> Result<()> {
+        self.with(|s| s.repo.local_note_edit(edit).map_err(err))
     }
 
     pub fn tag_info(&self, args: TagArgs) -> Result<gittor_git::tags::TagInfo> {

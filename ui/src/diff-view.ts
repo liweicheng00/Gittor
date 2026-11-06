@@ -432,7 +432,7 @@ export class DiffView {
     const deco = (ed: monaco.editor.ICodeEditor): monaco.editor.IModelDeltaDecoration[] => {
       const count = ed.getModel()?.getLineCount() ?? 0;
       return this.notes
-        .filter((n) => n.line >= 1 && n.line <= count)
+        .filter((n) => n.line >= 1 && n.line <= count && !n.resolved)
         .map((n) => ({
           range: new monaco.Range(n.line, 1, Math.min(Math.max(n.endLine, n.line), count), 1),
           options: { isWholeLine: true, className: "review-note-line", linesDecorationsClassName: "review-note-bar" },

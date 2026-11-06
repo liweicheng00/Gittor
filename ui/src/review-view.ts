@@ -280,6 +280,10 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
     filesEl.replaceChildren(...out);
   };
 
+  const resolveNote = async (id: string, resolved: boolean) => {
+    await cb.edit({ action: "resolveComment", branch: current, id, resolved });
+    await reload();
+  };
   const deleteNote = async (id: string) => {
     await cb.edit({ action: "deleteComment", branch: current, id });
     await reload();
@@ -302,8 +306,10 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
       return;
     }
     const list = fileNotes(f.path);
-    const copyAll = h("button", { class: "tb-button review-notes-copy", title: "Copy all notes of the file, with the file and the lines", disabled: !list.length }, icon("copy"), "Copy All");
-    copyAll.addEventListener("click", () => void copyText(formatNotes(f.path, list)));
+    // Copy All takes the open notes: a resolved note is done.
+    const open = list.filter((c) => !c.resolved);
+    const copyAll = h("button", { class: "tb-button review-notes-copy", title: "Copy the open notes of the file, with the file and the lines", disabled: !open.length }, icon("copy"), "Copy All");
+    copyAll.addEventListener("click", () => void copyText(formatNotes(f.path, open)));
     notesTitle.replaceChildren(
       h("span", {}, scope === "all" ? `Notes in ${f.path}` : "Notes are on the changes of the whole branch. Choose All changes to add one."),
       h("span", { class: "spacer" }),
@@ -331,12 +337,13 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
         const row = h(
           "div",
           {
-            class: "review-note" + (c.outdated ? " outdated" : ""),
+            class: "review-note" + (c.outdated ? " outdated" : "") + (c.resolved ? " resolved" : ""),
             title: c.outdated ? "The file changed after this note. The line can be another line now." : onFile ? "A note on the whole file" : "Go to the line",
           },
           h("span", { class: "review-note-line-no" }, onFile ? "File" : `L${lineRange(c)}`),
           h("span", { class: "review-note-body" }, c.text),
           c.outdated ? h("span", { class: "muted-inline" }, "outdated") : "",
+          c.resolved ? h("span", { class: "review-note-resolved", title: "Resolved" }, icon("resolved")) : "",
           h("span", { class: "muted-inline" }, formatDate(c.time)),
           copy(c),
           del(c.id),
@@ -346,7 +353,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
       }),
     );
     // A note on a line: only on a file that the branch has. A deleted file takes notes on the whole file.
-    const handlers = { add: addNote, remove: deleteNote, copy: (n: { line: number; endLine: number; text: string }) => void copyText(formatNote(f.path, n)) };
+    const handlers = { add: addNote, remove: deleteNote, resolve: resolveNote, copy: (n: { line: number; endLine: number; text: string }) => void copyText(formatNote(f.path, n)) };
     if (scope === "all") d.setNotes(list, f.status === "D" ? null : handlers);
   };
 

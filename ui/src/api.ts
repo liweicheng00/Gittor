@@ -20,6 +20,7 @@ import type { MergeSides } from "./bindings/MergeSides";
 import type { MergedBranches } from "./bindings/MergedBranches";
 import type { FinishMode } from "./bindings/FinishMode";
 import type { ReviewComment } from "./bindings/ReviewComment";
+import type { LocalNote } from "./bindings/LocalNote";
 import type { ReviewDetail } from "./bindings/ReviewDetail";
 import type { ReviewFile } from "./bindings/ReviewFile";
 import type { ReviewSummary } from "./bindings/ReviewSummary";
@@ -71,6 +72,7 @@ export type {
   IgnoreMatch,
   FinishMode,
   ReviewComment,
+  LocalNote,
   ReviewDetail,
   ReviewFile,
   ReviewSummary,
@@ -330,6 +332,9 @@ export const api = {
   reviews: () => call<ReviewSummary[]>("reviews"),
   review: (branch: string) => call<ReviewDetail>("review", { branch }),
   reviewEdit: (edit: ReviewEdit) => call<null>("review_edit", edit),
+  /** The notes on the local changes of a file; the notes of a file that changed are gone. */
+  localNotes: (path: string) => call<LocalNote[]>("local_notes", { path }),
+  localNoteEdit: (edit: LocalNoteEdit) => call<null>("local_note_edit", edit),
   /** Opens a web page: the default browser in the app, a new tab in a browser. */
   /** Clones a repository; returns the path of the new folder. An empty name uses the name of the URL. */
   cloneRepo: (url: string, parent: string, name: string) => call<string>("clone", { url, parent, name }),
@@ -518,4 +523,10 @@ export type ReviewEdit =
   | { action: "remove"; branch: string }
   | { action: "viewed"; branch: string; paths: string[]; viewed: boolean }
   | { action: "comment"; branch: string; path: string; line: number; endLine?: number; text: string }
-  | { action: "deleteComment"; branch: string; id: string };
+  | { action: "deleteComment"; branch: string; id: string }
+  | { action: "resolveComment"; branch: string; id: string; resolved: boolean };
+
+export type LocalNoteEdit =
+  | { action: "add"; path: string; line: number; endLine?: number; text: string }
+  | { action: "delete"; path: string; id: string }
+  | { action: "resolve"; path: string; id: string; resolved: boolean };

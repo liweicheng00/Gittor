@@ -132,6 +132,8 @@ pub enum ReviewEdit {
         text: String,
     },
     DeleteComment { branch: String, id: String },
+    /// Marks a note as resolved, or as open again.
+    ResolveComment { branch: String, id: String, resolved: bool },
 }
 
 #[derive(Deserialize)]

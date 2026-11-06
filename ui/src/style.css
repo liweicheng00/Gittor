@@ -692,6 +692,8 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .review-note { display: flex; gap: 8px; align-items: baseline; padding: 3px 10px; cursor: pointer; font-size: 12px; }
 .review-note:hover { background: var(--hover); }
 .review-note.outdated .review-note-body { opacity: 0.6; }
+.review-note.resolved .review-note-body { opacity: 0.55; }
+.review-note-resolved { color: var(--added); display: inline-flex; }
 .review-note-line-no { font-family: var(--mono, monospace); color: var(--tag); }
 .review-note-body { flex: 1; white-space: pre-wrap; }
 .review-note-line { background: rgba(230, 170, 30, 0.12); }
@@ -700,6 +702,10 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .note-add-icon { cursor: pointer; }
 .note-add-icon::before { content: "+"; display: block; width: 14px; height: 14px; margin: 2px 0 0 2px; border-radius: 3px; background: var(--accent); color: #fff; font: 600 12px/14px sans-serif; text-align: center; }
 .note-layer { position: absolute; top: 0; left: 0; pointer-events: none; overflow: hidden; }
+.note-chip { position: absolute; display: flex; align-items: center; justify-content: center; width: 22px; height: 18px; padding: 0; pointer-events: auto; border: 1px solid var(--border); border-radius: 9px; background: var(--panel); color: var(--added); cursor: pointer; }
+.note-chip:hover { background: var(--hover); }
+.note-card.resolved { border-left-color: var(--added); opacity: 0.85; }
+.note-card-resolve.on { color: var(--added); }
 .note-range { background: color-mix(in srgb, #e6aa1e 14%, transparent); }
 .note-card { position: absolute; width: 300px; max-width: 45%; pointer-events: auto; padding: 4px 8px 6px; border: 1px solid var(--border); border-left: 3px solid #e6aa1e; border-radius: 4px; background: var(--panel); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); font-size: 12px; color: var(--fg); }
 .note-card.outdated { opacity: 0.7; }

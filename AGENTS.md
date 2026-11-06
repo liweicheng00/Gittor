@@ -82,6 +82,10 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   note icon in the gutter, a double click adds a note). `DiffView.setNotes(notes, handlers)` turns it
   on; without handlers it is off, so the History window does not get it. Line 0 is a note on the whole
   file; its field is under the list of notes. `note-format.ts` makes the text for the clipboard.
+  A resolved note (`resolved`) shows as an icon only (`.note-chip`); a click opens it. Copy All skips it.
+- Notes on local changes: `crates/git/src/local_notes.rs` (`gittor/local-notes.json` of the worktree).
+  The notes of a file keep the git hash of its content; when the file changes, they go away.
+  `showLocalDiff` in `commit-flow.ts` gives them to the same note layer.
 - Updates of the app: `update-flow.ts` (checks 10 s after the start and every 6 h, only in the main
   window). Only a build with the public key checks: `scripts/build-dmg.sh --updater` merges
   `target/tauri.release.conf.json`, and `main.rs` registers the updater plugin only then. A local

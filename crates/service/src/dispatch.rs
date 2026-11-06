@@ -81,6 +81,8 @@ impl Service {
             "reviews" => serde_json::to_string(&self.reviews()?),
             "review" => serde_json::to_string(&self.review(parse(body)?)?),
             "review_edit" => serde_json::to_string(&self.review_edit(parse(body)?)?),
+            "local_notes" => serde_json::to_string(&self.local_notes(parse(body)?)?),
+            "local_note_edit" => serde_json::to_string(&self.local_note_edit(parse(body)?)?),
             "tag_info" => serde_json::to_string(&self.tag_info(parse(body)?)?),
             "remote_tags" => serde_json::to_string(&self.remote_tags(parse(body)?)?),
             "open_url" => serde_json::to_string(&self.open_url(parse(body)?)?),

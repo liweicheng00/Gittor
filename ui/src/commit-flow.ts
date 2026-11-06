@@ -1,7 +1,10 @@
 // The Changes tab: local changes, changelists, commit, rollback and partial changelists.
 
 import { visit } from "./nav";
-import { api, type ChangeListView, IGNORE_LIST } from "./api";
+import { api, type ChangeListView, IGNORE_LIST, type LocalNoteEdit } from "./api";
+import { copyText } from "./dom";
+import type { NoteHandlers } from "./note-layer";
+import { formatNote } from "./note-format";
 import { type LocalFile } from "./commit-panel";
 import { menuBelow, type MenuItem, showMenu } from "./context-menu";
 import { mergeFile } from "./conflicts";
@@ -17,6 +20,30 @@ import { compareBranches } from "./remotes";
 import { pushBranch } from "./sync";
 
 let localRequest = 0;
+
+/** Shows the notes of a local file again, after a change of its notes. */
+async function reloadLocalNotes(path: string) {
+  const notes = await api.localNotes(path).catch(() => []);
+  if (app.diffSource === "local" && diff.currentPath === path) diff.setNotes(notes.map((n) => ({ ...n, outdated: false })), localNoteHandlers(path));
+}
+
+/** Add, delete, resolve and copy for the notes on the local changes of a file. */
+function localNoteHandlers(path: string): NoteHandlers {
+  const run = async (e: LocalNoteEdit) => {
+    try {
+      await api.localNoteEdit(e);
+    } catch (err) {
+      toast(String(err).replace(/^Error: /, ""), "error");
+    }
+    await reloadLocalNotes(path);
+  };
+  return {
+    add: (line, endLine, text) => run({ action: "add", path, line, endLine, text }),
+    remove: (id) => run({ action: "delete", path, id }),
+    resolve: (id, resolved) => run({ action: "resolve", path, id, resolved }),
+    copy: (n) => void copyText(formatNote(path, n)),
+  };
+}
 export async function showLocalDiff(f: LocalFile) {
   const path = f.change.path;
   visit({
@@ -54,7 +81,11 @@ export async function showLocalDiff(f: LocalFile) {
     diff.setMoveChange(f.list !== null && text && f.change.status === "M" ? (line, at) => moveChangeMenu(f, line, at) : null);
     // Revert This Change rolls back one change of the file to HEAD.
     diff.setRevert(text && f.change.status === "M" ? (p, t, expected) => void runOp({ op: "writeFile", path: p, text: t, expected }, `Rolling back a change of ${p}`) : null);
+    // Notes on the working-tree file. They go away when the file changes.
+    const notes = text || (f.change.status !== "D" && !pair.right.missing && !pair.right.binary) ? await api.localNotes(path).catch(() => []) : null;
+    if (req !== localRequest || app.diffSource !== "local") return;
     diff.show(change, pair.left, pair.right);
+    if (notes) diff.setNotes(notes.map((n) => ({ ...n, outdated: false })), localNoteHandlers(path));
   } catch (e) {
     if (req === localRequest) diff.message(String(e));
   }

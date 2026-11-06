@@ -19,4 +19,8 @@ blob: string,
 /**
  * The file changed since the note was made, so the line can be another line now. The list sets it.
  */
-outdated: boolean, };
+outdated: boolean, 
+/**
+ * The note is done: the diff shows only its icon.
+ */
+resolved: boolean, };

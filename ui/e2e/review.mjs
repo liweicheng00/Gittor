@@ -148,6 +148,18 @@ await within("Copy All copies all notes of the file", async () =>
   (await clipboard()) === `cli.rs\nThe file needs tests\n\ncli.rs:${lineOf}\nSecond note\n\ncli.rs:3\nUse a logger here`
     || (await clipboard()) === `cli.rs\nThe file needs tests\n\ncli.rs:3\nUse a logger here\n\ncli.rs:${lineOf}\nSecond note`);
 
+// Resolve a note: only its icon stays in the diff, and Copy All leaves it out.
+await page.locator(".review-window .note-card:has-text('Use a logger here') .note-card-resolve").click();
+await within("a resolved review note shows its icon only", async () =>
+  (await page.$$(".review-window .note-chip")).length === 1 && (await page.$$(".review-window .note-card:has-text('Use a logger here')")).length === 0);
+await within("the list marks the note as resolved", async () => (await page.$$(".review-notes-list .review-note.resolved")).length === 1);
+await page.click(".review-notes-copy");
+await within("Copy All leaves out the resolved note", async () => !(await clipboard()).includes("Use a logger here") && (await clipboard()).includes("Second note"));
+await shot("rv1d-resolved");
+await page.click(".review-window .note-chip");
+await page.locator(".review-window .note-card:has-text('Use a logger here') .note-card-resolve").click();
+await within("the note opens again", async () => (await page.$$(".review-window .note-chip")).length === 0 && (await page.$$(".review-window .note-card:has-text('Use a logger here')")).length === 1);
+
 // Delete the second note with its card.
 await page.locator(".review-window .note-card:has-text('Second note') .note-card-delete").click();
 await within("the card is gone", async () => (await page.$$(".review-window .note-card")).length === 1);

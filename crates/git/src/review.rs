@@ -36,6 +36,9 @@ pub struct ReviewComment {
     /// The file changed since the note was made, so the line can be another line now. The list sets it.
     #[serde(default)]
     pub outdated: bool,
+    /// The note is done: the diff shows only its icon.
+    #[serde(default)]
+    pub resolved: bool,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -344,7 +347,16 @@ impl Repo {
         self.edit_review(branch, |r| {
             let n = r.comments.iter().filter_map(|c| c.id.parse::<u64>().ok()).max().unwrap_or(0) + 1;
             let end_line = if line > 0 && end_line > line { end_line } else { 0 };
-            r.comments.push(ReviewComment { id: n.to_string(), path: path.into(), line, end_line, text: text.trim().into(), time: now(), blob, outdated: false });
+            r.comments.push(ReviewComment { id: n.to_string(), path: path.into(), line, end_line, text: text.trim().into(), time: now(), blob, outdated: false, resolved: false });
+            Ok(())
+        })
+    }
+
+    /// Marks a note as resolved, or as open again.
+    pub fn resolve_review_comment(&self, branch: &str, id: &str, resolved: bool) -> Result<()> {
+        self.edit_review(branch, |r| {
+            let c = r.comments.iter_mut().find(|c| c.id == id).ok_or_else(|| GitError("The note does not exist".into()))?;
+            c.resolved = resolved;
             Ok(())
         })
     }

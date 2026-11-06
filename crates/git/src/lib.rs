@@ -6,6 +6,7 @@ pub mod cleanup;
 pub mod history;
 pub mod global_ignore;
 pub mod hunks;
+pub mod local_notes;
 pub mod merge;
 pub mod ops;
 pub mod remote;

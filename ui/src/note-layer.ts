@@ -16,11 +16,15 @@ export interface NoteItem {
   text: string;
   outdated: boolean;
   time: number;
+  /** A resolved note shows as an icon only, until a click on the icon opens it. */
+  resolved: boolean;
 }
 
 export interface NoteHandlers {
   add: (line: number, endLine: number, text: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
+  /** Marks a note as resolved, or as open again. */
+  resolve: (id: string, resolved: boolean) => Promise<void>;
   /** Copies the note to the clipboard, with its file and line. */
   copy: (note: NoteItem) => void;
 }
@@ -145,7 +149,7 @@ class EditorLayer {
     this.ranges = on && draftLine && draftEnd > draftLine ? [[draftLine, draftEnd]] : [];
     this.paintRanges();
     if (!on) return;
-    for (const n of notes) this.el.append(this.owner.card(n));
+    for (const n of notes) this.el.append(n.resolved && !this.owner.opened.has(n.id) ? this.owner.chip(n) : this.owner.card(n));
     if (draftLine) this.el.append(this.owner.draftCard(draftLine, draftEnd));
     this.place();
   }
@@ -158,7 +162,7 @@ class EditorLayer {
     this.el.style.height = `${layout.height}px`;
     const scroll = this.ed.getScrollTop();
     const lines = this.ed.getModel()?.getLineCount() ?? 0;
-    const cards = [...this.el.querySelectorAll<HTMLElement>(".note-card")].sort((a, b) => Number(a.dataset.line) - Number(b.dataset.line));
+    const cards = [...this.el.querySelectorAll<HTMLElement>(".note-card, .note-chip")].sort((a, b) => Number(a.dataset.line) - Number(b.dataset.line));
     let bottom = -Infinity;
     for (const c of cards) {
       const line = Math.min(Number(c.dataset.line), lines);
@@ -178,6 +182,8 @@ export class NoteLayer {
   private notes: NoteItem[] = [];
   private draftLine = 0;
   private draftEnd = 0;
+  /** The resolved notes that show as a card now, after a click on their icon. */
+  readonly opened = new Set<string>();
   private draftText = "";
   private readonly layers = new Map<monaco.editor.ICodeEditor, EditorLayer>();
 
@@ -221,19 +227,40 @@ export class NoteLayer {
     for (const layer of this.layers.values()) layer.render(this.notes, this.draftLine, this.draftEnd);
   }
 
+  /** A resolved note: its icon at the right of its line. A click shows the whole note. */
+  chip(n: NoteItem): HTMLElement {
+    const el = h("button", { class: "note-chip", "data-line": n.line, title: `Resolved note on L${lineRange(n)}: ${n.text}\nClick to show it` }, icon("resolved"));
+    el.addEventListener("click", () => {
+      this.opened.add(n.id);
+      this.render();
+    });
+    return el;
+  }
+
   card(n: NoteItem): HTMLElement {
     const del = h("button", { class: "icon-button note-card-delete", title: "Delete the note" }, icon("close"));
     del.addEventListener("click", () => void this.handlers?.remove(n.id));
+    const resolve = h("button", { class: "icon-button note-card-resolve" + (n.resolved ? " on" : ""), title: n.resolved ? "Open the note again" : "Resolve the note: only its icon stays" }, icon("resolved"));
+    resolve.addEventListener("click", () => {
+      this.opened.delete(n.id);
+      void this.handlers?.resolve(n.id, !n.resolved);
+    });
+    // An opened resolved note can go back to its icon.
+    const fold = h("button", { class: "icon-button note-card-fold", title: "Show only the icon" }, icon("up"));
+    fold.addEventListener("click", () => {
+      this.opened.delete(n.id);
+      this.render();
+    });
     const copy = h("button", { class: "icon-button note-card-copy", title: "Copy the file, the line and the note" }, icon("copy"));
     copy.addEventListener("click", () => this.handlers?.copy(n));
     return h(
       "div",
       {
-        class: "note-card" + (n.outdated ? " outdated" : ""),
+        class: "note-card" + (n.outdated ? " outdated" : "") + (n.resolved ? " resolved" : ""),
         "data-line": n.line,
         title: n.outdated ? "The file changed after this note. The line can be another line now." : "",
       },
-      h("div", { class: "note-card-head" }, icon("note"), h("span", {}, `L${lineRange(n)}`), n.outdated ? h("span", { class: "note-card-tag" }, "outdated") : "", h("span", { class: "spacer" }), h("span", {}, formatDate(n.time)), copy, del),
+      h("div", { class: "note-card-head" }, icon("note"), h("span", {}, `L${lineRange(n)}`), n.outdated ? h("span", { class: "note-card-tag" }, "outdated") : "", n.resolved ? h("span", { class: "note-card-tag" }, "resolved") : "", h("span", { class: "spacer" }), h("span", {}, formatDate(n.time)), n.resolved ? fold : "", resolve, copy, del),
       h("div", { class: "note-card-text" }, n.text),
     );
   }
