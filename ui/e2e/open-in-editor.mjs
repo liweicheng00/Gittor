@@ -112,6 +112,25 @@ await page.click(".log-row >> nth=1");
 await page.keyboard.press("Shift+F4");
 await within("Shift+F4 opens the folder of the repository", async () => opened() === repo);
 
+// The Review window has the IDE button too, and Shift+F4 works there.
+await page.click(".lp-tab:text-is('Branches')");
+await page.click(".sidebar .branch:has(.branch-name:text-is('feature/cli')) >> nth=0", { button: "right" });
+await page.waitForTimeout(400);
+await page.click(".menu-item:has-text('Review Branch')");
+await page.click(".dialog-buttons button:has-text('Start Review')");
+await page.waitForSelector(".review-window .review-ide");
+rmSync(log, { force: true });
+await page.click(".review-window .review-ide");
+await within("the IDE button of a review opens the folder of the repository", async () => opened() === repo);
+rmSync(log, { force: true });
+await page.click(".review-window .review-files");
+await page.keyboard.press("Shift+F4");
+await within("Shift+F4 works in the Review window", async () => opened() === repo);
+await shot("oe5-review-ide");
+await page.keyboard.press("Escape");
+await page.waitForSelector(".review-window", { state: "detached" });
+await page.click(".lp-tab:text-is('Changes')");
+
 // A program that does not exist shows an error.
 await setEditor("no-such-editor-xyz {file}");
 await page.click(".cl-file:has(.path:text-is('main.rs'))");

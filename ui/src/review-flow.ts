@@ -1,6 +1,7 @@
 // Review Branch: start a review, open it, switch between reviews, and merge a reviewed branch.
 
 import { api, type ReviewDetail, type ReviewSummary } from "./api";
+import { openProjectInEditor } from "./editor-flow";
 import type { PickerItem, PickerSection } from "./branch-picker";
 import { showMenu } from "./context-menu";
 import { confirmDialog, finishReviewDialog, formDialog } from "./dialogs";
@@ -110,6 +111,7 @@ export async function openReviewWindow(branch: string) {
       return branchSections().map(([title, items]): PickerSection => [title, items.filter((i) => !reviewed.has(i.value)).map((i) => ({ ...i, current: false }))]);
     },
     start: (b) => void startReview(b),
+    openInIde: () => void openProjectInEditor(),
     fetch: (b) => fetchRemoteBranches([b, ...reviewPanel.all.filter((r) => r.branch === b).map((r) => r.base)]),
     authorOf: (b) => app.refs.find((r) => r.name === b)?.author,
   });

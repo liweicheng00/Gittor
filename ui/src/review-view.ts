@@ -23,6 +23,8 @@ export interface ReviewCallbacks {
   /** Opens the Merge dialog. True when the branch was merged. */
   finish: (d: ReviewDetail) => Promise<boolean>;
   showInLog: (oid: string) => void;
+  /** Opens the repository in the editor of the settings (the IDE button of the toolbar). */
+  openInIde: () => void;
   /** The branches without a review, in groups, for the switcher. */
   branches: () => PickerSection[];
   /** The author of the last commit of a branch. */
@@ -76,6 +78,8 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
   const info = h("span", { class: "muted-inline review-info" });
   const finishBtn = h("button", { class: "tb-button primary review-merge" }, "Merge…");
   const closeBtn = h("button", { class: "tb-button" }, "Close");
+  const ideBtn = h("button", { class: "tb-button tb-icon review-ide", title: "Open the repository in the editor of Settings › Editor", "data-key-action": "openProjectInEditor" }, icon("ide"));
+  ideBtn.addEventListener("click", () => cb.openInIde());
   const status = h("div", { class: "review-status" });
   const commitsEl = h("div", { class: "review-commits" });
   const filesTitle = h("div", { class: "compare-files-title review-files-title" });
@@ -106,7 +110,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
   const win = h(
     "div",
     { class: "history-window review-window", role: "dialog", "aria-label": "Review" },
-    h("div", { class: "merge-header compare-header" }, h("b", {}, "Review"), switcher, info, h("span", { class: "spacer" }), finishBtn, closeBtn),
+    h("div", { class: "merge-header compare-header" }, h("b", {}, "Review"), switcher, info, h("span", { class: "spacer" }), ideBtn, finishBtn, closeBtn),
     status,
     body,
   );
