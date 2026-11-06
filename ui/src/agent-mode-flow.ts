@@ -434,7 +434,8 @@ const canvasHost = {
   mount: (body: HTMLElement, mod: string, props: Record<string, unknown>) => addBlock(body, { mod, props }),
   unmount: removeBlock,
   moved: () => saveLayout(),
-  insetLeft: () => (dock.hidden ? 0 : dock.offsetWidth + 12),
+  /** The part of the canvas at the left that the open agent window covers. */
+  insetLeft: () => (dock.hidden || !canvas ? 0 : Math.max(0, dock.getBoundingClientRect().right + 12 - canvas.el.getBoundingClientRect().left)),
 };
 const errors = new Map<string, string>();
 
@@ -612,7 +613,8 @@ const dock = h(
   h("div", { class: "am-dock-head" }, icon("agent"), dockTitle, dockState, h("span", { class: "spacer" }), h("button", { class: "tb-button tb-icon am-dock-fold", title: "Fold the window", "aria-label": "Fold", onclick: () => setDockOpen(false) }, icon("chevron-down"))),
   dockBody,
 );
-const pill = h("button", { class: "am-dock-pill", hidden: true, title: "Open the agent window", onclick: () => setDockOpen(true) }, icon("agent"), pillTitle, pillState);
+/** The small round button at the bottom left: it opens and closes the agent window. */
+const pill = h("button", { class: "am-dock-pill", hidden: true, onclick: () => setDockOpen(!dockOpen()) }, icon("agent"), pillState);
 
 function dockOpen(): boolean {
   try {
@@ -634,11 +636,16 @@ function setDockOpen(open: boolean) {
 function showDock() {
   const spec = layout?.dock;
   dock.hidden = !spec || !dockOpen();
-  pill.hidden = !spec || dockOpen();
+  pill.hidden = !spec;
   if (!spec) return;
+  pill.classList.toggle("active", dockOpen());
+  const name = spec.title ?? spec.mod;
+  pill.title = dockOpen() ? `Close the ${name} window` : `Open the ${name} window`;
+  pill.setAttribute("aria-label", name);
+  pill.setAttribute("aria-pressed", String(dockOpen()));
   dock.style.width = `${spec.width ?? 420}px`;
   dock.style.height = `${spec.height ?? 540}px`;
-  dockTitle.textContent = pillTitle.textContent = spec.title ?? spec.mod;
+  dockTitle.textContent = pillTitle.textContent = name;
 }
 
 /** The dot of the agent state, also on the folded button: a question of the agent is easy to see. */

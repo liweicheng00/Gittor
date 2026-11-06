@@ -50,9 +50,8 @@ IDE) and one canvas (cards at free places, with arrows between them, as a flow c
 {
   "type": "row",
   "children": [
-    { "type": "column", "size": 340, "children": [
-      { "mod": "branches", "title": "Branches", "collapsible": true, "grow": 1 },
-      { "mod": "chat", "title": "Agent", "badge": "agent", "collapsible": true, "size": 460 }
+    { "type": "column", "size": 280, "children": [
+      { "mod": "branches", "title": "Branches", "collapsible": true, "grow": 1 }
     ] },
     { "type": "canvas", "title": "Flow", "grow": 1,
       "nodes": [
@@ -65,7 +64,8 @@ IDE) and one canvas (cards at free places, with arrows between them, as a flow c
         { "id": "remotes", "mod": "remotes", "title": "Remote Branches", "x": 460, "y": 40, "w": 300 }
       ],
       "edges": [{ "from": "work", "to": "remotes", "label": "commit, push" }] }
-  ]
+  ],
+  "dock": { "mod": "chat", "title": "Agent", "width": 420, "height": 540 }
 }
 ```
 
@@ -78,8 +78,10 @@ Rows, columns and panels:
 - `title`: a title bar over the block; then the block is a panel. `collapsible: true` lets the user fold
   the panel to its title bar. `badge: "agent"` shows the state of the agent in the title bar.
 - `class` adds CSS classes. `props` is an object that the mod gets as `g.props`.
-- `dock` (on the top node only, optional): `{ "mod": "chat", "title": "Agent", "width": 440, "height": 560 }`
-  makes a window that floats at the bottom left and folds to a small button.
+- `dock` (on the top node only, optional): a window that floats over the layout at the bottom left. A
+  small round button at the bottom left opens and closes it, and shows the state of the agent. The
+  chat with you is in it. Keep the dock for the chat, unless the user asks for another place; the chat
+  can also be a panel (`{ "mod": "chat", "title": "Agent", "badge": "agent", "collapsible": true }`).
 
 The canvas:
 

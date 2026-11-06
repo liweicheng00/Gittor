@@ -84,22 +84,28 @@ await halfTurn("am1-turning-in");
 await page.waitForSelector(".agent-mode:not([hidden]) .x-chat");
 await within("the turn ends", async () => !(await page.$("body.am-turning")));
 check("the Git side is hidden", await page.$eval("#app", (e) => e.style.opacity === "0" && e.inert));
-// Fixed panels at the left, the agent at the bottom left, and the canvas in the rest of the window.
-check("the left column has the Branches and Agent panels", (await page.$$eval(".am-panel-title", (els) => els.map((e) => e.textContent))).join(",") === "Branches,Agent");
-const agentBox = await page.locator(".am-panel[data-panel='chat']").boundingBox();
-check("the agent panel is at the bottom left", agentBox.x < 5 && agentBox.y + agentBox.height > 1000 - 5);
+// A fixed panel at the left, the canvas in the rest of the window, and the agent button at the bottom left.
+check("the left column has the Branches panel", (await page.$$eval(".am-panel-title", (els) => els.map((e) => e.textContent))).join(",") === "Branches");
+const pillBox = await page.locator(".am-dock-pill").boundingBox();
+check("the agent button is small and at the bottom left", pillBox.width < 50 && pillBox.x < 30 && pillBox.y + pillBox.height > 1000 - 30);
+const dockBox = await page.locator(".am-dock").boundingBox();
+check("the agent window opens above its button", dockBox.x < 30 && dockBox.y + dockBox.height < pillBox.y + 4 && (await page.isVisible(".am-dock .x-chat")));
 check("the canvas shows three cards", (await page.$$(".am-card")).length === 3);
 check("the card with cards inside looks like a stack", !!(await page.$(".am-card.am-stack[data-node='work']")));
 check("the edge has its label", (await page.textContent(".am-edge-label")) === "commit, push");
 await within("the panels and cards load their content", async () => (await page.$$(".x-branches-row")).length > 0 && (await page.$$(".x-remotes-row")).length > 0 && !!(await page.$(".x-work-stat")));
 await shot("am2-back-side");
 
-// The agent panel folds to its title bar and opens again; the Branches panel takes the space.
-await page.click(".am-panel[data-panel='chat'] .am-panel-fold");
-check("the agent panel folds", (await page.locator(".am-panel[data-panel='chat']").boundingBox()).height < 40 && !(await page.isVisible(".x-chat")));
+// The round button closes and opens the agent window; the fold button of the window closes it too.
+await page.click(".am-dock-pill");
+check("the button closes the agent window", (await page.isHidden(".am-dock")) && (await page.isVisible(".am-dock-pill")) && !(await page.$(".am-dock-pill.active")));
 await shot("am2b-folded");
-await page.click(".am-panel[data-panel='chat'] .am-panel-fold");
-check("the agent panel opens again", await page.isVisible(".x-chat"));
+await page.click(".am-dock-pill");
+check("the button opens the agent window again", (await page.isVisible(".am-dock .x-chat")) && !!(await page.$(".am-dock-pill.active")));
+await page.click(".am-dock-fold");
+check("the fold button closes the window", await page.isHidden(".am-dock"));
+await page.click(".am-dock-pill");
+check("the window stays open for the next steps", await page.isVisible(".am-dock .x-chat"));
 
 // Ctrl+wheel zooms the canvas; Fit shows all cards again.
 const zoomText = () => page.textContent(".am-zoom-label");

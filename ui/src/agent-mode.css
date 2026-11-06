@@ -39,13 +39,17 @@ body.am-turning #app, body.am-turning .agent-mode { transform-origin: 50% 50%; b
 .am-zoom-label { min-width: 44px; text-align: center; font-size: 12px; color: var(--muted); }
 
 /* The dock: the agent window at the bottom left, and its folded button. */
-.am-dock { position: absolute; left: 12px; bottom: 12px; z-index: 2; display: flex; flex-direction: column; max-width: calc(100% - 24px); max-height: calc(100% - 24px); overflow: hidden; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); }
+.am-dock { position: absolute; left: 12px; bottom: 64px; z-index: 3; display: flex; flex-direction: column; max-width: calc(100% - 24px); max-height: calc(100% - 76px); overflow: hidden; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); transform-origin: 20px calc(100% + 32px); animation: am-dock-in 0.16s ease-out; }
+@keyframes am-dock-in { from { opacity: 0; transform: scale(0.92); } }
 .am-dock-head { flex: none; display: flex; align-items: center; gap: 7px; padding: 4px 6px 4px 12px; font-weight: 600; background: var(--panel); border-bottom: 1px solid var(--border); }
 .am-dock-head > .icon { width: 15px; height: 15px; color: var(--accent); }
 .am-dock-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.am-dock-pill { position: absolute; left: 12px; bottom: 12px; z-index: 2; display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px 7px 11px; font-weight: 600; cursor: pointer; background: var(--bg); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); }
+/* The round button that opens and closes the agent window. Its dot shows the state of the agent. */
+.am-dock-pill { position: absolute; left: 12px; bottom: 12px; z-index: 3; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; padding: 0; cursor: pointer; color: var(--accent); background: var(--bg); border: 1px solid var(--border); border-radius: 50%; box-shadow: var(--shadow); }
 .am-dock-pill:hover { background: var(--hover); }
-.am-dock-pill > .icon { width: 16px; height: 16px; color: var(--accent); }
+.am-dock-pill.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+.am-dock-pill > .icon { width: 20px; height: 20px; }
+.am-dock-pill > .am-dock-state { position: absolute; right: 1px; top: 1px; width: 10px; height: 10px; border: 2px solid var(--bg); box-sizing: content-box; }
 .am-dock-state { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); opacity: 0.6; }
 .am-dock-state[data-state="ready"] { background: var(--added); opacity: 1; }
 .am-dock-state[data-state="busy"], .am-dock-state[data-state="starting"] { background: var(--accent); opacity: 1; animation: am-pulse 1s ease-in-out infinite; }

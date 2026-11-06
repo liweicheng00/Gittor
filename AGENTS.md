@@ -126,8 +126,8 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   `visibility: visible` on its own elements. Mod classes start with `x-`, because Gittor uses short class
   names. `agent.rs` is an ACP client (JSON-RPC on stdio); its messages come as `Event::Agent`. The Tauri
   CSP allows `blob:` scripts for the mods. The e2e scenario `agent-mode` uses a fake ACP agent.
-  The default layout is fixed panels (a block with `title`, `collapsible`) at the left, the agent panel at
-  the bottom left, and a canvas node (`agent-canvas.ts`): cards at `x`/`y`, SVG edges, pan, Ctrl+wheel
+  The default layout is fixed panels (a block with `title`, `collapsible`) at the left, the chat in the
+  `dock` (a round button at the bottom left opens and closes it; the window opens above it), and a canvas node (`agent-canvas.ts`): cards at `x`/`y`, SVG edges, pan, Ctrl+wheel
   zoom. A card with `children` is a nested canvas; a card without opens a detail view. `Canvas.open` flies
   into a card (a tween of the view, then a fade), `goTo` flies out; each level keeps its own view in the
   storage. The canvas mounts the mods of its cards through `canvasHost` (`addBlock`, `removeBlock`).
