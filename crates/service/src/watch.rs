@@ -159,6 +159,8 @@ impl Worker {
         let mut index = false;
         let mut files: Vec<PathBuf> = Vec::new();
         let mut submodule = false;
+        // For each repository inside this one: is it a submodule of this one?
+        let mut gitlinks: std::collections::HashMap<PathBuf, bool> = std::collections::HashMap::new();
         for (p, created) in paths {
             let in_git = [&self.git_dir, &self.common_dir].iter().find_map(|d| p.strip_prefix(d).ok().map(Path::to_path_buf));
             match in_git {
@@ -183,8 +185,12 @@ impl Worker {
                     }
                     // A file in a submodule changes the submodule's status only. `git check-ignore`
                     // refuses such a path, and Local History keeps the files of this repository only.
-                    if self.in_submodule(&p) {
-                        submodule = true;
+                    // Another repository inside this one, for example a linked worktree, does not
+                    // change this repository: its files are not counted.
+                    if let Some(nested) = self.nested_root(&p) {
+                        if *gitlinks.entry(nested.clone()).or_insert_with(|| is_gitlink(&self.root, &nested)) {
+                            submodule = true;
+                        }
                     } else {
                         files.push(p);
                     }
@@ -211,8 +217,10 @@ impl Worker {
     }
 
     /// True when a directory between the path and the root has a `.git` entry.
-    fn in_submodule(&self, path: &Path) -> bool {
-        path.ancestors().skip(1).take_while(|a| *a != self.root && a.starts_with(&self.root)).any(|a| a.join(".git").exists())
+    /// The root of the repository inside this one that holds `path`: the first folder above it with a
+    /// `.git`. None for a file of this repository.
+    fn nested_root(&self, path: &Path) -> Option<PathBuf> {
+        path.ancestors().skip(1).take_while(|a| *a != self.root && a.starts_with(&self.root)).find(|a| a.join(".git").exists()).map(Path::to_path_buf)
     }
 
     fn watch_new_dir(&self, dir: &Path) {
@@ -251,5 +259,49 @@ impl Worker {
         let out = child.wait_with_output().map(|o| o.stdout).unwrap_or_default();
         let ignored: std::collections::HashSet<&[u8]> = out.split(|&b| b == 0).filter(|s| !s.is_empty()).collect();
         files.into_iter().zip(rel.iter()).filter(|(_, r)| !ignored.contains(r.as_bytes())).map(|(p, _)| p).collect()
+    }
+}
+
+/// True when the index of the repository at `root` has a submodule (a gitlink) at `dir`. A linked
+/// worktree or another clone inside the folder has none.
+fn is_gitlink(root: &Path, dir: &Path) -> bool {
+    let Ok(rel) = dir.strip_prefix(root) else { return false };
+    gittor_git::git_command()
+        .arg("-C")
+        .arg(root)
+        .args(["ls-files", "--stage", "--"])
+        .arg(rel)
+        .env("GIT_OPTIONAL_LOCKS", "0")
+        .stderr(Stdio::null())
+        .output()
+        .is_ok_and(|o| String::from_utf8_lossy(&o.stdout).starts_with("160000 "))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_gitlink;
+    use std::path::Path;
+    use std::process::Command;
+
+    fn git(dir: &Path, args: &[&str]) {
+        let out = Command::new("git").arg("-C").arg(dir).args(args).output().unwrap();
+        assert!(out.status.success(), "git {args:?}: {}", String::from_utf8_lossy(&out.stderr));
+    }
+
+    #[test]
+    fn a_worktree_inside_the_repository_is_not_a_submodule() {
+        let base = std::env::temp_dir().join(format!("gittor-watch-nested-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        let (main, lib) = (base.join("main"), base.join("lib"));
+        for d in [&main, &lib] {
+            std::fs::create_dir_all(d).unwrap();
+            git(d, &["init", "-q", "-b", "main"]);
+            git(d, &["-c", "user.name=T", "-c", "user.email=t@e", "commit", "-q", "--allow-empty", "-m", "Start"]);
+        }
+        git(&main, &["-c", "protocol.file.allow=always", "submodule", "add", "-q", lib.to_str().unwrap(), "sub"]);
+        git(&main, &["worktree", "add", "-q", ".claude/worktrees/x", "-b", "x"]);
+        assert!(is_gitlink(&main, &main.join("sub")), "a submodule");
+        assert!(!is_gitlink(&main, &main.join(".claude/worktrees/x")), "a linked worktree inside the folder");
+        let _ = std::fs::remove_dir_all(&base);
     }
 }

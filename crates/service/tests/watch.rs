@@ -76,3 +76,38 @@ fn counters_follow_files_and_refs() {
     std::thread::sleep(Duration::from_millis(800));
     assert_eq!(w.state.counters().files, c2.files, "reads must not refresh the index");
 }
+
+#[test]
+fn a_worktree_inside_the_folder_does_not_count() {
+    let dir = std::env::temp_dir().join(format!("gittor-watch-inner-wt-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    git(&dir, &["init", "-q", "-b", "main"]);
+    git(&dir, &["config", "user.name", "Test"]);
+    git(&dir, &["config", "user.email", "test@example.com"]);
+    std::fs::write(dir.join("a.txt"), "a\n").unwrap();
+    git(&dir, &["add", "."]);
+    git(&dir, &["commit", "-q", "-m", "Initial"]);
+    let repo = Repo::open(&dir).unwrap();
+    let w = RepoWatcher::start(&repo.root, &repo.git_dir(), &repo.common_dir(), None, None).unwrap();
+    std::thread::sleep(Duration::from_millis(400));
+
+    // A linked worktree in a folder of the repository, as some tools make them.
+    git(&dir, &["worktree", "add", "-q", "wt/x", "-b", "x"]);
+    std::thread::sleep(Duration::from_millis(900));
+    let c0 = w.state.counters();
+    // Its files change, as in a checkout there: this repository does not change.
+    for i in 0..3 {
+        std::fs::write(dir.join("wt/x/a.txt"), format!("worktree {i}\n")).unwrap();
+        std::fs::write(dir.join("wt/x/new.txt"), format!("new {i}\n")).unwrap();
+        std::thread::sleep(Duration::from_millis(400));
+    }
+    std::thread::sleep(Duration::from_millis(500));
+    assert_eq!(w.state.counters().files, c0.files, "the files of a worktree inside the folder must not count");
+    assert_eq!(w.state.counters().repo, c0.repo);
+
+    // A file of this repository still counts.
+    std::fs::write(dir.join("a.txt"), "a2\n").unwrap();
+    assert!(eventually(|| w.state.counters().files > c0.files));
+    let _ = std::fs::remove_dir_all(&dir);
+}
