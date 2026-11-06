@@ -15,6 +15,10 @@
 # the release 0.2.0, at commit a1b2c3d4). The name of the .dmg and Settings › General show it. The
 # CFBundleVersion of each build is the number of commits, so it grows. See scripts/version.mjs.
 #
+# A test build is the app "Gittor Dev" (identifier dev.gittor.app.dev, an icon with "DEV"). It runs next
+# to the release Gittor, with its own settings in "gittor-dev". At its first start it copies the
+# settings of the release.
+#
 # A signed build needs these variables (see README, "Sign and notarize"):
 #   APPLE_SIGNING_IDENTITY  "Developer ID Application: Name (TEAMID)", from: security find-identity -v -p codesigning
 #   APPLE_ID                the Apple ID of the developer account
@@ -48,6 +52,7 @@ if [ "$updater" = 1 ] && [ "$version" != "$(node scripts/version.mjs current)" ]
   exit 1
 fi
 echo "Version $version (build $build_number)."
+[[ $version == *-* ]] && echo "A test build: the app is \"Gittor Dev\". It runs next to the release Gittor."
 
 # The version, the build number and the updater settings go into a second config file that Tauri merges
 # with tauri.conf.json.
@@ -60,9 +65,17 @@ if [ "$updater" = 1 ]; then
   done
   pubkey=$TAURI_UPDATER_PUBKEY
 fi
+name=Gittor
+[[ $version == *-* ]] && name="Gittor Dev"
 node -e '
   const [file, version, build, key, repo] = process.argv.slice(1);
   const config = { version, bundle: { macOS: { bundleVersion: build } } };
+  if (version.includes("-")) {
+    // A test build: another app, next to the release.
+    config.productName = "Gittor Dev";
+    config.identifier = "dev.gittor.app.dev";
+    config.bundle.icon = ["icons-dev/icon.png", "icons-dev/icon.icns"];
+  }
   if (key) {
     config.bundle.createUpdaterArtifacts = true;
     config.plugins = { updater: { pubkey: key.trim(), endpoints: [`https://github.com/${repo}/releases/latest/download/latest.json`] } };
@@ -106,7 +119,7 @@ npm --prefix ui install
 
 dir=target/release/bundle
 [ "$universal" = 1 ] && dir=target/universal-apple-darwin/release/bundle
-app="$dir/macos/Gittor.app"
+app="$dir/macos/$name.app"
 dmg=$(ls -t "$dir"/dmg/*.dmg | head -n 1)
 
 if [ "$unsigned" = 0 ]; then

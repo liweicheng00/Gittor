@@ -113,6 +113,16 @@ impl Service {
         gittor_git::git_version(&args.path).map_err(err)
     }
 
+    /// The copy of the settings of the front end, for a new app (Gittor Dev) with empty storage.
+    pub fn ui_settings(&self) -> Result<Option<String>> {
+        Ok(config::load_ui(&self.config_dir))
+    }
+
+    /// Keeps a copy of the settings of the front end in the settings directory.
+    pub fn save_ui_settings(&self, args: crate::UiSettingsArgs) -> Result<()> {
+        config::save_ui(&self.config_dir, &args.text)
+    }
+
     pub fn backend_settings(&self) -> Result<config::BackendSettings> {
         Ok(self.settings.lock().unwrap().clone())
     }

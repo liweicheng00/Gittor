@@ -50,6 +50,8 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | Changelists, Local History, temporary files | `<git dir>/gittor/` of each worktree |
 | Reviews and favorite branches | `<common git dir>/gittor/`, shared by all worktrees |
 | Git program, Local History limits, editor, terminal | `settings.json` in `~/.config/gittor` (Linux), `~/Library/Application Support/gittor` (macOS) or `%APPDATA%\gittor` (Windows) |
+| A copy of the UI settings, for Gittor Dev | `ui-settings.json` in the same folder |
+| The settings of Gittor Dev (a test build) | the folder `gittor-dev` next to it; the first start copies the folder `gittor` |
 | Other settings and recent repositories | The storage of the window |
 
 Nothing goes to a remote.
@@ -98,7 +100,8 @@ scripts/release.sh minor    # 0.2.1 -> 0.3.0; also "major", or a version such as
 The script finds the next version, sets it in all files, commits, tags it (for example `v0.2.1`) and
 pushes. A build that is not at a release tag, or that has changes, is a test build: its version has a
 label, for example `0.2.2-dev.5+a1b2c3d4` (5 commits after 0.2.1, at commit `a1b2c3d4`). The name of
-the `.dmg` and Settings › General show it. The tag starts the
+the `.dmg` and Settings › General show it. A test build is the app "Gittor Dev", with its own
+identifier, icon and settings, so it runs next to the release Gittor. The tag starts the
 `Release` workflow on GitHub (`.github/workflows/release.yml`). It builds the universal app with
 `scripts/build-dmg.sh --universal --updater`, signs and notarizes it, and publishes a release with the
 `.dmg`, `Gittor.app.tar.gz`, its `.sig` and `latest.json`. The apps that run find the update at their

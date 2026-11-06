@@ -97,6 +97,11 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   without changes has the release version. Any other build is a test build, for example
   `0.2.1-dev.5+a1b2c3d4`; Settings › General marks it "Test build". `build-dmg.sh` writes the version
   and the build number (`CFBundleVersion`, the number of commits) into `target/tauri.build.conf.json`.
+  A test build is the app "Gittor Dev": identifier `dev.gittor.app.dev`, the icons of
+  `crates/app/icons-dev` (`source-1024.png` is the source for `tauri icon`). `main.rs` sees the
+  identifier and calls `config::use_dev_dir`: the settings folder `gittor-dev`, a copy of `gittor` at
+  the first start. The UI keeps a copy of its settings in `ui-settings.json` (`startSettingsCopy` in
+  `main.ts`, only in the app); a first start with empty storage takes them from there and loads again.
 - CI: `.github/workflows/ci.yml` runs the tests, clippy, the types, the unit tests and all UI
   scenarios on each push to main, the scenarios in 4 parts on 4 machines. Failed scenarios run once
   more alone.

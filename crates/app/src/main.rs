@@ -144,6 +144,12 @@ fn main() {
     gittor_service::askpass::run_helper_if_requested();
     #[cfg(target_os = "linux")]
     use_software_rendering_without_gpu();
+    let context = tauri::generate_context!();
+    // A test build (identifier ending in ".dev", see scripts/build-dmg.sh) runs next to a release with
+    // its own settings.
+    if context.config().identifier.ends_with(".dev") {
+        gittor_service::config::use_dev_dir();
+    }
     let builder = tauri::Builder::default();
     #[cfg(target_os = "macos")]
     let builder = builder.menu(app_menu);
@@ -178,6 +184,6 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![initial_path, call, set_zoom, open_window, focus_window, updates_enabled])
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("error while running Gittor");
 }

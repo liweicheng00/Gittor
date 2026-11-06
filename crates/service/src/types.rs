@@ -141,6 +141,11 @@ pub enum ReviewEdit {
 }
 
 #[derive(Deserialize)]
+pub struct UiSettingsArgs {
+    pub text: String,
+}
+
+#[derive(Deserialize)]
 pub struct TagArgs {
     pub name: String,
 }

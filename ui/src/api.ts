@@ -289,6 +289,9 @@ export const api = {
   /** The pattern that decides about a path of the active repository; null when no pattern matches. */
   checkIgnore: (path: string) => call<IgnoreMatch | null>("check_ignore", { path }),
   backendSettings: () => call<BackendSettings>("backend_settings"),
+  /** The copy of the UI settings in the settings folder; null when there is none. */
+  uiSettings: () => call<string | null>("ui_settings"),
+  saveUiSettings: (text: string) => call<null>("save_ui_settings", { text }),
   /** Applies and saves the settings of the backend; returns the version of the git program. */
   setBackendSettings: (s: BackendSettings) => call<string>("set_backend_settings", s),
   favorites: () => call<string[] | null>("favorites"),

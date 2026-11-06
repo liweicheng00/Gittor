@@ -16,10 +16,10 @@ import "./keyboard";
 // Each feature module `*-flow.ts` loads here by itself: a new feature needs no line in this file. The
 // modules import what they use, so the order of the files does not count.
 import.meta.glob("./*-flow.ts", { eager: true });
-import { initialPath } from "./api";
+import { api, initialPath, inTauri } from "./api";
 import { openRepo, renderTabs, switchTab } from "./repo";
 import { resetWindowRoots } from "./window-roots";
-import { settings, soloWindow } from "./settings";
+import { firstStart, restoreSettings, settings, soloWindow, startSettingsCopy } from "./settings";
 import { applyBackendSettings, scheduleAutoFetch } from "./settings-flow";
 import { applyLayout, applyTheme, showLeftTab } from "./shell";
 import { showWorkspace } from "./welcome";
@@ -38,6 +38,22 @@ document.addEventListener(
   },
   true,
 );
+// The app keeps a copy of the UI settings in the settings folder. A new app with empty storage, such
+// as Gittor Dev at its first start, takes the settings from the copy and loads again. Only the app
+// does this: the browser of the e2e scenarios starts empty each time.
+if (inTauri && !soloWindow) {
+  const copy = firstStart ? await api.uiSettings().catch(() => null) : null;
+  if (copy) {
+    restoreSettings(copy);
+    location.reload();
+    await new Promise(() => {});
+  }
+  let timer = 0;
+  startSettingsCopy((text) => {
+    clearTimeout(timer);
+    timer = window.setTimeout(() => void api.saveUiSettings(text).catch(() => {}), 1000);
+  });
+}
 applyLayout();
 showLeftTab(settings.leftTab);
 applyTheme();

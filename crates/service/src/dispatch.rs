@@ -35,6 +35,8 @@ impl Service {
             "check_ignore" => serde_json::to_string(&self.check_ignore(parse(body)?)?),
             "backend_settings" => serde_json::to_string(&self.backend_settings()?),
             "set_backend_settings" => serde_json::to_string(&self.set_backend_settings(parse(body)?)?),
+            "save_ui_settings" => serde_json::to_string(&self.save_ui_settings(parse(body)?)?),
+            "ui_settings" => serde_json::to_string(&self.ui_settings()?),
             "favorites" => serde_json::to_string(&self.favorites()?),
             "set_favorites" => serde_json::to_string(&self.set_favorites(parse::<FavoritesArgs>(body)?.refs)?),
             "activate" => serde_json::to_string(&self.activate(parse(body)?)?),

@@ -168,6 +168,32 @@ const DEFAULTS: Settings = {
 
 const KEY = "gittor.settings.v1";
 
+/** The storage had no settings at the start: a new install, or a new app such as Gittor Dev. */
+export const firstStart = (() => {
+  try {
+    return localStorage.getItem(KEY) === null;
+  } catch {
+    return false;
+  }
+})();
+
+/**
+ * Called with the saved settings, after `startSettingsCopy`. The app keeps a copy of them in the settings
+ * folder of the backend, so another app (Gittor Dev) can start with them.
+ */
+let copyHook: ((text: string) => void) | null = null;
+
+/** Starts the copy of the settings. */
+export function startSettingsCopy(hook: (text: string) => void) {
+  copyHook = hook;
+  hook(localStorage.getItem(KEY) ?? JSON.stringify(settings));
+}
+
+/** Puts settings from the copy into the storage. The settings take effect after a reload. */
+export function restoreSettings(text: string) {
+  localStorage.setItem(KEY, text);
+}
+
 function load(): Settings {
   try {
     const raw = localStorage.getItem(KEY);
@@ -212,7 +238,9 @@ export function save() {
   try {
     // A solo window keeps the tabs of the session as they are in the storage.
     const out = soloWindow ? { ...settings, ...Object.fromEntries(PER_WINDOW.map((k) => [k, stored()[k] ?? DEFAULTS[k]])) } : settings;
-    localStorage.setItem(KEY, JSON.stringify(out));
+    const text = JSON.stringify(out);
+    localStorage.setItem(KEY, text);
+    copyHook?.(text);
   } catch {}
 }
 
