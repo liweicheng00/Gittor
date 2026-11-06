@@ -1,6 +1,6 @@
 // UI scenario for Open in Editor: choose the editor in the settings, then open a file with F4, the button of
 // the diff and the file menu, at the line of the cursor. A small script stands in for the editor and writes
-// its arguments to a file. The IDE button opens the folder of the repository. A missing program shows an
+// its arguments to a file. The IDE button opens the repository at the file in view. A missing program shows an
 // error.
 // Start the dev server first (see README). Build a fresh repository with make-demo-repo.sh, then:
 // node e2e/open-in-editor.mjs <repo> <screenshot-dir>.
@@ -101,16 +101,17 @@ await within("F4 in the Compare window opens its file", async () => opened().sta
 await page.keyboard.press("Escape");
 await page.waitForSelector(".merge-overlay", { state: "detached" });
 
-// The IDE button opens the folder of the repository, without the line. Shift+F4 does the same.
+// The IDE button opens the folder of the repository and the file of the diff panel at the cursor.
 rmSync(log, { force: true });
 await page.click(".tb-ide");
-await within("the IDE button opens the folder of the repository", async () => opened() === repo);
+await within("the IDE button opens the repository at the file of the diff", async () => opened().startsWith(`${repo}\n--goto\n${repo}/main.rs:`));
 await within("the click shows the key of the button", async () => ((await page.textContent(".key-hint").catch(() => "")) ?? "").includes("Shift+F4"));
 await shot("oe4-ide");
+// Shift+F4 does the same.
 rmSync(log, { force: true });
-await page.click(".log-row >> nth=1");
+await page.click(".cl-file:has(.path:text-is('main.rs'))");
 await page.keyboard.press("Shift+F4");
-await within("Shift+F4 opens the folder of the repository", async () => opened() === repo);
+await within("Shift+F4 opens the repository at the file of the diff", async () => opened().startsWith(`${repo}\n--goto\n${repo}/main.rs:`));
 
 // The Review window has the IDE button too, and Shift+F4 works there.
 await page.click(".lp-tab:text-is('Branches')");
@@ -121,12 +122,27 @@ await page.click(".dialog-buttons button:has-text('Start Review')");
 await page.waitForSelector(".review-window .review-ide");
 rmSync(log, { force: true });
 await page.click(".review-window .review-ide");
-await within("the IDE button of a review opens the folder of the repository", async () => opened() === repo);
+// cli.rs of the reviewed branch is not in the working tree: the editor opens the folder only.
+await within("the IDE button of a review opens the folder when the file is not in the working tree", async () => opened() === repo);
 rmSync(log, { force: true });
 await page.click(".review-window .review-files");
 await page.keyboard.press("Shift+F4");
 await within("Shift+F4 works in the Review window", async () => opened() === repo);
 await shot("oe5-review-ide");
+await page.keyboard.press("Escape");
+await page.waitForSelector(".review-window", { state: "detached" });
+
+// topic/readme changes README.md, which is in the working tree: the IDE opens at that file.
+await page.click(".lp-tab:text-is('Branches')");
+await page.click(".sidebar .branch:has(.branch-name:text-is('topic/readme')) >> nth=0", { button: "right" });
+await page.waitForTimeout(400);
+await page.click(".menu-item:has-text('Review Branch')");
+await page.click(".dialog-buttons button:has-text('Start Review')");
+await page.waitForSelector(".review-window .review-ide");
+await page.waitForFunction(() => document.querySelector(".review-window .diff-title")?.textContent?.includes("README.md"));
+rmSync(log, { force: true });
+await page.click(".review-window .review-ide");
+await within("the IDE button of a review opens the repository at the file of the review", async () => opened().startsWith(`${repo}\n--goto\n${repo}/README.md:`));
 await page.keyboard.press("Escape");
 await page.waitForSelector(".review-window", { state: "detached" });
 await page.click(".lp-tab:text-is('Changes')");

@@ -105,6 +105,17 @@ pub fn project_command(template: &str, dir: &Path) -> Result<(String, Vec<String
     Ok((program, out))
 }
 
+/// The project command, then the arguments of the command of a file at a line. Most editors take both
+/// in one call: they open the folder as a project and show the file in it, for example
+/// "code <folder> --goto <file>:<line>:<column>" or "idea <folder> --line <line> <file>".
+pub fn project_file_command(template: &str, dir: &Path, file: Option<(&Path, u32, u32)>) -> Result<(String, Vec<String>)> {
+    let (program, mut args) = project_command(template, dir)?;
+    if let Some((file, line, column)) = file {
+        args.extend(editor_command(template, file, line, column)?.1);
+    }
+    Ok((program, args))
+}
+
 /// The default app of the system for a file.
 fn system_open(file: &str) -> (String, Vec<String>) {
     if cfg!(target_os = "macos") {
@@ -186,11 +197,14 @@ impl Service {
         start_editor(&program, &list, &root)
     }
 
-    /// Opens the working tree of the current repository in the editor of the settings, as a project.
-    pub fn open_project_in_editor(&self) -> Result<()> {
+    /// Opens the working tree of the current repository in the editor of the settings, as a project. With
+    /// a path, the editor also shows that file at the line. A path that is not in the working tree (for
+    /// example a file of another branch) opens the project only.
+    pub fn open_project_in_editor(&self, args: EditorArgs) -> Result<()> {
         let root = self.with_repo(|r| Ok(r.root.clone()))?;
         let template = self.settings.lock().unwrap().editor.clone();
-        let (program, list) = project_command(&template, &root)?;
+        let file = (!args.path.is_empty()).then(|| working_tree_file(&root, &args.path).ok()).flatten();
+        let (program, list) = project_file_command(&template, &root, file.as_deref().map(|f| (f, args.line.max(1), args.column.max(1))))?;
         start_editor(&program, &list, &root)
     }
 }
@@ -234,6 +248,21 @@ mod tests {
         assert_eq!(a, ["/r/x;rm -rf y:1"]);
         let (p, a) = editor_command("", f, 1, 1).unwrap();
         assert!(!p.is_empty() && a.last().unwrap() == "/r/a b.rs");
+    }
+
+    #[test]
+    fn opens_the_folder_and_the_file() {
+        let d = Path::new("/r/app");
+        let f = Path::new("/r/app/src/a.rs");
+        let run = |t: &str| {
+            let (p, a) = project_file_command(t, d, Some((f, 12, 3))).unwrap();
+            std::iter::once(p).chain(a).collect::<Vec<_>>().join("|")
+        };
+        assert_eq!(run("code --goto {file}:{line}:{column}"), "code|/r/app|--goto|/r/app/src/a.rs:12:3");
+        assert_eq!(run("idea --line {line} --column {column} {file}"), "idea|/r/app|--line|12|--column|3|/r/app/src/a.rs");
+        assert_eq!(run("zed {file}:{line}:{column}"), "zed|/r/app|/r/app/src/a.rs:12:3");
+        let (_, a) = project_file_command("code --goto {file}:{line}:{column}", d, None).unwrap();
+        assert_eq!(a, ["/r/app"], "without a file, the folder only");
     }
 
     #[test]

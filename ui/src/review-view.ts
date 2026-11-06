@@ -78,7 +78,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
   const info = h("span", { class: "muted-inline review-info" });
   const finishBtn = h("button", { class: "tb-button primary review-merge" }, "Merge…");
   const closeBtn = h("button", { class: "tb-button" }, "Close");
-  const ideBtn = h("button", { class: "tb-button tb-icon review-ide", title: "Open the repository in the editor of Settings › Editor", "data-key-action": "openProjectInEditor" }, icon("ide"));
+  const ideBtn = h("button", { class: "tb-button tb-icon review-ide", title: "Open the repository in the editor of Settings › Editor, at the file of the review", "data-key-action": "openProjectInEditor" }, icon("ide"));
   ideBtn.addEventListener("click", () => cb.openInIde());
   const status = h("div", { class: "review-status" });
   const commitsEl = h("div", { class: "review-commits" });

@@ -166,6 +166,8 @@ pub struct SaveIgnoreArgs {
 /// A file of the working tree and a line in it, both 1-based.
 #[derive(Deserialize)]
 pub struct EditorArgs {
+    /// Empty for Open in IDE without a file.
+    #[serde(default)]
     pub path: String,
     #[serde(default)]
     pub line: u32,
