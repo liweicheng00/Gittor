@@ -94,6 +94,8 @@ export class CommitPanel {
   onSaveMessage: (list: string, message: string) => void = () => {};
   onAmendToggle: (on: boolean) => Promise<string> = async () => "";
   onRefresh: () => void = () => {};
+  /** Copies the open notes on all local changes. */
+  onCopyNotes: () => void = () => {};
   onRollback: (files: LocalFile[]) => void = () => {};
   onNewChangeList: () => void = () => {};
   /** Shows the recent commit messages below the anchor. */
@@ -105,6 +107,8 @@ export class CommitPanel {
   private historyBtn: HTMLButtonElement;
 
   constructor() {
+    const copyNotes = h("button", { class: "icon-button commit-copy-notes", title: "Copy the open notes of all changed files" }, icon("copy"));
+    copyNotes.addEventListener("click", () => this.onCopyNotes());
     const refresh = h("button", { class: "icon-button", title: "Refresh the local changes" }, icon("refresh"));
     refresh.addEventListener("click", () => this.onRefresh());
     const rollback = h("button", { class: "icon-button", title: "Roll back the selected files" }, icon("revert"));
@@ -174,7 +178,7 @@ export class CommitPanel {
     this.el = h(
       "section",
       { class: "commit-panel" },
-      h("div", { class: "commit-toolbar" }, refresh, rollback, newList, h("span", { class: "spacer" }), treeBtn, expand, collapse),
+      h("div", { class: "commit-toolbar" }, refresh, rollback, newList, copyNotes, h("span", { class: "spacer" }), treeBtn, expand, collapse),
       this.tree,
       h(
         "div",

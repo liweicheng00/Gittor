@@ -4,7 +4,7 @@ import { visit } from "./nav";
 import { api, type ChangeListView, IGNORE_LIST, type LocalNoteEdit } from "./api";
 import { copyText } from "./dom";
 import type { NoteHandlers } from "./note-layer";
-import { formatNote } from "./note-format";
+import { formatNote, formatNotes } from "./note-format";
 import { type LocalFile } from "./commit-panel";
 import { menuBelow, type MenuItem, showMenu } from "./context-menu";
 import { mergeFile } from "./conflicts";
@@ -26,6 +26,14 @@ async function reloadLocalNotes(path: string) {
   const notes = await api.localNotes(path).catch(() => []);
   if (app.diffSource === "local" && diff.currentPath === path) diff.setNotes(notes.map((n) => ({ ...n, outdated: false })), localNoteHandlers(path));
 }
+
+/** Copies the open notes on all local changes, file by file. A resolved note is done, so it stays out. */
+commitPanel.onCopyNotes = async () => {
+  const open = (await api.localNotes("").catch(() => [])).filter((n) => !n.resolved);
+  if (!open.length) return void toast("There are no open notes on the local changes.", "info");
+  const paths = [...new Set(open.map((n) => n.path))].sort();
+  void copyText(paths.map((p) => formatNotes(p, open.filter((n) => n.path === p))).join("\n\n"));
+};
 
 /** Add, delete, resolve and copy for the notes on the local changes of a file. */
 function localNoteHandlers(path: string): NoteHandlers {
