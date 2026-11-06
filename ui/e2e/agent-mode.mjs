@@ -238,6 +238,79 @@ await page.click(".am-wf-card .am-card-open");
 await within("the card opens the workflow", async () => ((await page.textContent(".am-wf-tab.active").catch(() => "")) ?? "").includes("Release") && !(await page.$(".am-card[data-node='hello']")));
 await page.click(".am-wf-tab:has-text('Main')");
 await page.waitForSelector(".am-card[data-node='to-release']");
+await within("the camera is still", async () => !(await page.$(".am-flying")));
+
+// Edit the canvas in the window. A point of the empty canvas, out of the cards and the agent window:
+const emptyPoint = () =>
+  page.evaluate(() => {
+    const r = document.querySelector(".am-canvas").getBoundingClientRect();
+    for (let y = r.top + 60; y < r.bottom - 60; y += 30)
+      for (let x = r.left + 60; x < r.right - 60; x += 30) {
+        const el = document.elementFromPoint(x, y);
+        if (el && !el.closest(".am-card, .am-canvas-controls, .am-crumbs, .am-dock, .am-dock-pill, .am-edge-hit")) return { x, y };
+      }
+    return null;
+  });
+const layoutNow = () => JSON.parse(readFileSync(join(dir, "layout.json"), "utf8")).children[1];
+// A double click on the empty canvas adds a note; Ctrl+Enter saves its text.
+const spot = await emptyPoint();
+await page.mouse.dblclick(spot.x, spot.y);
+await page.waitForSelector(".am-card[data-node='note'] .am-note-edit");
+await page.keyboard.type("Plan the release");
+await page.keyboard.press("Control+Enter");
+await page.waitForSelector(".am-card[data-node='note'] .am-note:text-is('Plan the release')");
+await within("the note is in layout.json", async () => layoutNow().nodes.some((n) => n.id === "note" && n.note === "Plan the release"));
+// The + button adds a card from a mod.
+await page.click(".am-add-card");
+await page.waitForTimeout(400);
+await page.click(".menu-item:has-text('New Card from a Mod')");
+await page.selectOption(".overlay select.dialog-input", "stashes");
+await page.click(".overlay button:has-text('Add')");
+await page.waitForSelector(".am-card[data-node='stashes'] .x-stashes");
+check("the new card is in layout.json", layoutNow().nodes.some((n) => n.id === "stashes" && n.mod === "stashes"));
+// A drag from a port of the note to the new card connects them.
+await page.click(".am-fit");
+const port = await page.locator(".am-card[data-node='note'] .am-port-right").boundingBox();
+const target = await page.locator(".am-card[data-node='stashes'] .am-card-head").boundingBox();
+await page.mouse.move(port.x + port.width / 2, port.y + port.height / 2);
+await page.mouse.down();
+await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 8 });
+await page.screenshot({ path: `${outDir}/am9-connecting.png` });
+await page.mouse.up();
+await page.waitForSelector(".am-edges g[data-edge='note>stashes']");
+check("the edge is in layout.json", layoutNow().edges.some((e) => e.from === "note" && e.to === "stashes"));
+// A double click on the edge gives it a label.
+// The edge runs under the cards: take a point of it that no card covers.
+const mid = await page.evaluate(() => {
+  const p = document.querySelector("g[data-edge='note>stashes'] .am-edge-hit");
+  const m = p.getScreenCTM();
+  for (let t = 0.5; t > 0.05; t -= 0.05)
+    for (const u of [t, 1 - t]) {
+      const pt = p.getPointAtLength(p.getTotalLength() * u);
+      const at = { x: pt.x * m.a + m.e, y: pt.y * m.d + m.f };
+      if (document.elementFromPoint(at.x, at.y) === p) return at;
+    }
+  return null;
+});
+await page.mouse.dblclick(mid.x, mid.y);
+await page.fill(".overlay .dialog-input >> nth=0", "plan");
+await page.click(".overlay button:has-text('Save')");
+await page.waitForSelector("g[data-edge='note>stashes'] .am-edge-label");
+check("the label is in layout.json", layoutNow().edges.find((e) => e.from === "note").label === "plan");
+await shot("am10-edited-canvas");
+// The context menu of a card changes its title, and deletes a card with its edges.
+await page.click(".am-card[data-node='stashes'] .am-card-head", { button: "right" });
+await page.waitForTimeout(400);
+await page.click(".menu-item:has-text('Edit the Card')");
+await page.fill(".overlay .dialog-input >> nth=0", "Stash list");
+await page.click(".overlay button:has-text('Save')");
+await page.waitForSelector(".am-card[data-node='stashes'] .am-card-title:text-is('Stash list')");
+await page.click(".am-card[data-node='note'] .am-card-head", { button: "right" });
+await page.waitForTimeout(400);
+await page.click(".menu-item:has-text('Delete the Card')");
+await page.click(".overlay button:has-text('Delete')");
+await within("the note and its edge go away", async () => !(await page.$(".am-card[data-node='note']")) && !(await page.$("g[data-edge='note>stashes']")));
+check("layout.json has no note and no edge of it", !layoutNow().nodes.some((n) => n.id === "note") && !layoutNow().edges.some((e) => e.from === "note"));
 
 // The keys of the Git side do not work on the back side; Ctrl+Shift+A turns back.
 await page.click(".x-chat-input");

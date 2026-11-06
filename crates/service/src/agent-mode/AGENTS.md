@@ -100,6 +100,11 @@ The canvas:
   shows the projects of that workflow, and a click on it opens that workflow in a tab. The id is the
   name of the folder of the workflow. Example: `{ "id": "to-release", "workflow": "release", "x": 900,
   "y": 40, "w": 260 }`.
+- **Note cards.** A card with `"note": "<text>"` and no `mod` shows the text. The user writes notes on
+  the canvas; read them, they often say what the user wants.
+- The user also edits the canvas in the window: a double click on the empty canvas adds a note, the
+  context menu and the + button add cards, a drag from the dot on the side of a card to another card
+  adds an edge, and a double click on an edge changes its label. Gittor writes all of it into this file.
 - When the user drags a card, Gittor writes the new `x` and `y` into this file. Read the file again
   before you change it, so that you keep the places of the user.
 - Put a new card where there is free space, for example to the right of the last card.

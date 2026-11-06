@@ -131,6 +131,10 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   zoom. A card with `children` is a nested canvas; a card without opens a detail view. `Canvas.open` flies
   into a card (a tween of the view, then a fade), `goTo` flies out; each level keeps its own view in the
   storage. The canvas mounts the mods of its cards through `canvasHost` (`addBlock`, `removeBlock`).
+  The user edits the canvas: a double click on the empty canvas adds a note card (`note`), the context menu
+  and the + button add cards, a drag from a port (`.am-port`) adds an edge, a double click on an edge
+  (`.am-edge-hit`) sets its label. `Canvas.commit` saves and draws the level again. Edges run under the
+  cards: a test clicks a point of an edge that `elementFromPoint` finds.
   A drag of a card writes `layout.json` (`mode_save_layout`) and sets `layoutText` first, so the poll does
   not draw the canvas again. A test measures a card only when `.am-flying` is gone, and drags a card
   only after a reload ends.

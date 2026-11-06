@@ -3,6 +3,8 @@
 // with a double click on its title, its open button, or a zoom past the largest size. The camera then
 // flies into the card, and the inner level fades in. The trail at the top left and Esc go back up.
 
+import { menuBelow, showMenu, type MenuItem } from "./context-menu";
+import { confirmDialog, formDialog } from "./dialogs";
 import { h } from "./dom";
 import { icon } from "./icons";
 
@@ -12,6 +14,8 @@ export interface CanvasNode {
   mod?: string;
   /** The id of another workflow: the card links to it, and opens it. */
   workflow?: string;
+  /** The text of a note card. A note card has no mod. */
+  note?: string;
   x: number;
   y: number;
   w?: number;
@@ -50,7 +54,9 @@ export function checkCanvas(c: { nodes?: CanvasNode[]; edges?: CanvasEdge[] }, a
     ids.add(n.id);
     if (n.workflow !== undefined) {
       if (typeof n.workflow !== "string" || !n.workflow) return `${p}.workflow is not a string`;
-    } else if (typeof n.mod !== "string") return `${p} needs "mod", or "workflow" for a card of another workflow`;
+    } else if (n.note !== undefined) {
+      if (typeof n.note !== "string") return `${p}.note is not a string`;
+    } else if (typeof n.mod !== "string") return `${p} needs "mod", "note", or "workflow" for a card of another workflow`;
     if (typeof n.x !== "number" || typeof n.y !== "number") return `${p} needs the numbers "x" and "y"`;
     if (n.detail !== undefined && typeof n.detail !== "string") return `${p}.detail is not a string`;
     if (n.children !== undefined) {
@@ -80,6 +86,10 @@ export interface CanvasHost {
   workflowName(id: string): string;
   /** Shows another workflow. False when it cannot. */
   openWorkflow(id: string): Promise<boolean>;
+  /** The names of the mods of the workflow, for a new card. */
+  mods(): string[];
+  /** The other workflows, for a workflow card. */
+  workflows(): { id: string; name: string }[];
 }
 
 const SVG = "http://www.w3.org/2000/svg";
@@ -137,9 +147,18 @@ export class Canvas {
       h("button", { class: "tb-button", title: "Zoom in", onclick: () => this.zoomBy(1.2) }, "+"),
       h("button", { class: "tb-button am-fit", title: "Show all cards", onclick: () => this.fit() }, "Fit"),
     );
+    const addBtn = h("button", { class: "tb-button tb-icon am-add-card", title: "Add a card", "aria-label": "Add a card" }, icon("add"));
+    addBtn.addEventListener("click", () => menuBelow(addBtn, this.addItems(this.freeSpot(this.centre()))));
+    this.controls.prepend(addBtn);
     this.el = h("div", { class: "am-canvas", tabindex: "-1" }, this.stage, this.detail, this.crumbs, this.controls);
     this.el.addEventListener("mousedown", (e) => this.startPan(e));
     this.el.addEventListener("wheel", (e) => this.onWheel(e), { passive: false });
+    this.el.addEventListener("contextmenu", (e) => this.onMenu(e));
+    // A double click on the empty canvas writes a note there.
+    this.el.addEventListener("dblclick", (e) => {
+      if (this.isDetail() || (e.target as Element).closest(".am-card, .am-canvas-controls, .am-crumbs, .am-edge-hit")) return;
+      void this.addNote(this.toWorld(e.clientX, e.clientY));
+    });
     this.el.addEventListener("keydown", (e) => {
       const t = e.target as HTMLElement;
       if (e.key !== "Escape" || !this.path.length || t.matches("input, textarea, select") || t.closest(".monaco-editor")) return;
@@ -364,13 +383,22 @@ export class Canvas {
   private addCard(n: CanvasNode) {
     const inner = n.children?.length ?? 0;
     const wf = n.workflow;
+    const note = n.note !== undefined && !inner;
     const openBtn = wf
       ? h("button", { class: "am-card-open", title: "Open the workflow", onclick: () => void this.open(n) }, icon("workflow"), h("span", {}, "Open"))
-      : h("button", { class: "am-card-open", title: inner ? `Open: ${inner} cards inside` : "Open the details", onclick: () => void this.open(n) }, icon("open-card"), inner ? h("span", {}, String(inner)) : null);
-    const title = n.title ?? (wf ? this.host.workflowName(wf) : n.mod);
+      : note
+        ? null
+        : h("button", { class: "am-card-open", title: inner ? `Open: ${inner} cards inside` : "Open the details", onclick: () => void this.open(n) }, icon("open-card"), inner ? h("span", {}, String(inner)) : null);
+    const title = n.title ?? (wf ? this.host.workflowName(wf) : note ? "Note" : n.mod);
     const head = h("div", { class: "am-card-head", title: "Drag to move the card. Double-click to open it." }, wf ? icon("workflow") : null, h("span", { class: "am-card-title" }, title), openBtn);
     const body = h("div", { class: "am-card-body am-block", "data-mod": n.mod ?? "" });
-    const el = h("div", { class: `am-card${inner ? " am-stack" : ""}${wf ? " am-wf-card" : ""}`, "data-node": n.id }, head, body);
+    const el = h("div", { class: `am-card${inner ? " am-stack" : ""}${wf ? " am-wf-card" : ""}${note ? " am-note-card" : ""}`, "data-node": n.id }, head, body);
+    // The ports: drag from one to another card to connect the two cards.
+    for (const side of ["top", "right", "bottom", "left"]) {
+      const port = h("span", { class: `am-port am-port-${side}`, title: "Drag to another card to connect" });
+      port.addEventListener("mousedown", (e) => this.startConnect(e, n, port));
+      el.append(port);
+    }
     if (n.class) el.classList.add(...n.class.split(/\s+/).filter(Boolean));
     el.style.left = `${n.x}px`;
     el.style.top = `${n.y}px`;
@@ -379,14 +407,269 @@ export class Canvas {
     head.addEventListener("mousedown", (e) => {
       if (!(e.target as Element).closest(".am-card-open")) this.startDrag(e, n, el);
     });
-    head.addEventListener("dblclick", () => void this.open(n));
+    head.addEventListener("dblclick", () => void (note ? this.editNote(n) : this.open(n)));
     this.cards.set(n.id, { node: n, el, body });
     this.resize.observe(el);
     this.world.append(el);
     if (wf) {
       this.host.workflowCard(body, wf);
       body.addEventListener("dblclick", () => void this.open(n));
+    } else if (note) {
+      body.append(n.note ? h("div", { class: "am-note" }, n.note) : h("div", { class: "am-note am-note-empty" }, "Double-click to write."));
+      body.addEventListener("dblclick", () => this.editNote(n));
     } else this.host.mount(body, n.mod ?? "", n.props ?? {});
+  }
+
+  // ---- Editing: add, change and delete cards and edges ----
+
+  /** The cards and edges of this level, to change them. */
+  private editLevel(): { nodes: CanvasNode[]; edges: CanvasEdge[] } {
+    const top = this.path[this.path.length - 1];
+    if (top) {
+      top.children ??= [];
+      top.edges ??= [];
+      return { nodes: top.children, edges: top.edges };
+    }
+    this.spec.edges ??= [];
+    return { nodes: this.spec.nodes, edges: this.spec.edges };
+  }
+
+  /** Saves the layout and draws the level again, at the same view. */
+  private commit() {
+    saveView(this.key(), this.view);
+    this.host.moved();
+    this.renderLevel();
+  }
+
+  /** An id that no card of this level has. */
+  private newId(base: string): string {
+    const ids = new Set(this.editLevel().nodes.map((n) => n.id));
+    const clean = base.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "card";
+    let id = clean;
+    for (let i = 2; ids.has(id); i++) id = `${clean}-${i}`;
+    return id;
+  }
+
+  /** The point of the canvas under a point of the screen. */
+  private toWorld(cx: number, cy: number) {
+    const r = this.el.getBoundingClientRect();
+    return { x: Math.round((cx - r.left - this.view.x) / this.view.z), y: Math.round((cy - r.top - this.view.y) / this.view.z) };
+  }
+
+  /** The point of the canvas in the middle of the screen. */
+  private centre() {
+    const r = this.el.getBoundingClientRect();
+    return this.toWorld(r.left + r.width / 2 - 120, r.top + r.height / 2 - 60);
+  }
+
+  /** The first place near `at`, to the right and then down, where a new card covers no card. */
+  private freeSpot(at: { x: number; y: number }, w = 300, hh = 200) {
+    const boxes = [...this.cards.values()].map(({ el }) => rect(el));
+    const free = (x: number, y: number) => boxes.every((b) => x + w + 24 < b.x || x > b.r + 24 || y + hh + 24 < b.y || y > b.b + 24);
+    for (let row = 0; row < 12; row++)
+      for (let col = 0; col < 8; col++) {
+        const x = at.x + col * 160, y = at.y + row * 120;
+        if (free(x, y)) return { x, y };
+      }
+    return at;
+  }
+
+  private addItems(at: { x: number; y: number }): MenuItem[] {
+    const others = this.host.workflows();
+    return [
+      { label: "New Note", icon: "edit", action: () => void this.addNote(at) },
+      { label: "New Card from a Mod…", icon: "add", action: () => void this.addModCard(at) },
+      { label: "New Workflow Card…", icon: "workflow", disabled: !others.length, action: () => void this.addWorkflowCard(at) },
+    ];
+  }
+
+  private add(n: CanvasNode) {
+    this.editLevel().nodes.push(n);
+    this.commit();
+  }
+
+  /** Adds a note card at the point, and opens its text for typing. */
+  async addNote(at: { x: number; y: number }) {
+    if (this.isDetail()) return;
+    const n: CanvasNode = { id: this.newId("note"), note: "", x: at.x, y: at.y, w: 240 };
+    this.add(n);
+    this.editNote(n);
+  }
+
+  private async addModCard(at: { x: number; y: number }) {
+    const mods = this.host.mods();
+    const r = await formDialog(
+      "New Card",
+      [
+        { key: "mod", label: "Mod: the code that draws the card", type: "select", options: mods.map((m) => [m, m]), value: mods[0] },
+        { key: "title", label: "Title", placeholder: "the name of the mod" },
+      ],
+      "Add",
+      "A mod is a folder in mods/. Ask the agent to write a new mod for a card that does not exist yet.",
+    );
+    if (!r || !r.mod) return;
+    const n: CanvasNode = { id: this.newId(String(r.mod)), mod: String(r.mod), x: at.x, y: at.y, w: 300 };
+    if (String(r.title).trim()) n.title = String(r.title).trim();
+    this.add(n);
+  }
+
+  private async addWorkflowCard(at: { x: number; y: number }) {
+    const others = this.host.workflows();
+    const r = await formDialog("New Workflow Card", [{ key: "workflow", label: "Workflow", type: "select", options: others.map((w) => [w.id, w.name]), value: others[0]?.id }], "Add");
+    if (!r || !r.workflow) return;
+    this.add({ id: this.newId(`to-${r.workflow}`), workflow: String(r.workflow), x: at.x, y: at.y, w: 260 });
+  }
+
+  /** Changes the title, the size and the content of a card in a dialog. */
+  private async editCard(n: CanvasNode) {
+    const fields: Parameters<typeof formDialog>[1] = [{ key: "title", label: "Title", value: n.title ?? "" }];
+    if (n.note !== undefined && !n.children?.length) fields.push({ key: "note", label: "Text", type: "textarea", value: n.note });
+    else if (n.workflow !== undefined) fields.push({ key: "workflow", label: "Workflow", type: "select", options: this.host.workflows().map((w) => [w.id, w.name]), value: n.workflow });
+    else fields.push({ key: "mod", label: "Mod", type: "select", options: this.host.mods().map((m) => [m, m]), value: n.mod ?? "" });
+    fields.push({ key: "w", label: "Width (pixels)", value: n.w !== undefined ? String(n.w) : "" }, { key: "h", label: "Height (pixels; empty fits the content)", value: n.h !== undefined ? String(n.h) : "" });
+    const r = await formDialog("Edit Card", fields, "Save");
+    if (!r) return;
+    const title = String(r.title).trim();
+    if (title) n.title = title;
+    else delete n.title;
+    if ("note" in r) n.note = String(r.note);
+    if ("workflow" in r && r.workflow) n.workflow = String(r.workflow);
+    if ("mod" in r && r.mod) n.mod = String(r.mod);
+    for (const k of ["w", "h"] as const) {
+      const v = Number.parseInt(String(r[k]), 10);
+      if (Number.isFinite(v) && v >= 80) n[k] = v;
+      else delete n[k];
+    }
+    this.commit();
+  }
+
+  private async deleteCard(n: CanvasNode) {
+    const name = n.title ?? n.mod ?? n.workflow ?? "Note";
+    const inner = n.children?.length ? ` The ${n.children.length} cards inside go too.` : "";
+    if (!(await confirmDialog("Delete Card", `Delete the card "${name}" and its edges?${inner}`, "Delete", true))) return;
+    const lv = this.editLevel();
+    lv.nodes.splice(lv.nodes.indexOf(n), 1);
+    for (let i = lv.edges.length - 1; i >= 0; i--) if (lv.edges[i].from === n.id || lv.edges[i].to === n.id) lv.edges.splice(i, 1);
+    this.commit();
+  }
+
+  /** Types the text of a note in the card. Ctrl+Enter or a click outside saves it; Esc cancels. */
+  private editNote(n: CanvasNode) {
+    const card = this.cards.get(n.id);
+    if (!card) return;
+    const area = h("textarea", { class: "am-note-edit", placeholder: "Write a note…" });
+    area.value = n.note ?? "";
+    card.body.replaceChildren(area);
+    card.el.classList.add("am-editing");
+    let done = false;
+    const finish = (save: boolean) => {
+      if (done) return;
+      done = true;
+      if (save && area.value !== (n.note ?? "")) {
+        n.note = area.value;
+        this.commit();
+      } else this.renderLevel();
+    };
+    area.addEventListener("keydown", (e) => {
+      e.stopPropagation();
+      if (e.key === "Escape") finish(false);
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) finish(true);
+    });
+    area.addEventListener("blur", () => finish(true));
+    area.addEventListener("mousedown", (e) => e.stopPropagation());
+    requestAnimationFrame(() => area.focus());
+  }
+
+  /** Draws a line from a port while the mouse moves; on a release over another card, it adds an edge. */
+  private startConnect(e: MouseEvent, from: CanvasNode, port: HTMLElement) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const card = this.cards.get(from.id)!.el;
+    const start = { x: card.offsetLeft + port.offsetLeft + port.offsetWidth / 2, y: card.offsetTop + port.offsetTop + port.offsetHeight / 2 };
+    const draft = svg("path", { class: "am-edge am-edge-draft", fill: "none", "marker-end": "url(#am-arrow)" });
+    this.lines.append(draft);
+    this.el.classList.add("am-connecting");
+    let target: HTMLElement | null = null;
+    const move = (m: MouseEvent) => {
+      const p = this.toWorld(m.clientX, m.clientY);
+      draft.setAttribute("d", `M${start.x},${start.y} L${p.x},${p.y}`);
+      const over = (document.elementFromPoint(m.clientX, m.clientY)?.closest(".am-card") as HTMLElement | null) ?? null;
+      const next = over && over !== card ? over : null;
+      if (next !== target) {
+        target?.classList.remove("am-connect-target");
+        next?.classList.add("am-connect-target");
+        target = next;
+      }
+    };
+    const up = () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      draft.remove();
+      this.el.classList.remove("am-connecting");
+      target?.classList.remove("am-connect-target");
+      const to = target?.dataset.node;
+      if (!to) return;
+      const lv = this.editLevel();
+      if (lv.edges.some((x) => x.from === from.id && x.to === to)) return;
+      lv.edges.push({ from: from.id, to });
+      this.host.moved();
+      this.drawEdges();
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  }
+
+  private async editEdgeLabel(edge: CanvasEdge) {
+    const r = await formDialog("Edge Label", [{ key: "label", label: "Label", value: edge.label ?? "", placeholder: "for example: review, deploy" }], "Save");
+    if (!r) return;
+    const label = String(r.label).trim();
+    if (label) edge.label = label;
+    else delete edge.label;
+    this.host.moved();
+    this.drawEdges();
+  }
+
+  private deleteEdge(edge: CanvasEdge) {
+    const lv = this.editLevel();
+    lv.edges.splice(lv.edges.indexOf(edge), 1);
+    this.host.moved();
+    this.drawEdges();
+  }
+
+  /** The context menu of an edge, a card or the empty canvas. A mod that shows its own menu cancels the event. */
+  private onMenu(e: MouseEvent) {
+    if (e.defaultPrevented || this.isDetail() || this.flying) return;
+    const t = e.target as Element;
+    if (t.closest(".am-canvas-controls, .am-crumbs") || t.closest("input, textarea")) return;
+    const edgeEl = t.closest("[data-edge-index]");
+    if (edgeEl) {
+      e.preventDefault();
+      const edge = this.level().edges[Number(edgeEl.getAttribute("data-edge-index"))];
+      if (!edge) return;
+      showMenu(e.clientX, e.clientY, [
+        { label: edge.label ? "Change the Label…" : "Add a Label…", icon: "edit", action: () => void this.editEdgeLabel(edge) },
+        { label: "Delete the Edge", icon: "close", action: () => this.deleteEdge(edge) },
+      ]);
+      return;
+    }
+    const cardEl = t.closest(".am-card") as HTMLElement | null;
+    if (cardEl) {
+      const n = this.cards.get(cardEl.dataset.node ?? "")?.node;
+      if (!n) return;
+      e.preventDefault();
+      const note = n.note !== undefined && !n.children?.length;
+      showMenu(e.clientX, e.clientY, [
+        ...(note ? [] : [{ label: n.workflow ? "Open the Workflow" : "Open", icon: "open-card" as const, action: () => void this.open(n) }]),
+        ...(note ? [{ label: "Write the Note", icon: "edit" as const, action: () => this.editNote(n) }] : []),
+        { label: "Edit the Card…", icon: "edit", action: () => void this.editCard(n) },
+        { separator: true },
+        { label: "Delete the Card…", icon: "close", action: () => void this.deleteCard(n) },
+      ]);
+      return;
+    }
+    e.preventDefault();
+    showMenu(e.clientX, e.clientY, [...this.addItems(this.toWorld(e.clientX, e.clientY)), { separator: true }, { label: "Show All Cards", action: () => this.fit() }]);
   }
 
   private startDrag(e: MouseEvent, n: CanvasNode, el: HTMLElement) {
@@ -507,7 +790,7 @@ export class Canvas {
   drawEdges() {
     for (const old of this.lines.querySelectorAll("g")) old.remove();
     if (this.isDetail()) return;
-    for (const e of this.level().edges) {
+    for (const [index, e] of this.level().edges.entries()) {
       const a = this.cards.get(e.from)?.el, b = this.cards.get(e.to)?.el;
       if (!a || !b) continue;
       const ra = rect(a), rb = rect(b);
@@ -528,8 +811,13 @@ export class Canvas {
         c1 = { x: p1.x, y: p1.y + s * k };
         c2 = { x: p2.x, y: p2.y - s * k };
       }
-      const g = svg("g", { "data-edge": `${e.from}>${e.to}` });
-      g.append(svg("path", { class: "am-edge", d: `M${p1.x},${p1.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${p2.x},${p2.y}`, "marker-end": "url(#am-arrow)", fill: "none" }));
+      const g = svg("g", { "data-edge": `${e.from}>${e.to}`, "data-edge-index": String(index) });
+      const d = `M${p1.x},${p1.y} C${c1.x},${c1.y} ${c2.x},${c2.y} ${p2.x},${p2.y}`;
+      g.append(svg("path", { class: "am-edge", d, "marker-end": "url(#am-arrow)", fill: "none" }));
+      // A wide line without color takes the mouse: a double click changes the label.
+      const hit = svg("path", { class: "am-edge-hit", d, fill: "none" });
+      hit.addEventListener("dblclick", (ev) => (ev.stopPropagation(), void this.editEdgeLabel(e)));
+      g.append(hit);
       if (e.label) {
         // The middle of the cubic curve (t = 0.5).
         const mx = (p1.x + 3 * c1.x + 3 * c2.x + p2.x) / 8, my = (p1.y + 3 * c1.y + 3 * c2.y + p2.y) / 8;

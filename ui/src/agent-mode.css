@@ -115,3 +115,23 @@ body.am-turning #app, body.am-turning .agent-mode { transform-origin: 50% 50%; b
 .am-wf-none, .am-wf-card-meta { color: var(--muted); font-size: 12px; }
 .am-wf-card-meta { margin-top: 6px; }
 .am-wf-card-go { margin-top: 10px; color: var(--accent); font-size: 12px; }
+
+/* Editing on the canvas: the ports of a card, the line while it connects, and the notes. */
+.am-port { position: absolute; z-index: 2; width: 12px; height: 12px; margin: -6px; border-radius: 50%; background: var(--bg); border: 2px solid var(--accent); cursor: crosshair; opacity: 0; transition: opacity 0.12s, transform 0.12s; }
+.am-port-top { left: 50%; top: 0; }
+.am-port-right { left: 100%; top: 50%; }
+.am-port-bottom { left: 50%; top: 100%; }
+.am-port-left { left: 0; top: 50%; }
+.am-card:hover > .am-port, .am-connecting .am-card.am-connect-target > .am-port { opacity: 1; }
+.am-connecting .am-card:not(.am-connect-target) > .am-port { opacity: 0; }
+.am-port:hover { transform: scale(1.35); background: var(--accent); }
+.am-connecting, .am-connecting * { cursor: crosshair !important; }
+.am-card.am-connect-target { outline: 2px solid var(--accent); outline-offset: 3px; }
+.am-edge-draft { stroke-dasharray: 6 5; }
+.am-edge-hit { stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: pointer; }
+.am-edges g:hover .am-edge { stroke-width: 3; }
+.am-note-card { background: color-mix(in srgb, var(--tag) 9%, var(--bg)); border-color: color-mix(in srgb, var(--tag) 35%, var(--border)); }
+.am-note { padding: 2px 12px 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.am-note-empty { color: var(--muted); font-style: italic; }
+.am-note-edit { flex: 1; min-height: 90px; margin: 0 8px 8px; padding: 6px 8px; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--accent); border-radius: 6px; outline: none; resize: vertical; }
+.am-add-card .icon { width: 14px; height: 14px; }

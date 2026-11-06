@@ -416,6 +416,8 @@ function removeBlock(el: HTMLElement) {
 
 const canvasHost = {
   workflowName: (id: string) => workflows.find((w) => w.id === id)?.name ?? id,
+  mods: () => (files?.mods ?? []).map((m) => m.name).filter((m) => m !== "chat"),
+  workflows: () => workflows.filter((w) => w.id !== active).map((w) => ({ id: w.id, name: w.name })),
   openWorkflow: (id: string) => openWorkflow(id),
   /** The body of a card of another workflow: its projects, and a hint to open it. */
   workflowCard(body: HTMLElement, id: string) {
