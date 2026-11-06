@@ -3,7 +3,7 @@
 # writes docs/video/gittor-intro.mp4 and docs/video/gittor-intro.gif.
 # Usage: scripts/video/run.sh <scratch-dir>
 # <scratch-dir> gets the repositories, the scene recordings and the clips. Set CHROMIUM to a Chromium
-# binary when Playwright has no downloaded browser. ffmpeg must be on the PATH.
+# binary when Playwright has no downloaded browser. ffmpeg, python3 and numpy must be on the PATH.
 set -euo pipefail
 scratch=${1:?usage: run.sh <scratch-dir>}
 here=$(cd "$(dirname "$0")" && pwd)

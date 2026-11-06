@@ -1,7 +1,8 @@
 // Joins the scenes of record.mjs into the intro video: a title card, a caption on each scene, and an end
-// card. Makes an MP4 (1920x1080) and a short GIF for the README.
+// card. Makes an MP4 (1920x1080) with the music of music.py, and a short GIF for the README.
 //   node scripts/video/build.mjs <rec-dir> <out-dir>
-// <rec-dir> has the <scene>.webm files and scenes.json of record.mjs. ffmpeg must be on the PATH.
+// <rec-dir> has the <scene>.webm files and scenes.json of record.mjs. ffmpeg, python3 and numpy
+// must be on the PATH.
 // Set CHROMIUM to a Chromium binary when Playwright has no downloaded browser.
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
@@ -106,8 +107,16 @@ for (let i = 1; i < clips.length; i++) {
   chain += `${last}[${i}:v]xfade=transition=fade:duration=${FADE}:offset=${offset.toFixed(3)}${label};`;
   last = label;
 }
+const silent = join(tmp, "video.mp4");
+ff(...inputs, "-filter_complex", chain.replace(/;$/, ""), "-map", "[vout]", ...enc, silent);
+
+// The music: music.py makes it for the length of the video. The loudness suits a web video.
+const seconds = clips.reduce((sum, c) => sum + c.len, 0) - FADE * (clips.length - 1);
+const music = join(tmp, "music.wav");
+execFileSync("python3", [join(here, "music.py"), seconds.toFixed(2), music], { stdio: "inherit" });
 const mp4 = join(out, "gittor-intro.mp4");
-ff(...inputs, "-filter_complex", chain.replace(/;$/, ""), "-map", "[vout]", ...enc, "-movflags", "+faststart", mp4);
+ff("-i", silent, "-i", music, "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-af", "loudnorm=I=-18:TP=-2:LRA=11",
+  "-c:a", "aac", "-b:a", "160k", "-ar", "48000", "-shortest", "-movflags", "+faststart", mp4);
 
 // The GIF: short parts of some scenes, faster, at 800 pixels wide.
 const gifParts = [
