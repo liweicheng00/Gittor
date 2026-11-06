@@ -91,10 +91,14 @@ A local build does not check for updates. Only a release build does.
 ### Release
 
 ```sh
-scripts/release.sh 0.2.0
+scripts/release.sh          # the next patch version: 0.2.0 -> 0.2.1
+scripts/release.sh minor    # 0.2.1 -> 0.3.0; also "major", or a version such as 1.0.0
 ```
 
-The script sets the version in all files, commits, tags `v0.2.0` and pushes. The tag starts the
+The script finds the next version, sets it in all files, commits, tags it (for example `v0.2.1`) and
+pushes. A build that is not at a release tag, or that has changes, is a test build: its version has a
+label, for example `0.2.2-dev.5+a1b2c3d4` (5 commits after 0.2.1, at commit `a1b2c3d4`). The name of
+the `.dmg` and Settings › General show it. The tag starts the
 `Release` workflow on GitHub (`.github/workflows/release.yml`). It builds the universal app with
 `scripts/build-dmg.sh --universal --updater`, signs and notarizes it, and publishes a release with the
 `.dmg`, `Gittor.app.tar.gz`, its `.sig` and `latest.json`. The apps that run find the update at their

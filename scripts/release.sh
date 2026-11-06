@@ -1,28 +1,26 @@
 #!/usr/bin/env bash
-# Makes a release: sets the version in all files, commits, tags and pushes. The tag starts the
+# Makes a release: sets the next version in all files, commits, tags and pushes. The tag starts the
 # release workflow on GitHub, which builds, signs and publishes the app and its update.
-# Usage: scripts/release.sh <version> [--no-push]
-#   <version>   for example 0.2.0. It must be greater than the current version.
+# Usage: scripts/release.sh [patch|minor|major|<version>] [--no-push]
+#   patch       the default: 0.2.0 -> 0.2.1. A version that has no release yet is released as it is.
+#   minor       0.2.3 -> 0.3.0
+#   major       0.2.3 -> 1.0.0
+#   <version>   a version x.y.z that is greater than the last release
 #   --no-push   commit and tag here only, for a check before the push.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-version=${1:-}
+what=patch
 push=1
-[ "${2:-}" = "--no-push" ] && push=0
-if ! [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "Usage: scripts/release.sh <version> [--no-push], for example scripts/release.sh 0.2.0" >&2
-  exit 1
-fi
-current=$(node -p 'require("./crates/app/tauri.conf.json").version')
-newer=$(node -e '
-  const [a, b] = process.argv.slice(1).map((v) => v.split(".").map(Number));
-  const d = a.map((x, i) => x - b[i]).find((x) => x !== 0) ?? 0;
-  console.log(d > 0 ? "yes" : "no");
-' "$version" "$current")
-if [ "$newer" != yes ]; then
-  echo "The version $version is not greater than the current version $current." >&2
-  exit 1
-fi
+for arg in "$@"; do
+  case "$arg" in
+    --no-push) push=0 ;;
+    -*) echo "Usage: scripts/release.sh [patch|minor|major|<version>] [--no-push]" >&2; exit 1 ;;
+    *) what=$arg ;;
+  esac
+done
+current=$(node scripts/version.mjs current)
+version=$(node scripts/version.mjs next "$what")
+echo "Release $version (the version before: $current)."
 if [ -n "$(git status --porcelain)" ]; then
   echo "The working tree has changes. Commit or stash them first." >&2
   exit 1
@@ -64,7 +62,8 @@ done
 cargo update --workspace --quiet
 
 git add crates/app/tauri.conf.json crates/*/Cargo.toml Cargo.lock ui/package.json ui/package-lock.json
-git commit -q -m "Release v$version"
+# The first release of a version that is in the files already changes no file.
+git diff --cached --quiet || git commit -q -m "Release v$version"
 git tag -a "v$version" -m "Gittor $version"
 echo "Committed and tagged v$version."
 if [ "$push" = 1 ]; then

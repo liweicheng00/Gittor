@@ -180,7 +180,9 @@ export function openSettingsDialog(ctx: SettingsContext): Promise<Settings | nul
       });
       const auto = check("Check for updates automatically", () => draft.autoCheckUpdates, (v) => (draft.autoCheckUpdates = v));
       void ctx.updates.status().then((s) => {
-        version.textContent = `Version ${s.version}`;
+        version.replaceChildren(`Version ${s.version}`);
+        // A test build has a pre-release label, for example 0.2.1-dev.5+a1b2c3d4.
+        if (s.version.includes("-")) version.append(h("span", { class: "settings-test-build", title: "A test build: not a release" }, "Test build"));
         checkBtn.disabled = !s.enabled;
         if (!s.enabled) status.textContent = "This build does not check for updates: only a release build from GitHub does.";
       });

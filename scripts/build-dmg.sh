@@ -8,7 +8,12 @@
 #                  TAURI_UPDATER_PUBKEY                the public key of the updater
 #                  TAURI_SIGNING_PRIVATE_KEY           the private key (the text or the path of the file)
 #                  TAURI_SIGNING_PRIVATE_KEY_PASSWORD  its password, when it has one
-#                A build without --updater is the same as before: it does not check for updates.
+#                A build without --updater does not check for updates.
+#
+# The version: a build at a release tag without changes has the version of the release. Any other build
+# is a test build: its version has the label "dev", for example 0.2.1-dev.5+a1b2c3d4 (5 commits after
+# the release 0.2.0, at commit a1b2c3d4). The name of the .dmg and Settings › General show it. The
+# CFBundleVersion of each build is the number of commits, so it grows. See scripts/version.mjs.
 #
 # A signed build needs these variables (see README, "Sign and notarize"):
 #   APPLE_SIGNING_IDENTITY  "Developer ID Application: Name (TEAMID)", from: security find-identity -v -p codesigning
@@ -35,25 +40,36 @@ for arg in "$@"; do
   esac
 done
 
-config=()
+version=$(node scripts/version.mjs build)
+build_number=$(node scripts/version.mjs build-number)
+if [ "$updater" = 1 ] && [ "$version" != "$(node scripts/version.mjs current)" ]; then
+  echo "A release build needs a release tag and no changes. This is the test version $version." >&2
+  echo "Make a release with scripts/release.sh." >&2
+  exit 1
+fi
+echo "Version $version (build $build_number)."
+
+# The version, the build number and the updater settings go into a second config file that Tauri merges
+# with tauri.conf.json.
+mkdir -p target
+build_config="$(pwd)/target/tauri.build.conf.json"
+pubkey=""
 if [ "$updater" = 1 ]; then
   for v in TAURI_UPDATER_PUBKEY TAURI_SIGNING_PRIVATE_KEY; do
     [ -n "${!v:-}" ] || { echo "--updater needs the variable $v (see the top of this script)." >&2; exit 1; }
   done
-  # The updater settings go into a second config file that Tauri merges with tauri.conf.json.
-  repo=${GITTOR_RELEASE_REPO:-liweicheng00/Gittor}
-  mkdir -p target
-  release_config="$(pwd)/target/tauri.release.conf.json"
-  node -e '
-    const [file, key, repo] = process.argv.slice(1);
-    const config = {
-      bundle: { createUpdaterArtifacts: true },
-      plugins: { updater: { pubkey: key.trim(), endpoints: [`https://github.com/${repo}/releases/latest/download/latest.json`] } },
-    };
-    require("fs").writeFileSync(file, JSON.stringify(config, null, 2));
-  ' "$release_config" "$TAURI_UPDATER_PUBKEY" "$repo"
-  config=(--config "$release_config")
+  pubkey=$TAURI_UPDATER_PUBKEY
 fi
+node -e '
+  const [file, version, build, key, repo] = process.argv.slice(1);
+  const config = { version, bundle: { macOS: { bundleVersion: build } } };
+  if (key) {
+    config.bundle.createUpdaterArtifacts = true;
+    config.plugins = { updater: { pubkey: key.trim(), endpoints: [`https://github.com/${repo}/releases/latest/download/latest.json`] } };
+  }
+  require("fs").writeFileSync(file, JSON.stringify(config, null, 2));
+' "$build_config" "$version" "$build_number" "$pubkey" "${GITTOR_RELEASE_REPO:-liweicheng00/Gittor}"
+config=(--config "$build_config")
 
 if [ "$unsigned" = 1 ]; then
   # Tauri signs when the identity is set; an unsigned build must not see it.

@@ -89,9 +89,14 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   `showLocalDiff` in `commit-flow.ts` gives them to the same note layer.
 - Updates of the app: `update-flow.ts` (checks 10 s after the start and every 6 h, only in the main
   window). Only a build with the public key checks: `scripts/build-dmg.sh --updater` merges
-  `target/tauri.release.conf.json`, and `main.rs` registers the updater plugin only then. A local
+  `target/tauri.build.conf.json`, and `main.rs` registers the updater plugin only then. A local
   build stays as before. In a browser, `window.__GITTOR_FAKE_UPDATE__` gives a fake update to the
-  `updates` scenario. Releases: `scripts/release.sh <version>` and `.github/workflows/release.yml`.
+  `updates` scenario. Releases: `scripts/release.sh [patch|minor|major|<version>]` and
+  `.github/workflows/release.yml`.
+- Versions: `scripts/version.mjs` (tested in `ui/test/version.test.ts`). A build at a release tag
+  without changes has the release version. Any other build is a test build, for example
+  `0.2.1-dev.5+a1b2c3d4`; Settings › General marks it "Test build". `build-dmg.sh` writes the version
+  and the build number (`CFBundleVersion`, the number of commits) into `target/tauri.build.conf.json`.
 - CI: `.github/workflows/ci.yml` runs the tests, clippy, the types, the unit tests and all UI
   scenarios on each push to main, the scenarios in 4 parts on 4 machines. Failed scenarios run once
   more alone.

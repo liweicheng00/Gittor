@@ -29,7 +29,7 @@ fn set_zoom(webview: tauri::Webview, level: f64) -> Result<(), String> {
 }
 
 /// The app checks for updates only when the build has the public key of the updater. A release build
-/// on GitHub gets it from `tauri.release.conf.json`; a local build has none.
+/// on GitHub gets it from `tauri.build.conf.json` (`scripts/build-dmg.sh --updater`); a local build has none.
 struct Updates(bool);
 
 /// True when this build can check for updates and install them.
