@@ -23,7 +23,7 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | Keys | Action |
 |---|---|
 | `Ctrl/Cmd+O` | Open a repository |
-| `Ctrl/Cmd+1` … `Ctrl/Cmd+5` | Branches, Changes, Stash, Reviews and Submodules tabs |
+| `Ctrl/Cmd+1` … `Ctrl/Cmd+5` | Branches, Changes, Stash and Reviews tabs; the submodules in the Changes tab |
 | `Ctrl/Cmd+K`, `Ctrl/Cmd+Enter` | Commit (from the tab, from the message field) |
 | `Ctrl/Cmd+Alt+K` | Commit and push |
 | `Ctrl/Cmd+Shift+K` | Push |

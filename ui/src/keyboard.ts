@@ -10,7 +10,7 @@ import { undoLast } from "./operations";
 import { askForRepo, closeActiveTab, fetchAll, refresh, switchTab } from "./repo";
 import { settings } from "./settings";
 import { openSettings } from "./settings-flow";
-import { changes, commitPanel, diff, filterBar, openBtn, showLeftTab, statusActivity, tabSubmodules, toggleDiff, toggleSidebar } from "./shell";
+import { changes, commitPanel, diff, filterBar, openBtn, showLeftTab, statusActivity, submodulePanel, toggleDiff, toggleSidebar } from "./shell";
 import { app } from "./state";
 import { pushBranch, updateBranch } from "./sync";
 import { resetZoom, zoomBy } from "./zoom";
@@ -55,7 +55,16 @@ for (const a of [
   },
   { id: "stash", label: "Stash Tab", defaults: ["Mod+3"], run: () => showLeftTab("stash") },
   { id: "reviews", label: "Reviews Tab", defaults: ["Mod+4"], run: () => showLeftTab("reviews") },
-  { id: "submodules", label: "Submodules Tab", defaults: ["Mod+5"], run: () => !tabSubmodules.hidden && showLeftTab("submodules") },
+  {
+    id: "submodules",
+    label: "Submodules (in the Changes tab)",
+    defaults: ["Mod+5"],
+    run: () => {
+      if (submodulePanel.el.hidden) return;
+      showLeftTab("commit");
+      submodulePanel.focus();
+    },
+  },
   { id: "diffPanel", label: "Diff Panel (show or hide)", defaults: [], run: () => toggleDiff() },
   { id: "hideDiff", label: "Hide the Diff Panel", defaults: ["Escape"], run: () => toggleDiff(false), when: (t: HTMLElement) => !typing(t) && settings.showDiff },
   { id: "closeProject", label: "Close the Project Tab", defaults: ["Mod+W"], run: () => void closeActiveTab() },

@@ -1,8 +1,10 @@
-// Submodules tab: the submodules of the repository and, for the selected one, the commits between the
-// recorded commit and the checked-out commit.
+// The Submodules section under the changelists of the Changes tab: the submodules of the repository and,
+// for the selected one, the commits between the recorded commit and the checked-out commit.
 
 import type { OutgoingCommit, Submodule, SubmoduleRange } from "./api";
 import { formatDate, h, icon } from "./dom";
+import { twisty } from "./icons";
+import { save, settings } from "./settings";
 
 /** The submodule is not at the recorded commit, or has local changes. */
 export const needsAttention = (s: Submodule) => s.state !== "clean" || s.dirty || s.untracked;
@@ -18,6 +20,8 @@ export class SubmodulePanel {
   readonly el: HTMLElement;
   private list: HTMLElement;
   private detail: HTMLElement;
+  private title: HTMLElement;
+  private twist: HTMLElement;
   private subs: Submodule[] = [];
   private selected: string | null = null;
   private range: SubmoduleRange | null = null;
@@ -29,10 +33,16 @@ export class SubmodulePanel {
   onRefresh: () => void = () => {};
 
   constructor() {
-    const refresh = h("button", { class: "icon-button", title: "Refresh" }, icon("refresh"));
+    const refresh = h("button", { class: "icon-button", title: "Refresh the submodules" }, icon("refresh"));
     refresh.addEventListener("click", () => this.onRefresh());
     const updateAll = h("button", { class: "tb-button", title: "Initialize all submodules and check out their recorded commits" }, "Update All");
     updateAll.addEventListener("click", () => this.onUpdate([]));
+    this.title = h("span", { class: "sm-title" }, "Submodules");
+    const head = h("div", { class: "sm-head", title: "Show or hide the submodules" }, (this.twist = twisty(!settings.submodulesCollapsed)), this.title, h("span", { class: "spacer" }), refresh, updateAll);
+    head.addEventListener("click", (e) => {
+      if ((e.target as HTMLElement).closest("button")) return;
+      this.setCollapsed(!settings.submodulesCollapsed);
+    });
     this.list = h("div", { class: "sm-list", tabIndex: 0 });
     this.list.addEventListener("keydown", (e) => {
       if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
@@ -42,8 +52,23 @@ export class SubmodulePanel {
       this.select(this.subs[Math.max(0, Math.min(this.subs.length - 1, i + (e.key === "ArrowDown" ? 1 : -1)))]);
     });
     this.detail = h("div", { class: "sm-detail" });
-    this.el = h("section", { class: "submodule-panel" }, h("div", { class: "commit-toolbar" }, refresh, h("span", { class: "spacer" }), updateAll), this.list, this.detail);
+    this.el = h("section", { class: "submodule-panel", hidden: true }, head, h("div", { class: "sm-body" }, this.list, this.detail));
+    this.el.classList.toggle("collapsed", settings.submodulesCollapsed);
     this.render();
+  }
+
+  /** Shows or hides the list. The setting keeps the choice. */
+  setCollapsed(collapsed: boolean) {
+    settings.submodulesCollapsed = collapsed;
+    save();
+    this.el.classList.toggle("collapsed", collapsed);
+    this.twist.classList.toggle("open", !collapsed);
+  }
+
+  /** Opens the section and puts the keyboard focus on the list. */
+  focus() {
+    this.setCollapsed(false);
+    this.list.focus();
   }
 
   get count() {
@@ -64,6 +89,9 @@ export class SubmodulePanel {
     // No new elements when nothing changed: a new row under the mouse loses the click.
     if (JSON.stringify(subs) === JSON.stringify(this.subs)) return;
     this.subs = subs;
+    this.el.hidden = !subs.length;
+    const n = this.attention;
+    this.title.replaceChildren("Submodules", h("span", { class: "sm-count" + (n ? " attention" : ""), title: n ? `${n} need attention` : "" }, String(n || subs.length)));
     if (!subs.some((s) => s.path === this.selected)) {
       this.selected = null;
       this.range = null;
@@ -126,8 +154,9 @@ export class SubmodulePanel {
 
   private renderDetail() {
     const s = this.selectedSubmodule;
+    this.detail.hidden = !s;
     if (!s) {
-      this.detail.replaceChildren(h("div", { class: "muted commit-empty" }, "Select a submodule to see how its checked-out commit differs from the recorded commit."));
+      this.detail.replaceChildren();
       return;
     }
     const parts: (HTMLElement | string)[] = [];

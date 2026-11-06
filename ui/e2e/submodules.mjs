@@ -1,4 +1,4 @@
-// UI scenario for submodules: the Submodules tab, the commits between the recorded and the checked-out
+// UI scenario for submodules: the Submodules section under the changelists of the Changes tab, the commits between the recorded and the checked-out
 // commit, the diff of a submodule, and Update.
 // Start the dev server first (see README). Build a fresh repository with make-demo-repo.sh, then:
 // node e2e/submodules.mjs <repo> <screenshot-dir>. The scenario adds a submodule to the repository.
@@ -47,12 +47,14 @@ const within = async (what, fn, ms = 6000) => {
 
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
-await within("the Submodules tab shows", async () => await page.isVisible(".lp-tab:text-is('Modules')"));
-// The five left tabs fit the default width of the left pane: no label is cut.
+// The left tabs fit the default width of the left pane: no label is cut.
 const cut = await page.$$eval(".lp-tab", (tabs) => tabs.filter((t) => !t.hidden && t.scrollWidth > t.clientWidth).map((t) => t.textContent));
 check(`no left tab label is cut (${cut.join(", ")})`, cut.length === 0);
-await page.click(".lp-tab:text-is('Modules')");
-await page.waitForSelector(".sm-row");
+// Control+5 opens the Changes tab at the submodules.
+await page.waitForSelector(".submodule-panel:not([hidden])", { state: "attached" });
+await page.keyboard.press("Control+5");
+await within("Control+5 shows the submodules in the Changes tab", async () => (await page.isVisible(".commit-panel .sm-row")) && (await page.getAttribute(".lp-tab:text-is('Changes')", "class")).includes("on"));
+const head = () => page.textContent(".sm-head .sm-title");
 const rowText = () => page.textContent(".sm-row");
 check("the tab lists vendor/lib on its branch", (await rowText()).includes("vendor/lib") && (await rowText()).includes("main"));
 await page.click(".sm-row");
@@ -62,7 +64,7 @@ await within("a clean submodule is at the recorded commit", async () => (await p
 run(sub, "checkout", "-q", c1);
 await page.keyboard.press("F5");
 await within("the row shows another commit and detached", async () => (await rowText()).includes("other commit") && (await rowText()).includes("detached"));
-await within("the tab counts the submodule", async () => (await page.textContent(".lp-tab:has-text('Modules')")).includes("1"));
+await within("the header counts the submodule", async () => (await page.$(".sm-count.attention")) !== null && (await head()).includes("1"));
 await within("the detail says one commit behind", async () => (await page.textContent(".sm-detail")).includes("1 commit behind the recorded commit"));
 check("the detail lists the commit Two", (await page.textContent(".sm-commit")).includes("Two"));
 
@@ -75,12 +77,19 @@ await within("the detail lists the local changes", async () => {
   return t.includes("Local changes (2)") && t.includes("lib.rs") && t.includes("extra.rs");
 });
 check("the row shows modified and unversioned files", (await rowText()).includes("modified") && (await rowText()).includes("unversioned files"));
+// The changed submodule shows in the changelist and in the section below it.
+await within("the submodule is in the changelist too", async () => (await page.$(".cl-file:has-text('lib')")) !== null);
 await shot("sm1-submodules-tab");
+// A click on the header hides the list, and the setting keeps it.
+await page.click(".sm-head .sm-title");
+await within("the header hides the list", async () => !(await page.isVisible(".sm-row")));
+check("the setting keeps the hidden list", JSON.parse(await page.evaluate(() => localStorage.getItem("gittor.settings.v1"))).submodulesCollapsed === true);
+await page.click(".sm-head .sm-title");
+await within("the header shows the list again", async () => await page.isVisible(".sm-row"));
 run(sub, "checkout", "-q", "--", ".");
 rmSync(`${sub}/extra.rs`);
 
 // The Changes tab groups the files by folder: the submodule shows as "lib" under "vendor".
-await page.click(".lp-tab:has-text('Changes')");
 await within("the submodule is a local change", async () => (await page.$(".cl-file:has-text('lib')")) !== null);
 await page.click(".cl-file:has-text('lib')");
 await within("the diff shows the two commits", async () => {
@@ -95,7 +104,7 @@ await page.click(".sm-row");
 await page.click(".sm-actions button:has-text('Update to Recorded')");
 await within("Update checks out the recorded commit", async () => run(sub, "rev-parse", "HEAD") === c2);
 await within("the row shows the submodule as clean", async () => !(await rowText()).includes("other commit"));
-await within("the tab has no count", async () => (await page.textContent(".lp-tab:has-text('Modules')")).trim() === "Modules");
+await within("the header has no count of attention", async () => (await page.$(".sm-count.attention")) === null);
 
 // A checkout that changes the recorded commit offers Update Submodules.
 git("checkout", "-q", "-b", "old-lib");
@@ -118,7 +127,7 @@ writeFileSync(`${sub}/lib.rs`, "pub fn three() {}\n");
 run(sub, "-c", "user.name=Lib", "-c", "user.email=lib@example.com", "-c", "commit.gpgsign=false", "commit", "-q", "-am", "Three");
 git("checkout", "-q", "main");
 await page.keyboard.press("F5");
-await page.click(".lp-tab:text-is('Modules')");
+await page.click(".lp-tab:text-is('Changes')");
 await page.click(".sm-row");
 await within("the detail says one commit ahead", async () => (await page.textContent(".sm-detail")).includes("1 commit ahead of the recorded commit"));
 check("no Update for a submodule with commits of its own", (await page.$(".sm-actions button:has-text('Update to Recorded')")) === null);
@@ -167,7 +176,7 @@ const stored = JSON.parse(await page.evaluate(() => localStorage.getItem("gittor
 check("the settings keep the tabs of the main window", stored.tabs.length === 1 && stored.tabs[0].endsWith(name));
 
 // A repository shows in one window only: the main window does not open the submodule again.
-await page.click(".lp-tab:text-is('Modules')");
+await page.click(".lp-tab:text-is('Changes')");
 await page.click(".sm-row");
 await page.click(".sm-actions button:has-text('Open as Repository')");
 await within("the main window says that another window shows it", async () => (await page.$(".toast:has-text('is open in another window')")) !== null);

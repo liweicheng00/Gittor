@@ -83,10 +83,14 @@ export const tabBranches = h("button", { class: "lp-tab", title: `Branches (${mo
 export const tabCommit = h("button", { class: "lp-tab", title: `Local changes and commit (${mod}2)` }, "Changes");
 export const tabStash = h("button", { class: "lp-tab", title: `Stashes (${mod}3)` }, "Stash");
 export const tabReviews = h("button", { class: "lp-tab", title: `Reviews (${mod}4)` }, "Reviews");
-/** The tab shows only when the repository has submodules. */
-export const tabSubmodules = h("button", { class: "lp-tab", title: `Submodules (${mod}5)`, hidden: true }, "Modules");
-const leftPane = h("aside", { class: "leftpane" }, h("div", { class: "lp-tabs" }, tabBranches, tabCommit, tabStash, tabReviews, tabSubmodules), sidebar.el, commitPanel.el, stashPanel.el, reviewPanel.el, submodulePanel.el);
-export function showLeftTab(tab: "branches" | "commit" | "stash" | "reviews" | "submodules") {
+// The submodules show under the changelists, so that their changes show together with the files.
+// One scroll area holds both.
+const commitTree = commitPanel.el.querySelector(".commit-tree")!;
+const commitScroll = h("div", { class: "commit-scroll" });
+commitTree.replaceWith(commitScroll);
+commitScroll.append(commitTree, submodulePanel.el);
+const leftPane = h("aside", { class: "leftpane" }, h("div", { class: "lp-tabs" }, tabBranches, tabCommit, tabStash, tabReviews), sidebar.el, commitPanel.el, stashPanel.el, reviewPanel.el);
+export function showLeftTab(tab: "branches" | "commit" | "stash" | "reviews") {
   settings.leftTab = tab;
   save();
   if (!settings.showSidebar) {
@@ -101,14 +105,11 @@ export function showLeftTab(tab: "branches" | "commit" | "stash" | "reviews" | "
   stashPanel.el.hidden = tab !== "stash";
   tabReviews.classList.toggle("on", tab === "reviews");
   reviewPanel.el.hidden = tab !== "reviews";
-  tabSubmodules.classList.toggle("on", tab === "submodules");
-  submodulePanel.el.hidden = tab !== "submodules";
 }
 tabBranches.addEventListener("click", () => showLeftTab("branches"));
 tabCommit.addEventListener("click", () => showLeftTab("commit"));
 tabStash.addEventListener("click", () => showLeftTab("stash"));
 tabReviews.addEventListener("click", () => showLeftTab("reviews"));
-tabSubmodules.addEventListener("click", () => showLeftTab("submodules"));
 const top = h("div", { class: "top" }, leftPane, sideGrip, center, rightGrip, right);
 export const workspace = h("main", { class: "workspace" }, top, diffGrip, diff.el);
 export const welcome = h("main", { class: "welcome" });

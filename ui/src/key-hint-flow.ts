@@ -6,7 +6,7 @@ import { h } from "./dom";
 import { keymap, keyWorksAt } from "./keyboard";
 import { formatKey } from "./keymap";
 import { settings } from "./settings";
-import { filterBar, localHistoryBtn, pushBtn, refreshBtn, settingsBtn, tabBranches, tabCommit, tabReviews, tabStash, tabSubmodules, updateBtn } from "./shell";
+import { filterBar, localHistoryBtn, pushBtn, refreshBtn, settingsBtn, tabBranches, tabCommit, tabReviews, tabStash, updateBtn } from "./shell";
 
 /** The hint of one action shows at most once in this time. */
 const AGAIN_MS = 3000;
@@ -24,7 +24,6 @@ for (const [el, action] of [
   [tabCommit, "commit"],
   [tabStash, "stash"],
   [tabReviews, "reviews"],
-  [tabSubmodules, "submodules"],
   [filterBar.text, "filter"],
 ] as const) el.dataset.keyAction = action;
 

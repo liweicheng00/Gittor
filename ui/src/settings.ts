@@ -27,7 +27,7 @@ export interface Settings {
   showDate: boolean;
   showHash: boolean;
   showSidebar: boolean;
-  leftTab: "branches" | "commit" | "stash" | "reviews" | "submodules";
+  leftTab: "branches" | "commit" | "stash" | "reviews";
   updateMode: "merge" | "rebase";
   autoRefresh: boolean;
   changesAsTree: boolean;
@@ -35,6 +35,8 @@ export interface Settings {
   reviewAsTree: boolean;
   /** The Changes tab groups the files of a changelist by folder. */
   localChangesAsTree: boolean;
+  /** The Submodules section of the Changes tab shows its header only. */
+  submodulesCollapsed: boolean;
   sideBySide: boolean;
   ignoreWhitespace: boolean;
   collapseUnchanged: boolean;
@@ -123,6 +125,7 @@ const DEFAULTS: Settings = {
   changesAsTree: true,
   reviewAsTree: true,
   localChangesAsTree: true,
+  submodulesCollapsed: false,
   sideBySide: true,
   ignoreWhitespace: false,
   collapseUnchanged: false,
@@ -168,7 +171,12 @@ const KEY = "gittor.settings.v1";
 function load(): Settings {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...DEFAULTS, ...JSON.parse(raw) };
+    if (raw) {
+      const s: Settings = { ...DEFAULTS, ...JSON.parse(raw) };
+      // The Submodules tab is now a section of the Changes tab.
+      if ((s.leftTab as string) === "submodules") s.leftTab = "commit";
+      return s;
+    }
   } catch {}
   return { ...DEFAULTS };
 }

@@ -8,7 +8,7 @@ import { emptyFilter } from "./filter-bar";
 import { loadFavorites } from "./remotes";
 import { clearCompare } from "./selection";
 import { addRecent, save, setRecentProject, settings } from "./settings";
-import { authors, banner, commitPanel, details, fetchBtn, filterBar, ideBtn, localHistoryBtn, terminalBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, showLeftTab, sidebar, stashPanel, statusActivity, submodulePanel, tabBar, tabScroll, tabsInTitleBar, tabCommit, tabReviews, tabStash, tabSubmodules, task, updateBtn, updateStatus } from "./shell";
+import { authors, banner, commitPanel, details, fetchBtn, filterBar, ideBtn, localHistoryBtn, terminalBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, sidebar, stashPanel, statusActivity, submodulePanel, tabBar, tabScroll, tabsInTitleBar, tabCommit, tabReviews, tabStash, task, updateBtn, updateStatus } from "./shell";
 import { app } from "./state";
 import { showWorkspace } from "./welcome";
 import { formDialog } from "./dialogs";
@@ -337,15 +337,10 @@ export async function loadLocalChanges() {
   await loadSubmodules();
 }
 
-/** Loads the Submodules tab. The tab shows only when the repository has submodules; its count is the
- * submodules that need attention. */
+/** Loads the Submodules section of the Changes tab. It shows only when the repository has submodules. */
 export async function loadSubmodules() {
   const subs = await api.submodules().catch(() => [] as Submodule[]);
   submodulePanel.set(subs);
-  tabSubmodules.hidden = !subs.length;
-  const n = submodulePanel.attention;
-  setTabLabel(tabSubmodules, "Modules", n);
-  if (!subs.length && settings.leftTab === "submodules") showLeftTab("branches");
   // The commits of the selected submodule load again: its checked-out commit can have changed.
   const s = submodulePanel.selectedSubmodule;
   if (s) submodulePanel.onSelect(s);

@@ -376,7 +376,7 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 /* left pane: branches and commit tabs */
 .leftpane { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--panel); border-right: 1px solid var(--border); }
 .leftpane[hidden] { display: none; }
-.leftpane > .sidebar, .leftpane > .commit-panel, .leftpane > .stash-panel, .leftpane > .submodule-panel { flex: 1; min-height: 0; border-right: 0; }
+.leftpane > .sidebar, .leftpane > .commit-panel, .leftpane > .stash-panel { flex: 1; min-height: 0; border-right: 0; }
 .leftpane > [hidden] { display: none !important; }
 .leftpane .sidebar > .pane-title { display: none; }
 .lp-tabs { display: flex; overflow: hidden; border-bottom: 1px solid var(--border); padding: 0 2px; gap: 0; }
@@ -429,9 +429,17 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .stash-message { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stash-meta { display: flex; gap: 8px; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; }
 
-/* submodules tab */
-.submodule-panel { display: flex; flex-direction: column; min-height: 0; }
-.sm-list { flex: 0 1 auto; max-height: 45%; overflow: auto; outline: none; border-bottom: 1px solid var(--border); }
+/* submodules: a section under the changelists of the Changes tab */
+.commit-scroll { flex: 1; min-height: 60px; overflow: auto; display: flex; flex-direction: column; }
+.commit-scroll > .commit-tree { flex: none; min-height: 0; overflow: visible; }
+.submodule-panel { flex: none; border-top: 1px solid var(--border); margin-top: 4px; }
+.sm-head { position: sticky; top: 0; z-index: 1; background: var(--bg); display: flex; align-items: center; gap: 5px; padding: 2px 6px; white-space: nowrap; cursor: default; user-select: none; -webkit-user-select: none; }
+.sm-head:hover { background: var(--hover); }
+.sm-title { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.sm-count { color: var(--muted); font-size: 11px; font-weight: 400; }
+.sm-count.attention { color: var(--deleted); font-weight: 600; }
+.submodule-panel.collapsed .sm-body { display: none; }
+.sm-list { outline: none; border-top: 1px solid var(--border); }
 .sm-row { padding: 5px 10px; border-bottom: 1px solid var(--border); cursor: default; }
 .sm-row:last-child { border-bottom: 0; }
 .sm-row:hover { background: var(--hover); }
@@ -442,7 +450,7 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .sm-meta { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; padding-left: 19px; }
 .sm-detached { color: var(--warn, #b26a00); }
 .sm-badge { color: var(--deleted); }
-.sm-detail { flex: 1; min-height: 0; overflow: auto; padding: 6px 10px; }
+.sm-detail { padding: 6px 10px; border-top: 1px solid var(--border); }
 .sm-detail-head { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sm-actions { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
 .sm-summary { margin: 6px 0; line-height: 1.4; }

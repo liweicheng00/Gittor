@@ -1,4 +1,4 @@
-// The Submodules tab.
+// The Submodules section of the Changes tab.
 
 import { api, type Submodule } from "./api";
 import { showMenu } from "./context-menu";
