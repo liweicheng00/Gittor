@@ -1,5 +1,6 @@
 // The keymap actions and the key handler.
 
+import { agentModeOn, toggleAgentMode } from "./agent-mode-flow";
 import { back, forward } from "./nav";
 import { copyText } from "./dom";
 import { openInEditorHere, openProjectInEditor } from "./editor-flow";
@@ -28,6 +29,7 @@ const nextTab = (d: number) => {
   void switchTab(settings.tabs[(i + d + settings.tabs.length) % settings.tabs.length]);
 };
 for (const a of [
+  { id: "agentMode", label: "Agent Mode (turn the window around)", defaults: ["Mod+Shift+A"], run: () => void toggleAgentMode() },
   { id: "open", label: "Open Repository", defaults: ["Mod+O"], run: () => void askForRepo() },
   { id: "refresh", label: "Refresh", defaults: ["Mod+R", "F5"], run: () => void refresh() },
   { id: "fetch", label: "Fetch", defaults: [], run: () => app.view && void fetchAll() },
@@ -118,6 +120,8 @@ export function keyWorksAt(id: string, target: HTMLElement): boolean {
 window.addEventListener("keydown", (e) => {
   // An open dialog handles its own keys. A window, such as Compare or Review, takes the keys of the editor only.
   if (openAtKey.dialog || document.querySelector(".overlay")) return;
+  // The back side (Agent mode) covers the Git side: only its own key and the zoom keys work there.
+  if (agentModeOn()) return void keymap.handle(e, (a) => a.id === "agentMode" || a.id.startsWith("zoom"));
   // The zoom keys work in every window, as in a browser.
   if (keymap.handle(e, (a) => a.id.startsWith("zoom") || a.id.startsWith("navigate"))) return;
   if (openAtKey.window || document.querySelector(".merge-overlay")) return void keymap.handle(e, (a) => inWindow(a.id));

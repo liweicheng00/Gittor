@@ -1,0 +1,14 @@
+{
+  "type": "row",
+  "children": [
+    { "mod": "changes", "size": 300 },
+    {
+      "type": "column",
+      "grow": 1,
+      "children": [
+        { "mod": "intro", "size": 132 },
+        { "mod": "chat", "grow": 1 }
+      ]
+    }
+  ]
+}

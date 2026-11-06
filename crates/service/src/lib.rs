@@ -4,6 +4,8 @@
 //! `view` the graph rows, `queries` the read commands, `ops` the write operations, and `dispatch` the
 //! table of commands by name.
 
+pub mod agent;
+mod agent_mode;
 pub mod askpass;
 pub mod config;
 pub mod errors;
@@ -19,6 +21,7 @@ mod types;
 mod view;
 pub mod watch;
 
+pub use agent_mode::{AgentConfig, ModFile, ModeFiles};
 pub use ops::{HunkSelection, Op};
 pub use types::*;
 
@@ -39,4 +42,8 @@ pub struct Service {
     config_dir: Option<std::path::PathBuf>,
     settings: Mutex<config::BackendSettings>,
     events: std::sync::Arc<events::Events>,
+    /// True after the agent-mode folder got its files in this run.
+    mode_ready: Mutex<bool>,
+    /// The agent of Agent mode, when one runs.
+    agent: Mutex<Option<agent::Agent>>,
 }

@@ -115,6 +115,14 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   only with `.view-zones { z-index: 1 }`, and it acts on `mousedown`: Monaco takes the mouse after a press.
   Each side of a change needs a decision: taken (`applied`) or not taken (`rejected`, the ✕ buttons). A
   change is resolved when each side has one; then the bar `.merge-done` shows.
+- Agent mode (an experiment, branch `claude/agent-mode-experiment`): the back side of the window.
+  `agent-mode-flow.ts` turns the window (Web Animations, two halves of 90 degrees) and draws the back side
+  from the files of `<config dir>/agent-mode`: `layout.json`, `style.css`, `mods/<name>/main.js`. The
+  defaults and the guide for agents are in `crates/service/src/agent-mode/`. A broken file keeps the last
+  good version and writes `<name>.error`. Hide the Git side with `opacity`, not `visibility`: Monaco sets
+  `visibility: visible` on its own elements. Mod classes start with `x-`, because Gittor uses short class
+  names. `agent.rs` is an ACP client (JSON-RPC on stdio); its messages come as `Event::Agent`. The Tauri
+  CSP allows `blob:` scripts for the mods. The e2e scenario `agent-mode` uses a fake ACP agent.
 - Windows (Compare, History, Review, Show Repository): `windows.ts`. A window calls
   `registerWindow(close, kind, show)`, and listens with `onRepoChange`. `watch.ts` calls
   `notifyRepoChange("files" | "repo")`.

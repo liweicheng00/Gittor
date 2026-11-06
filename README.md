@@ -23,6 +23,7 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | Keys | Action |
 |---|---|
 | `Ctrl/Cmd+O` | Open a repository |
+| `Ctrl/Cmd+Shift+A` | Agent mode: turn the window around (an experiment) |
 | `Ctrl/Cmd+1` … `Ctrl/Cmd+5` | Branches, Changes, Stash and Reviews tabs; the submodules in the Changes tab |
 | `Ctrl/Cmd+K`, `Ctrl/Cmd+Enter` | Commit (from the tab, from the message field) |
 | `Ctrl/Cmd+Alt+K` | Commit and push |
@@ -52,9 +53,10 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | Git program, Local History limits, editor, terminal | `settings.json` in `~/.config/gittor` (Linux), `~/Library/Application Support/gittor` (macOS) or `%APPDATA%\gittor` (Windows) |
 | A copy of the UI settings, for Gittor Dev | `ui-settings.json` in the same folder |
 | The settings of Gittor Dev (a test build) | the folder `gittor-dev` next to it; the first start copies the folder `gittor` |
+| Agent mode: its layout, style, mods and agent programs | `agent-mode/` in the same folder as `settings.json` |
 | Other settings and recent repositories | The storage of the window |
 
-Nothing goes to a remote.
+Gittor sends nothing to a remote. An agent that you start in Agent mode talks to its own provider.
 
 ## Build
 

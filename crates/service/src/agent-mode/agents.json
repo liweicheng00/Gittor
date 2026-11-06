@@ -1,0 +1,5 @@
+[
+  { "name": "Claude Code", "command": "npx", "args": ["-y", "@agentclientprotocol/claude-agent-acp"], "env": {} },
+  { "name": "Codex", "command": "npx", "args": ["-y", "@agentclientprotocol/codex-acp"], "env": {} },
+  { "name": "Gemini CLI", "command": "gemini", "args": ["--acp"], "env": {} }
+]

@@ -4,6 +4,8 @@
 // types (RevSpec, LogFilter, ViewSettings, Op, ChangeListOp) stay here, because the front end builds them
 // and many of their fields have defaults.
 import type { Action } from "./bindings/Action";
+import type { AgentConfig } from "./bindings/AgentConfig";
+import type { ModeFiles } from "./bindings/ModeFiles";
 import type { BackendSettings } from "./bindings/BackendSettings";
 import type { Event as BackendEvent } from "./bindings/Event";
 import type { ErrorKind } from "./bindings/ErrorKind";
@@ -54,6 +56,8 @@ import type { IgnoreMatch } from "./bindings/IgnoreMatch";
 import type { Change as ChangeResult } from "./bindings/Change";
 export type {
   Action,
+  AgentConfig,
+  ModeFiles,
   BackendEvent,
   ErrorKind,
   BackendSettings,
@@ -151,7 +155,11 @@ export function setRepoRoot(root: string | null) {
   repoRoot = root;
 }
 
-async function call<T>(cmd: string, args?: unknown): Promise<T> {
+export function getRepoRoot(): string | null {
+  return repoRoot;
+}
+
+export async function call<T>(cmd: string, args?: unknown): Promise<T> {
   if (repoRoot && (args === undefined || (typeof args === "object" && args !== null && !Array.isArray(args)))) {
     args = { root: repoRoot, ...(args as object | undefined) };
   }
@@ -277,6 +285,18 @@ export type ChangeListOp =
 export const api = {
   open: (path: string, view: ViewSettings) => call<ViewResult>("open", { path, ...view }),
   /** Makes an open repository active, for a tab switch; opens it when it is not open. */
+  /** Agent mode: the agent programs of agents.json, and one agent that runs. */
+  agentList: () => call<AgentConfig[]>("agent_list"),
+  agentStart: (index: number, cwd = "") => call<string>("agent_start", { index, cwd }),
+  agentPrompt: (text: string) => call<null>("agent_prompt", { text }),
+  agentCancel: () => call<null>("agent_cancel"),
+  agentAnswer: (token: number, optionId: string | null) => call<null>("agent_answer", { token, optionId }),
+  agentStop: () => call<null>("agent_stop"),
+  /** Agent mode: the files of its interface. */
+  modeFiles: () => call<ModeFiles>("mode_files"),
+  modeStamp: () => call<string>("mode_stamp"),
+  modeError: (name: string, message: string | null) => call<null>("mode_error", { name, message }),
+  modeReset: () => call<string>("mode_reset"),
   activate: (path: string, view: ViewSettings) => call<ViewResult>("activate", { path, ...view }),
   close: (path: string) => call<null>("close", { path }),
   /** The version of a git program; it changes nothing. Empty means git from PATH. */

@@ -1,0 +1,61 @@
+/* The look of Agent mode. Gittor loads this file after its own styles. The colors are the variables of
+   Gittor, so the blocks follow the light and dark theme. */
+
+.am-block { background: var(--bg); }
+.am-row > .am-node + .am-node { border-left: 1px solid var(--border); }
+.am-column > .am-node + .am-node { border-top: 1px solid var(--border); }
+
+/* intro */
+.x-intro { height: 100%; padding: 18px 22px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, var(--bg)), var(--bg) 70%); }
+.x-intro-title { font-size: 20px; font-weight: 600; letter-spacing: 0.2px; }
+.x-intro-text { margin-top: 6px; max-width: 640px; color: var(--muted); }
+.x-intro-dir { margin-top: 10px; font-size: 12px; color: var(--muted); }
+
+/* changes */
+.x-changes { display: flex; flex-direction: column; height: 100%; background: var(--panel-2); }
+.x-changes-head { padding: 10px 12px 6px; font-weight: 600; }
+.x-changes-body { flex: 1; overflow: auto; padding: 0 6px 10px; scrollbar-width: none; }
+.x-changes-list { padding: 8px 6px 4px; color: var(--muted); font-size: 12px; }
+.x-changes-row { display: flex; gap: 8px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+.x-changes-row:hover { background: var(--hover); }
+.x-changes-status { width: 12px; flex: none; font-family: ui-monospace, monospace; font-size: 12px; color: var(--renamed); }
+.x-changes-A, .x-changes-new { color: var(--added); }
+.x-changes-D { color: var(--deleted); }
+.x-changes-path { overflow: hidden; text-overflow: ellipsis; }
+.x-changes-empty { padding: 8px 12px; color: var(--muted); }
+
+/* chat */
+.x-chat { display: flex; flex-direction: column; height: 100%; }
+.x-chat-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.x-chat-title { font-weight: 600; margin-right: 4px; }
+.x-chat-picker { font: inherit; padding: 3px 6px; color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: 5px; }
+.x-chat-state { margin-left: auto; color: var(--muted); font-size: 12px; }
+.x-chat-state[data-state="busy"] { color: var(--accent); }
+.x-chat-state[data-state="error"] { color: var(--deleted); }
+.x-chat-btn { padding: 3px 10px; background: var(--panel); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
+.x-chat-btn:hover:not(:disabled) { background: var(--hover); }
+.x-chat-btn:disabled { opacity: 0.5; cursor: default; }
+.x-chat-send:not(:disabled) { color: #fff; background: var(--accent); border-color: var(--accent); }
+.x-chat-log { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; scrollbar-width: none; }
+.x-chat-empty { margin: auto; max-width: 420px; text-align: center; color: var(--muted); }
+.x-chat-msg { max-width: 82%; padding: 7px 11px; border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.x-chat-user { align-self: flex-end; color: #fff; background: var(--accent); border-bottom-right-radius: 3px; }
+.x-chat-agent { align-self: flex-start; background: var(--panel); border-bottom-left-radius: 3px; }
+.x-chat-thought { align-self: flex-start; color: var(--muted); font-style: italic; background: none; padding: 0 11px; }
+.x-chat-error { align-self: stretch; max-width: none; color: var(--deleted); background: color-mix(in srgb, var(--deleted) 10%, var(--bg)); }
+.x-chat-info { align-self: center; color: var(--muted); font-size: 12px; }
+.x-chat-tool { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; font-family: ui-monospace, monospace; }
+.x-chat-tool-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.x-chat-tool-in_progress .x-chat-tool-dot, .x-chat-tool-pending .x-chat-tool-dot { background: var(--accent); }
+.x-chat-tool-completed .x-chat-tool-dot { background: var(--added); }
+.x-chat-tool-failed .x-chat-tool-dot { background: var(--deleted); }
+.x-chat-plan { padding: 6px 10px; border-left: 2px solid var(--border); color: var(--muted); font-size: 12px; }
+.x-chat-plan-completed { text-decoration: line-through; }
+.x-chat-perm { align-self: stretch; padding: 9px 11px; border: 1px solid var(--accent); border-radius: 8px; }
+.x-chat-perm-title { font-weight: 600; }
+.x-chat-perm-options { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.x-chat-perm-answer { margin-top: 4px; color: var(--muted); }
+.x-chat-foot { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--border); }
+.x-chat-input { flex: 1; resize: none; font: inherit; padding: 7px 9px; color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: 7px; outline: none; }
+.x-chat-input:focus { border-color: var(--accent); }
+.x-chat-actions { display: flex; flex-direction: column; gap: 6px; }

@@ -1,5 +1,5 @@
-//! Events that the backend pushes to the front end: a repository changed outside the app, or git asks
-//! for a password. The Tauri app sends them as window events, the dev server as server-sent events.
+//! Events that the backend pushes to the front end: a repository changed outside the app, git asks
+//! for a password, or the agent of Agent mode sent a message. The Tauri app sends them as window events, the dev server as server-sent events.
 
 use crate::askpass::Prompt;
 use serde::Serialize;
@@ -15,6 +15,11 @@ pub enum Event {
     Watch { root: String, repo: u64, files: u64 },
     /// The prompts that wait for an answer changed.
     Askpass { prompts: Vec<Prompt> },
+    /// A message of the agent of Agent mode; see `agent.rs`.
+    Agent {
+        #[ts(type = "any")]
+        data: serde_json::Value,
+    },
 }
 
 /// The subscribers. A subscriber that went away is removed at the next event.
