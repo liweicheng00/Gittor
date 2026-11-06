@@ -297,6 +297,7 @@ export const api = {
   modeStamp: () => call<string>("mode_stamp"),
   modeError: (name: string, message: string | null) => call<null>("mode_error", { name, message }),
   modeReset: () => call<string>("mode_reset"),
+  modeSaveLayout: (text: string) => call<null>("mode_save_layout", { text }),
   activate: (path: string, view: ViewSettings) => call<ViewResult>("activate", { path, ...view }),
   close: (path: string) => call<null>("close", { path }),
   /** The version of a git program; it changes nothing. Empty means git from PATH. */

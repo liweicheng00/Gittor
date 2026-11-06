@@ -1,5 +1,6 @@
 // UI scenario for Agent mode: the agent button turns the window around, and the back side shows the mods
-// of the agent-mode folder. A small fake agent speaks ACP: it streams a reply, asks for permission, and
+// of the agent-mode folder as cards on a canvas, with edges between them, and the agent window at the
+// bottom left. The user folds the window, zooms and drags a card. A small fake agent speaks ACP: it streams a reply, asks for permission, and
 // writes a new mod and a new layout through the client. The window loads them at once. A broken mod keeps
 // the last version that worked and shows the error. Ctrl+Shift+A turns back.
 // Start the dev server first (see README). Build a fresh repository with make-demo-repo.sh, then:
@@ -36,7 +37,8 @@ createInterface({ input: process.stdin }).on("line", async (line) => {
   const code = 'export default function (root, g) { root.append(g.h("div", { class: "hello-panel" }, "Hello from the agent")); }';
   await ask("fs/write_text_file", { sessionId: "s1", path: cwd + "/mods/hello/main.js", content: code });
   const layout = JSON.parse((await ask("fs/read_text_file", { sessionId: "s1", path: cwd + "/layout.json" })).content);
-  layout.children.push({ mod: "hello", size: 220 });
+  layout.nodes.push({ id: "hello", mod: "hello", title: "Hello", x: 1240, y: 240, w: 240 });
+  layout.edges.push({ from: "remotes", to: "hello", label: "greets" });
   await ask("fs/write_text_file", { sessionId: "s1", path: cwd + "/layout.json", content: JSON.stringify(layout, null, 2) });
   update({ sessionUpdate: "tool_call_update", toolCallId: "t1", status: "completed" });
   update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: " Done." } });
@@ -81,8 +83,31 @@ await halfTurn("am1-turning-in");
 await page.waitForSelector(".agent-mode:not([hidden]) .x-chat");
 await within("the turn ends", async () => !(await page.$("body.am-turning")));
 check("the Git side is hidden", await page.$eval("#app", (e) => e.style.opacity === "0" && e.inert));
-check("the back side shows the three default mods", (await page.$$(".am-block[data-mod]")).length === 3);
+check("the canvas shows four cards", (await page.$$(".am-card")).length === 4);
+check("the canvas draws the two edges", (await page.$$(".am-edges g[data-edge]")).length === 2);
+check("the edges have their labels", (await page.$$eval(".am-edge-label", (els) => els.map((e) => e.textContent))).join(",") === "commit,push");
+const dockBox = await page.locator(".am-dock").boundingBox();
+check("the agent window is at the bottom left", dockBox.x < 30 && dockBox.y + dockBox.height > 1000 - 30);
+await within("the cards load their content", async () => (await page.$$(".x-branches-row")).length > 0 && (await page.$$(".x-remotes-row")).length > 0);
 await shot("am2-back-side");
+
+// The agent window folds to a small button and opens again.
+await page.click(".am-dock-fold");
+check("the window folds", (await page.$eval(".am-dock", (e) => e.hidden)) && (await page.isVisible(".am-dock-pill")));
+await shot("am2b-folded");
+await page.click(".am-dock-pill");
+check("the window opens again", await page.isVisible(".am-dock .x-chat"));
+
+// Ctrl+wheel zooms the canvas; Fit shows all cards again.
+const zoomText = () => page.textContent(".am-zoom-label");
+const zoomBefore = await zoomText();
+await page.mouse.move(1300, 120);
+await page.keyboard.down("Control");
+await page.mouse.wheel(0, -300);
+await page.keyboard.up("Control");
+await within("Ctrl+wheel zooms in", async () => parseInt(await zoomText()) > parseInt(zoomBefore));
+await page.click(".am-fit");
+check("Fit goes back", (await zoomText()) === zoomBefore);
 
 // The fake agent goes into agents.json; the folder name is in the bar.
 const dir = await page.textContent(".am-dir");
@@ -90,6 +115,16 @@ const saved = Object.fromEntries(["agents.json", "layout.json"].map((f) => [f, r
 writeFileSync(join(dir, "agents.json"), JSON.stringify([{ name: "Fake Agent", command: "node", args: [agentScript], env: {} }]));
 await page.click(".am-bar button:has-text('Reload')");
 await within("the picker lists the fake agent", async () => (await page.textContent(".x-chat-picker")) === "Fake Agent");
+
+// A drag of a card by its title moves it, and its place goes into layout.json.
+const hb = await page.locator(".am-card[data-node='intro'] .am-card-head").boundingBox();
+await page.mouse.move(hb.x + 40, hb.y + 10);
+await page.mouse.down();
+await page.mouse.move(hb.x + 140, hb.y + 70, { steps: 6 });
+await page.mouse.up();
+const introX = () => JSON.parse(readFileSync(join(dir, "layout.json"), "utf8")).nodes.find((n) => n.id === "intro").x;
+await within("the new place is in layout.json", async () => introX() > 40);
+check("the canvas keeps its cards after the save", (await page.$$(".am-card")).length === 4);
 await page.click(".x-chat-head button:has-text('Start')");
 await within("the agent is ready", async () => (await page.textContent(".x-chat-state")).includes("ready"));
 
@@ -102,7 +137,9 @@ await shot("am3-permission");
 await page.click(".x-chat-perm button:has-text('Allow')");
 
 // The agent writes a mod and the layout: the window shows the new block, and the chat keeps its log.
-await page.waitForSelector(".hello-panel");
+await page.waitForSelector(".am-card[data-node='hello'] .hello-panel");
+check("the agent connects the new card", (await page.$$(".am-edges g[data-edge]")).length === 3);
+check("the agent keeps the place that the user gave", introX() > 40);
 await within("the turn of the agent ends", async () => (await page.textContent(".x-chat-state")).includes("ready"));
 check("the chat keeps the conversation", (await page.$$eval(".x-chat-agent", (els) => els.map((e) => e.textContent))).join("|") === "I will add a hello panel.| Done.");
 check("the tool call is complete", !!(await page.$(".x-chat-tool-completed")));

@@ -6,17 +6,18 @@ This folder is **the whole interface of the Agent mode of Gittor, as files**. Gi
 client. Agent mode is the back side of its window: the user turns the window around, and Gittor draws
 this side from the files here. When a file changes, the window changes within a second.
 
-When the user asks for something ("show my branches on the left", "make it warmer", "a panel with the
-last commits"), do it by editing these files or by writing a mod. Nothing in this side is special: the
-chat with you, the list of changes and the text at the top are mods, made from the same parts as yours.
+When the user asks for something ("a card with the last commits", "connect the changes to the
+branches", "make it warmer"), do it by editing these files or by writing a mod. Nothing in this side is
+special: the chat with you, the list of changes and the branch lists are mods, made from the same parts
+as yours.
 
 ## The files
 
 | File | What it decides |
 | --- | --- |
-| `layout.json` | The blocks of the window and their sizes. |
-| `style.css` | The look of all blocks. It loads after the styles of Gittor. |
-| `mods/<name>/main.js` | The code of one block (a "mod"). |
+| `layout.json` | The cards on the canvas, the edges between them, and the agent window. |
+| `style.css` | The look of all cards. It loads after the styles of Gittor. |
+| `mods/<name>/main.js` | The code of one card (a "mod"). |
 | `agents.json` | The agent programs that the chat can start. |
 | `gittor.d.ts` | The API that a mod gets. Read it before you write a mod. |
 
@@ -24,31 +25,46 @@ chat with you, the list of changes and the text at the top are mods, made from t
 
 ## layout.json
 
-A tree of nodes. A node is a row, a column or a block:
+The default layout is a canvas, like a flow chart: cards at free places, and arrows between them.
 
 ```json
 {
-  "type": "row",
-  "children": [
-    { "mod": "changes", "size": 280 },
-    { "type": "column", "grow": 1, "children": [
-      { "mod": "intro", "size": 120 },
-      { "mod": "chat", "grow": 1, "props": { "title": "Agent" } }
-    ] }
-  ]
+  "type": "canvas",
+  "nodes": [
+    { "id": "changes", "mod": "changes", "title": "Local Changes", "x": 40, "y": 240, "w": 300, "h": 280 },
+    { "id": "branches", "mod": "branches", "title": "Local Branches", "x": 440, "y": 240, "w": 300 }
+  ],
+  "edges": [{ "from": "changes", "to": "branches", "label": "commit" }],
+  "dock": { "mod": "chat", "title": "Agent", "width": 440, "height": 560 }
 }
 ```
 
-- `type`: `"row"` (children side by side) or `"column"` (children on top of each other).
-- `mod`: the name of a folder in `mods/`. The block shows that mod.
-- `size`: a fixed width (in a row) or height (in a column), in pixels.
-- `grow`: the share of the free space. A node without `size` and `grow` gets `grow: 1`.
-- `class`: extra CSS classes of the element. `props`: an object that the mod gets as `g.props`.
+- `nodes`: the cards. `id` is unique. `mod` is the name of a folder in `mods/`; the mod draws the body of
+  the card. `x` and `y` are the place of the top left corner, in pixels of the canvas. `w` and `h` are
+  the size; without `h`, the card is as high as its content. `title` is the text of the title bar.
+  `class` adds CSS classes. `props` is an object that the mod gets as `g.props`.
+- `edges`: arrows from the card `from` to the card `to`, with an optional `label`.
+- `dock`: the window at the bottom left, over the canvas. The user can fold it to a small button. The
+  chat with you is in it.
+- When the user drags a card, Gittor writes the new `x` and `y` into this file. Read the file again
+  before you change it, so that you keep the places of the user.
+- Put a new card where there is free space, for example to the right of the last card.
+
+A layout can also be a tree of rows and columns, without a canvas:
+
+```json
+{ "type": "row", "children": [{ "mod": "changes", "size": 280 }, { "mod": "branches", "grow": 1 }], "dock": { "mod": "chat" } }
+```
+
+`size` is a fixed width (in a row) or height (in a column), and `grow` is a share of the free space.
+
+The canvas has these classes for `style.css`: `.am-canvas` (the grid; its color is `--grid`), `.am-card`,
+`.am-card-head`, `.am-card-body`, `.am-edge` (an SVG path), `.am-edge-label`, and `.am-dock`.
 
 ## Mods
 
 A mod is one ES module, `mods/<name>/main.js`, with a default function. Gittor calls it with the empty
-element of the block and the API `g`:
+element of the card body and the API `g`:
 
 ```js
 export default function mount(root, g) {

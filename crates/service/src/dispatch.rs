@@ -48,6 +48,7 @@ impl Service {
             "mode_error" => serde_json::to_string(&self.mode_error(parse(body)?)?),
             "mode_files" => serde_json::to_string(&self.mode_files()?),
             "mode_reset" => serde_json::to_string(&self.mode_reset()?),
+            "mode_save_layout" => serde_json::to_string(&self.mode_save_layout(parse(body)?)?),
             "mode_stamp" => serde_json::to_string(&self.mode_stamp()?),
             "activate" => serde_json::to_string(&self.activate(parse(body)?)?),
             "close" => serde_json::to_string(&self.close(parse(body)?)?),

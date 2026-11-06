@@ -123,6 +123,10 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   `visibility: visible` on its own elements. Mod classes start with `x-`, because Gittor uses short class
   names. `agent.rs` is an ACP client (JSON-RPC on stdio); its messages come as `Event::Agent`. The Tauri
   CSP allows `blob:` scripts for the mods. The e2e scenario `agent-mode` uses a fake ACP agent.
+  The default layout is a canvas (`agent-canvas.ts`): cards at `x`/`y`, SVG edges, pan, Ctrl+wheel zoom.
+  A drag of a card writes `layout.json` (`mode_save_layout`) and sets `layoutText` first, so the poll does
+  not draw the canvas again. `dock` in the layout is the agent window at the bottom left; it folds to a
+  button, and Fit keeps the cards out of its width. A test drags a card only after a reload ends.
 - Windows (Compare, History, Review, Show Repository): `windows.ts`. A window calls
   `registerWindow(close, kind, show)`, and listens with `onRepoChange`. `watch.ts` calls
   `notifyRepoChange("files" | "repo")`.

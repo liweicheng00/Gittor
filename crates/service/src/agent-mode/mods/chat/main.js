@@ -6,7 +6,7 @@ export default function mount(root, g) {
   const picker = h("select", { class: "x-chat-picker", title: "The agent program (agents.json)" });
   const startBtn = h("button", { class: "x-chat-btn", onclick: () => start() }, "Start");
   const state = h("span", { class: "x-chat-state" });
-  const head = h("div", { class: "x-chat-head" }, h("span", { class: "x-chat-title" }, String(g.props.title ?? "Agent")), picker, startBtn, state);
+  const head = h("div", { class: "x-chat-head" }, picker, startBtn, state);
   const log = h("div", { class: "x-chat-log" });
   const input = h("textarea", { class: "x-chat-input", rows: 3, placeholder: "Ask the agent. Enter sends, Shift+Enter makes a new line." });
   const sendBtn = h("button", { class: "x-chat-btn x-chat-send", onclick: () => send() }, "Send");

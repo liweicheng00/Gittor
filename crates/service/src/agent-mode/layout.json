@@ -1,14 +1,14 @@
 {
-  "type": "row",
-  "children": [
-    { "mod": "changes", "size": 300 },
-    {
-      "type": "column",
-      "grow": 1,
-      "children": [
-        { "mod": "intro", "size": 132 },
-        { "mod": "chat", "grow": 1 }
-      ]
-    }
-  ]
+  "type": "canvas",
+  "nodes": [
+    { "id": "intro", "mod": "intro", "title": "Agent mode", "x": 40, "y": 40, "w": 520 },
+    { "id": "changes", "mod": "changes", "title": "Local Changes", "x": 40, "y": 240, "w": 300, "h": 280 },
+    { "id": "branches", "mod": "branches", "title": "Local Branches", "x": 440, "y": 240, "w": 300, "h": 280 },
+    { "id": "remotes", "mod": "remotes", "title": "Remote Branches", "x": 840, "y": 240, "w": 300, "h": 280 }
+  ],
+  "edges": [
+    { "from": "changes", "to": "branches", "label": "commit" },
+    { "from": "branches", "to": "remotes", "label": "push" }
+  ],
+  "dock": { "mod": "chat", "title": "Agent", "width": 440, "height": 560 }
 }

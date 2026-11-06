@@ -3,7 +3,7 @@
 export default function mount(root, g) {
   const { h } = g;
   const body = h("div", { class: "x-changes-body" });
-  root.append(h("div", { class: "x-changes" }, h("div", { class: "x-changes-head" }, "Local Changes"), body));
+  root.append(h("div", { class: "x-changes" }, body));
 
   async function load() {
     if (!g.repo()) {

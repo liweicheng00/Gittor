@@ -1,21 +1,25 @@
 /* The look of Agent mode. Gittor loads this file after its own styles. The colors are the variables of
    Gittor, so the blocks follow the light and dark theme. */
 
-.am-block { background: var(--bg); }
 .am-row > .am-node + .am-node { border-left: 1px solid var(--border); }
 .am-column > .am-node + .am-node { border-top: 1px solid var(--border); }
 
+/* The canvas and its cards. The grid, the cards and the edges have these classes:
+   .am-canvas, .am-card, .am-card-head, .am-card-body, .am-edge, .am-edge-label, .am-dock. */
+.am-canvas { --grid: color-mix(in srgb, var(--fg) 13%, transparent); background-color: var(--panel-2); }
+.am-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12); }
+.am-card-head { font-weight: 600; }
+.am-edge { stroke: color-mix(in srgb, var(--accent) 70%, var(--muted)); stroke-width: 2; }
+
 /* intro */
-.x-intro { height: 100%; padding: 18px 22px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, var(--bg)), var(--bg) 70%); }
-.x-intro-title { font-size: 20px; font-weight: 600; letter-spacing: 0.2px; }
-.x-intro-text { margin-top: 6px; max-width: 640px; color: var(--muted); }
-.x-intro-dir { margin-top: 10px; font-size: 12px; color: var(--muted); }
+.x-intro { padding: 4px 14px 14px; }
+.x-intro-text { color: var(--muted); }
+.x-intro-dir { margin-top: 8px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 
 /* changes */
-.x-changes { display: flex; flex-direction: column; height: 100%; background: var(--panel-2); }
-.x-changes-head { padding: 10px 12px 6px; font-weight: 600; }
+.x-changes { display: flex; flex-direction: column; height: 100%; }
 .x-changes-body { flex: 1; overflow: auto; padding: 0 6px 10px; scrollbar-width: none; }
-.x-changes-list { padding: 8px 6px 4px; color: var(--muted); font-size: 12px; }
+.x-changes-list { padding: 6px 6px 4px; color: var(--muted); font-size: 12px; }
 .x-changes-row { display: flex; gap: 8px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
 .x-changes-row:hover { background: var(--hover); }
 .x-changes-status { width: 12px; flex: none; font-family: ui-monospace, monospace; font-size: 12px; color: var(--renamed); }
@@ -24,10 +28,22 @@
 .x-changes-path { overflow: hidden; text-overflow: ellipsis; }
 .x-changes-empty { padding: 8px 12px; color: var(--muted); }
 
+/* branches and remotes */
+.x-branches, .x-remotes { height: 100%; overflow: auto; padding: 4px 6px 10px; scrollbar-width: none; }
+.x-branches-row, .x-remotes-row { display: flex; align-items: baseline; gap: 8px; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+.x-branches-row:hover, .x-remotes-row:hover { background: var(--hover); }
+.x-branches-name, .x-remotes-name { overflow: hidden; text-overflow: ellipsis; color: var(--local); }
+.x-remotes-name { color: var(--remote); }
+.x-branches-current .x-branches-name { font-weight: 600; }
+.x-branches-current::before { content: "●"; color: var(--head); font-size: 9px; }
+.x-branches-ahead { color: var(--added); font-size: 12px; }
+.x-branches-behind { color: var(--deleted); font-size: 12px; }
+.x-remotes-author { margin-left: auto; color: var(--muted); font-size: 12px; }
+.x-branches-empty, .x-remotes-empty { padding: 8px 10px; color: var(--muted); }
+
 /* chat */
 .x-chat { display: flex; flex-direction: column; height: 100%; }
 .x-chat-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
-.x-chat-title { font-weight: 600; margin-right: 4px; }
 .x-chat-picker { font: inherit; padding: 3px 6px; color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: 5px; }
 .x-chat-state { margin-left: auto; color: var(--muted); font-size: 12px; }
 .x-chat-state[data-state="busy"] { color: var(--accent); }

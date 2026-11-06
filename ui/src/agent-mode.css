@@ -21,3 +21,34 @@ body.am-turning #app, body.am-turning .agent-mode { transform-origin: 50% 50%; b
 .am-block > * { flex: 1; min-height: 0; }
 .am-missing { padding: 12px; color: var(--deleted); white-space: pre-wrap; }
 .tb-button.active { background: var(--select); }
+
+/* The canvas: a grid that moves with the cards. style.css of the folder can change the look. */
+.am-content { position: relative; }
+.am-canvas { position: relative; flex: 1; overflow: hidden; cursor: grab; background-image: radial-gradient(circle, var(--grid, rgba(128, 128, 128, 0.25)) 1px, transparent 1.2px); }
+.am-canvas.am-panning { cursor: grabbing; }
+.am-world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.am-edges { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+.am-edge { stroke: var(--accent); stroke-width: 2; }
+.am-arrow { fill: var(--accent); }
+.am-edge-label { font-size: 12px; fill: var(--muted); paint-order: stroke; stroke: var(--panel-2); stroke-width: 5px; stroke-linejoin: round; }
+.am-card { position: absolute; display: flex; flex-direction: column; width: 280px; max-height: 640px; cursor: default; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; }
+.am-card.am-dragging { opacity: 0.92; box-shadow: var(--shadow); z-index: 1; }
+.am-card-head { flex: none; padding: 8px 12px 6px; cursor: move; user-select: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.am-card-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.am-canvas-controls { position: absolute; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 2px; padding: 2px; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; box-shadow: var(--shadow); }
+.am-zoom-label { min-width: 44px; text-align: center; font-size: 12px; color: var(--muted); }
+
+/* The dock: the agent window at the bottom left, and its folded button. */
+.am-dock { position: absolute; left: 12px; bottom: 12px; z-index: 2; display: flex; flex-direction: column; max-width: calc(100% - 24px); max-height: calc(100% - 24px); overflow: hidden; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); }
+.am-dock-head { flex: none; display: flex; align-items: center; gap: 7px; padding: 4px 6px 4px 12px; font-weight: 600; background: var(--panel); border-bottom: 1px solid var(--border); }
+.am-dock-head > .icon { width: 15px; height: 15px; color: var(--accent); }
+.am-dock-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.am-dock-pill { position: absolute; left: 12px; bottom: 12px; z-index: 2; display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px 7px 11px; font-weight: 600; cursor: pointer; background: var(--bg); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); }
+.am-dock-pill:hover { background: var(--hover); }
+.am-dock-pill > .icon { width: 16px; height: 16px; color: var(--accent); }
+.am-dock-state { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); opacity: 0.6; }
+.am-dock-state[data-state="ready"] { background: var(--added); opacity: 1; }
+.am-dock-state[data-state="busy"], .am-dock-state[data-state="starting"] { background: var(--accent); opacity: 1; animation: am-pulse 1s ease-in-out infinite; }
+.am-dock-state[data-state="asks"] { background: var(--tag); opacity: 1; animation: am-pulse 0.6s ease-in-out infinite; }
+.am-dock-state[data-state="error"] { background: var(--deleted); opacity: 1; }
+@keyframes am-pulse { 50% { opacity: 0.35; } }

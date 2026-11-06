@@ -3,6 +3,7 @@
 // An agent (ACP) edits these files, and the window loads them again within a second.
 
 import "./agent-mode.css";
+import { Canvas, checkCanvas, type CanvasSpec } from "./agent-canvas";
 import { api, call, getRepoRoot, onBackendEvent, type ModeFiles } from "./api";
 import { h } from "./dom";
 import { icon } from "./icons";
@@ -182,6 +183,7 @@ export async function toggleAgentMode(show = !on) {
     // Monaco sets `visibility: visible` on its own elements, so only opacity hides the whole side.
     front.style.opacity = show ? "0" : "";
     backSide.hidden = !show;
+    if (show) canvas?.shown();
     if (!still) await turn(to, -90 * dir, 0, "cubic-bezier(0.15, 0.8, 0.3, 1)");
   } finally {
     document.body.classList.remove("am-turning");
@@ -205,10 +207,16 @@ agentBtn.addEventListener("click", () => void toggleAgentMode());
 // ---- The files of the back side ----
 
 type LayoutNode = { type?: "row" | "column"; children?: LayoutNode[]; mod?: string; size?: number; grow?: number; class?: string; props?: Record<string, unknown> };
+/** A window at the bottom left of the back side, over the layout. It folds to a small button. */
+type DockSpec = { mod: string; title?: string; width?: number; height?: number; props?: Record<string, unknown> };
+type LayoutRoot = (LayoutNode | CanvasSpec) & { dock?: DockSpec };
 type ModFn = (root: HTMLElement, g: unknown) => void | (() => void);
 
 let files: ModeFiles | null = null;
 let layoutText = "";
+/** The layout on the screen. The canvas changes the places of its nodes in it. */
+let layout: LayoutRoot | null = null;
+let canvas: Canvas | null = null;
 /** The last module of each mod that loaded: a broken edit keeps it. */
 const good = new Map<string, { code: string; fn: ModFn }>();
 /** The blocks on the screen. */
@@ -222,6 +230,12 @@ function setError(name: string, message: string | null) {
   void api.modeError(name, message).catch(() => {});
   errorBar.hidden = !errors.size;
   errorBar.replaceChildren(...[...errors].map(([n, m]) => h("div", {}, h("b", {}, n === "layout" ? "layout.json" : `mods/${n}/main.js`), ": ", m)));
+}
+
+function checkRoot(r: LayoutRoot): string | null {
+  if (r && typeof r === "object" && r.dock !== undefined && (typeof r.dock !== "object" || typeof r.dock?.mod !== "string")) return "layout.dock needs a \"mod\"";
+  if (r && typeof r === "object" && r.type === "canvas") return checkCanvas(r as CanvasSpec, "layout");
+  return checkLayout(r, "layout");
 }
 
 function checkLayout(n: unknown, at: string): string | null {
@@ -312,6 +326,68 @@ function build(n: LayoutNode): HTMLElement {
   return el;
 }
 
+// ---- The dock: the agent window at the bottom left ----
+
+const DOCK_KEY = "gittor.agentDock";
+const dockState = h("span", { class: "am-dock-state" });
+const pillState = h("span", { class: "am-dock-state" });
+const dockTitle = h("span", { class: "am-dock-title" });
+const pillTitle = h("span", {});
+const dockBody = h("div", { class: "am-dock-body am-block" });
+const dock = h(
+  "div",
+  { class: "am-dock", hidden: true },
+  h("div", { class: "am-dock-head" }, icon("agent"), dockTitle, dockState, h("span", { class: "spacer" }), h("button", { class: "tb-button tb-icon am-dock-fold", title: "Fold the window", "aria-label": "Fold", onclick: () => setDockOpen(false) }, icon("chevron-down"))),
+  dockBody,
+);
+const pill = h("button", { class: "am-dock-pill", hidden: true, title: "Open the agent window", onclick: () => setDockOpen(true) }, icon("agent"), pillTitle, pillState);
+
+function dockOpen(): boolean {
+  try {
+    return localStorage.getItem(DOCK_KEY) !== "closed";
+  } catch {
+    return true;
+  }
+}
+
+function setDockOpen(open: boolean) {
+  try {
+    localStorage.setItem(DOCK_KEY, open ? "open" : "closed");
+  } catch {
+    // Without storage the window opens at the next start.
+  }
+  showDock();
+}
+
+function showDock() {
+  const spec = layout?.dock;
+  dock.hidden = !spec || !dockOpen();
+  pill.hidden = !spec || dockOpen();
+  if (!spec) return;
+  dock.style.width = `${spec.width ?? 420}px`;
+  dock.style.height = `${spec.height ?? 540}px`;
+  dockTitle.textContent = pillTitle.textContent = spec.title ?? spec.mod;
+}
+
+/** The dot of the agent state, also on the folded button: a question of the agent is easy to see. */
+function showAgentState() {
+  const asks = agent.log.some((e) => e.kind === "permission" && e.answer === undefined);
+  for (const el of [dockState, pillState]) {
+    el.dataset.state = asks ? "asks" : agent.state;
+    el.title = asks ? "The agent asks for permission" : agent.state;
+  }
+}
+listeners.agent.add(showAgentState);
+showAgentState();
+
+function saveLayout() {
+  if (!layout) return;
+  const text = JSON.stringify(layout, null, 2) + "\n";
+  // The poll then finds the same text and does not draw the canvas again.
+  layoutText = text;
+  void api.modeSaveLayout(text).catch((e) => toast(String(e).replace(/^Error: /, ""), "error"));
+}
+
 /** Loads the files, and draws again what changed: the whole layout, or only the blocks of changed mods. */
 async function reload(force: boolean) {
   let next: ModeFiles;
@@ -327,23 +403,36 @@ async function reload(force: boolean) {
   dirLabel.textContent = next.dir;
   dirLabel.title = next.dir;
   if (styleEl.textContent !== next.style) styleEl.textContent = next.style;
-  let layout: LayoutNode | null = null;
+  let fresh: LayoutRoot | null = null;
   if (force || next.layout !== layoutText) {
     try {
       const parsed = JSON.parse(next.layout);
-      const e = checkLayout(parsed, "layout");
+      const e = checkRoot(parsed);
       if (e) throw new Error(e);
-      layout = parsed;
+      fresh = parsed;
       setError("layout", null);
     } catch (e) {
       setError("layout", e instanceof Error ? e.message : String(e));
     }
   }
-  if (layout) {
+  if (fresh) {
     layoutText = next.layout;
+    layout = fresh;
     blocks.splice(0).forEach(unmount);
-    content.replaceChildren(build(layout));
+    canvas?.dispose();
+    canvas = null;
+    if (fresh.type === "canvas") {
+      canvas = new Canvas(fresh as CanvasSpec, saveLayout, () => (dock.hidden ? 0 : dock.offsetWidth + 12));
+      for (const { node, body } of canvas.bodies()) blocks.push({ el: body, node, cleanup: null, offs: [] });
+      content.replaceChildren(canvas.el);
+    } else {
+      content.replaceChildren(build(fresh as LayoutNode));
+    }
+    content.append(dock, pill);
+    if (fresh.dock) blocks.push({ el: dockBody, node: { mod: fresh.dock.mod, props: fresh.dock.props }, cleanup: null, offs: [] });
+    showDock();
     await Promise.all(blocks.map(mount));
+    if (!backSide.hidden) canvas?.shown();
   } else {
     await Promise.all(blocks.filter((b) => changedMods.has(b.node.mod!)).map(mount));
   }

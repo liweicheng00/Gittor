@@ -21,7 +21,9 @@ const DEFAULTS: &[(&str, &str)] = &[
     ("agents.json", include_str!("agent-mode/agents.json")),
     ("mods/chat/main.js", include_str!("agent-mode/mods/chat/main.js")),
     ("mods/changes/main.js", include_str!("agent-mode/mods/changes/main.js")),
+    ("mods/branches/main.js", include_str!("agent-mode/mods/branches/main.js")),
     ("mods/intro/main.js", include_str!("agent-mode/mods/intro/main.js")),
+    ("mods/remotes/main.js", include_str!("agent-mode/mods/remotes/main.js")),
 ];
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -58,6 +60,11 @@ pub struct ModeFiles {
     pub layout: String,
     pub style: String,
     pub mods: Vec<ModFile>,
+}
+
+#[derive(Deserialize)]
+pub struct ModeLayoutArgs {
+    pub text: String,
 }
 
 #[derive(Deserialize)]
@@ -144,6 +151,15 @@ impl Service {
                 Ok(())
             }
         }
+    }
+
+    /// Writes `layout.json`, for example after the user moved a card of the canvas. The text must be JSON.
+    pub fn mode_save_layout(&self, args: ModeLayoutArgs) -> Result<()> {
+        serde_json::from_str::<serde_json::Value>(&args.text).map_err(|e| format!("layout.json: {e}"))?;
+        let p = self.mode_dir()?.join("layout.json");
+        let tmp = p.with_extension("json.tmp");
+        write_file(&tmp, &args.text)?;
+        std::fs::rename(&tmp, &p).map_err(err)
     }
 
     /// Moves the folder to `agent-mode.bak-<seconds>` and makes it again with the default files.
