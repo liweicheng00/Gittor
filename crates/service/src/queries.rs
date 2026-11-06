@@ -121,6 +121,11 @@ impl Service {
         self.with_repo(|r| r.submodules().map_err(err))
     }
 
+    /// The branches of a submodule, for the quick switch of its branch.
+    pub fn submodule_branches(&self, args: PathArgs) -> Result<Vec<gittor_git::submodule::SubmoduleBranch>> {
+        self.with_repo(|r| r.submodule_branches(&args.path).map_err(err))
+    }
+
     /// The commits between the recorded and the checked-out commit of a submodule, for the Submodules tab.
     pub fn submodule_range(&self, args: PathArgs) -> Result<gittor_git::submodule::SubmoduleRange> {
         self.with_repo(|r| r.submodule_range(&args.path).map_err(err))

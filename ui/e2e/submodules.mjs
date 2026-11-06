@@ -72,11 +72,12 @@ check("the detail lists the commit Two", (await page.textContent(".sm-commit")).
 writeFileSync(`${sub}/lib.rs`, "pub fn changed() {}\n");
 writeFileSync(`${sub}/extra.rs`, "pub fn extra() {}\n");
 await page.keyboard.press("F5");
-await within("the detail lists the local changes", async () => {
-  const t = await page.textContent(".sm-detail");
-  return t.includes("Local changes (2)") && t.includes("lib.rs") && t.includes("extra.rs");
+await within("the detail counts the uncommitted files", async () => (await page.textContent(".sm-detail")).includes("2 uncommitted files (1 unversioned)"));
+check("the row shows uncommitted changes", (await rowText()).includes("uncommitted"));
+await within("the line under the header counts the states", async () => {
+  const t = await page.textContent(".sm-stats");
+  return t.includes("1 at another commit") && t.includes("1 with uncommitted changes") && t.includes("1 detached");
 });
-check("the row shows modified and unversioned files", (await rowText()).includes("modified") && (await rowText()).includes("unversioned files"));
 // The changed submodule shows in the changelist and in the section below it.
 await within("the submodule is in the changelist too", async () => (await page.$(".cl-file:has-text('lib')")) !== null);
 await shot("sm1-submodules-tab");
@@ -105,6 +106,17 @@ await page.click(".sm-actions button:has-text('Update to Recorded')");
 await within("Update checks out the recorded commit", async () => run(sub, "rev-parse", "HEAD") === c2);
 await within("the row shows the submodule as clean", async () => !(await rowText()).includes("other commit"));
 await within("the header has no count of attention", async () => (await page.$(".sm-count.attention")) === null);
+
+// The branch of the row opens the branches of the submodule. "recorded" marks main: its tip is the
+// recorded commit.
+await page.click(".sm-row .sm-branch");
+await page.waitForSelector(".menu .menu-header:text-is('Remote Branches')");
+check("the menu marks main as recorded", ((await page.textContent(".menu-item:has(.menu-label:text-matches('^main'))")) ?? "").includes("recorded"));
+await shot("sm1b-branch-menu");
+await page.waitForTimeout(400);
+await page.click(".menu-item:has(.menu-label:text-matches('^main'))");
+await within("the submodule is on main", async () => run(sub, "rev-parse", "--abbrev-ref", "HEAD") === "main");
+await within("the row shows main", async () => (await page.textContent(".sm-row .sm-branch")).includes("main"));
 
 // A checkout that changes the recorded commit offers Update Submodules.
 git("checkout", "-q", "-b", "old-lib");
@@ -177,8 +189,7 @@ check("the settings keep the tabs of the main window", stored.tabs.length === 1 
 
 // A repository shows in one window only: the main window does not open the submodule again.
 await page.click(".lp-tab:text-is('Changes')");
-await page.click(".sm-row");
-await page.click(".sm-actions button:has-text('Open as Repository')");
+await page.click(".sm-row .sm-open");
 await within("the main window says that another window shows it", async () => (await page.$(".toast:has-text('is open in another window')")) !== null);
 check("the main window opens no tab for it", await page.$eval(".tabbar", (e) => e.hidden));
 await popup.screenshot({ path: `${outDir}/sm8-new-window.png` });
@@ -188,7 +199,7 @@ await shot("sm7-open-elsewhere");
 // runs no beforeunload, so the entry of the window gets old first.
 await popup.close();
 await page.waitForTimeout(11000);
-await page.click(".sm-actions button:has-text('Open as Repository')");
+await page.click(".sm-row .sm-open");
 await within("the submodule opens in a tab again", async () => (await page.textContent(".tab.on .tab-name").catch(() => "")).includes("lib"));
 console.log("errors:", JSON.stringify(errors));
 await browser.close();

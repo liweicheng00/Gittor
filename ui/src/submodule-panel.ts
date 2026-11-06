@@ -22,6 +22,7 @@ export class SubmodulePanel {
   private detail: HTMLElement;
   private title: HTMLElement;
   private twist: HTMLElement;
+  private stats: HTMLElement;
   private subs: Submodule[] = [];
   private selected: string | null = null;
   private range: SubmoduleRange | null = null;
@@ -29,6 +30,8 @@ export class SubmodulePanel {
   onMenu: (s: Submodule, e: MouseEvent) => void = () => {};
   onOpen: (s: Submodule) => void = () => {};
   onOpenCommit: (s: Submodule, oid: string) => void = () => {};
+  /** A click on the branch of a row: the menu of the branches of the submodule. */
+  onBranchMenu: (s: Submodule, e: MouseEvent) => void = () => {};
   onUpdate: (paths: string[]) => void = () => {};
   onRefresh: () => void = () => {};
 
@@ -52,7 +55,8 @@ export class SubmodulePanel {
       this.select(this.subs[Math.max(0, Math.min(this.subs.length - 1, i + (e.key === "ArrowDown" ? 1 : -1)))]);
     });
     this.detail = h("div", { class: "sm-detail" });
-    this.el = h("section", { class: "submodule-panel", hidden: true }, head, h("div", { class: "sm-body" }, this.list, this.detail));
+    this.stats = h("div", { class: "sm-stats" });
+    this.el = h("section", { class: "submodule-panel", hidden: true }, head, h("div", { class: "sm-body" }, this.stats, this.list, this.detail));
     this.el.classList.toggle("collapsed", settings.submodulesCollapsed);
     this.render();
   }
@@ -92,6 +96,7 @@ export class SubmodulePanel {
     this.el.hidden = !subs.length;
     const n = this.attention;
     this.title.replaceChildren("Submodules", h("span", { class: "sm-count" + (n ? " attention" : ""), title: n ? `${n} need attention` : "" }, String(n || subs.length)));
+    this.stats.replaceChildren(...statistics(subs));
     if (!subs.some((s) => s.path === this.selected)) {
       this.selected = null;
       this.range = null;
@@ -122,22 +127,37 @@ export class SubmodulePanel {
     this.list.replaceChildren(
       ...this.subs.map((s) => {
         const commit = (s.current ?? s.recorded).slice(0, 8);
-        const badges = [STATE_TEXT[s.state], s.dirty ? "modified" : "", s.untracked ? "unversioned files" : ""].filter(Boolean);
-        const where = s.state === "uninitialized" ? "" : s.branch ?? "detached";
+        const badges = [STATE_TEXT[s.state], s.dirty || s.untracked ? "uncommitted" : ""].filter(Boolean);
+        const tools = h("span", { class: "sm-tools" });
+        if (s.state !== "uninitialized") {
+          const branch = h(
+            "button",
+            { class: "sm-branch" + (s.branch ? "" : " sm-detached"), title: "Check out another branch in the submodule" },
+            icon("branch"),
+            h("span", { class: "sm-branch-name" }, s.branch ?? "detached"),
+            icon("chevron-down"),
+          );
+          branch.addEventListener("mousedown", (e) => e.stopPropagation());
+          branch.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this.onBranchMenu(s, e);
+          });
+          const open = h("button", { class: "icon-button sm-open", title: "Open as Repository" }, icon("open"));
+          open.addEventListener("mousedown", (e) => e.stopPropagation());
+          open.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this.onOpen(s);
+          });
+          tools.append(branch, open);
+        }
         const row = h(
           "div",
           {
             class: "sm-row" + (s.path === this.selected ? " selected" : ""),
             title: `${s.path}\nrecorded ${s.recorded}${s.current ? `\nchecked out ${s.current}` : ""}${s.url ? `\n${s.url}` : ""}`,
           },
-          h("div", { class: "sm-name" }, h("span", { class: "branch-icon" }, icon("submodule")), h("span", { class: "sm-path" }, s.path)),
-          h(
-            "div",
-            { class: "sm-meta" },
-            where ? h("span", { class: s.branch ? "" : "sm-detached" }, s.branch ? icon("branch") : "", ` ${where}`) : "",
-            h("code", {}, commit),
-            ...badges.map((b) => h("span", { class: "sm-badge" }, b)),
-          ),
+          h("div", { class: "sm-name" }, h("span", { class: "branch-icon" }, icon("submodule")), h("span", { class: "sm-path" }, s.path), tools),
+          h("div", { class: "sm-meta" }, h("code", {}, commit), ...badges.map((b) => h("span", { class: "sm-badge" }, b))),
         );
         row.addEventListener("mousedown", (e) => e.button === 0 && this.select(s));
         row.addEventListener("dblclick", () => s.state !== "uninitialized" && this.onOpen(s));
@@ -167,34 +187,26 @@ export class SubmodulePanel {
     };
     const actions = h("div", { class: "sm-actions" });
     if (s.state === "uninitialized") {
-      parts.push(h("p", { class: "sm-summary" }, "The submodule is not initialized. Its folder is empty."));
+      parts.push(h("span", { class: "sm-summary" }, "Not initialized."));
       actions.append(button("Initialize and Update", "Clone the submodule and check out the recorded commit", () => this.onUpdate([s.path])));
     } else {
       const r = this.range?.path === s.path ? this.range : null;
-      parts.push(h("p", { class: "sm-summary" }, summary(s, r)));
+      parts.push(h("span", { class: "sm-summary", title: `Recorded commit ${s.recorded}` }, summary(s, r)));
       // Not when the submodule has commits of its own: on a detached HEAD, an update would leave them behind.
       if ((s.state === "otherCommit" && r && !r.ahead.length) || r?.recordedMissing) {
         actions.append(button("Update to Recorded", "Check out the commit that the parent repository records", () => this.onUpdate([s.path])));
       }
-      actions.append(button("Open as Repository", "Open the submodule in a new tab", () => this.onOpen(s)));
       if (r) {
+        if (r.changes.length) {
+          const untracked = r.changes.filter((c) => c.status === "?").length;
+          const files = `${r.changes.length} uncommitted file${r.changes.length === 1 ? "" : "s"}${untracked ? ` (${untracked} unversioned)` : ""}`;
+          parts.push(h("div", { class: "sm-changes", title: r.changes.map((c) => `${c.status} ${c.path}`).join("\n") }, files));
+        }
         if (r.behind.length) parts.push(this.commits(s, `Only in the recorded commit (${count(r.behind)})`, r.behind));
         if (r.ahead.length) parts.push(this.commits(s, `Only in the checked-out commit (${count(r.ahead)})`, r.ahead));
-        if (r.changes.length) {
-          parts.push(
-            h(
-              "div",
-              { class: "sm-section" },
-              h("div", { class: "sm-section-title" }, `Local changes (${r.changes.length})`),
-              ...r.changes.map((c) =>
-                h("div", { class: "sm-file", title: c.path }, h("span", { class: c.status === "?" ? "sm-status sm-unversioned" : `sm-status status-text-${c.status}` }, c.status), c.path),
-              ),
-            ),
-          );
-        }
       }
     }
-    this.detail.replaceChildren(h("div", { class: "sm-detail-head", title: s.path }, s.path), actions, ...parts);
+    this.detail.replaceChildren(h("div", { class: "sm-detail-line" }, ...parts.splice(0, 1), actions), ...parts);
   }
 
   private commits(s: Submodule, title: string, commits: OutgoingCommit[]) {
@@ -202,7 +214,7 @@ export class SubmodulePanel {
       "div",
       { class: "sm-section" },
       h("div", { class: "sm-section-title" }, title),
-      ...commits.map((c) => {
+      ...commits.slice(0, MAX_COMMITS).map((c) => {
         const row = h(
           "div",
           { class: "sm-commit", title: `${c.oid}\n${c.author}, ${formatDate(c.time)}\nDouble-click to show the commit in the submodule` },
@@ -213,8 +225,26 @@ export class SubmodulePanel {
         row.addEventListener("dblclick", () => this.onOpenCommit(s, c.oid));
         return row;
       }),
+      commits.length > MAX_COMMITS ? h("div", { class: "sm-more muted" }, `${commits.length - MAX_COMMITS} more: open the submodule to see them`) : "",
     );
   }
+}
+
+/** The detail lists only the newest commits. */
+const MAX_COMMITS = 5;
+
+/** The counts of the states of the submodules, for the line under the header. */
+function statistics(subs: Submodule[]): HTMLElement[] {
+  const n = (f: (s: Submodule) => boolean) => subs.filter(f).length;
+  const parts: [number, string, string][] = [
+    [n((s) => s.state === "clean"), "at the recorded commit", ""],
+    [n((s) => s.state === "otherCommit"), "at another commit", "warn"],
+    [n((s) => s.dirty || s.untracked), "with uncommitted changes", "warn"],
+    [n((s) => s.state === "uninitialized"), "not initialized", "warn"],
+    [n((s) => s.state === "conflict"), "in conflict", "warn"],
+    [n((s) => s.state !== "uninitialized" && !s.branch), "detached", ""],
+  ];
+  return parts.filter(([c]) => c).map(([c, text, cls]) => h("span", { class: "sm-stat " + cls }, `${c} ${text}`));
 }
 
 const count = (commits: OutgoingCommit[]) => (commits.length >= 1000 ? "1000+" : String(commits.length));
@@ -231,7 +261,7 @@ function summary(s: Submodule, r: SubmoduleRange | null): string {
   const behind = r.behind.length;
   const ahead = r.ahead.length;
   if (behind && ahead) return `Diverged from the recorded commit ${recorded}: ${plural(ahead)} ahead, ${plural(behind)} behind.`;
-  if (behind) return `${plural(behind)} behind the recorded commit ${recorded}. Update checks out the recorded commit.`;
-  if (ahead) return `${plural(ahead)} ahead of the recorded commit ${recorded}. Commit the submodule in the parent repository to record them.`;
+  if (behind) return `${plural(behind)} behind the recorded commit ${recorded}.`;
+  if (ahead) return `${plural(ahead)} ahead of the recorded commit ${recorded}. Commit the submodule to record them.`;
   return `At another commit than the recorded commit ${recorded}.`;
 }

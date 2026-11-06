@@ -292,6 +292,10 @@ export async function addWorktree(at = "HEAD", atLabel = "HEAD") {
   if (out?.result.ok && r.open) void openRepo(String(r.path).trim());
 }
 
+/** Checks out a branch in a submodule. A remote branch checks out its local branch. */
+export const checkoutSubmoduleBranch = (path: string, branch: string, remote: boolean) =>
+  runOp({ op: "checkoutSubmoduleBranch", path, branch, remote }, `Checking out ${branch} in ${path}`);
+
 /** Checks out the recorded commits of submodules, and initializes them first. No paths means all. */
 export const updateSubmodules = (paths: string[]) => runOp({ op: "updateSubmodules", paths }, "Updating submodules");
 

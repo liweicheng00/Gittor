@@ -70,6 +70,24 @@ pub struct SubmoduleRange {
     pub changes: Vec<Change>,
 }
 
+/// A branch of a submodule, for the quick switch of the branch.
+#[derive(Debug, Serialize)]
+#[derive(ts_rs::TS)]
+#[ts(export)]
+#[serde(rename_all = "camelCase")]
+pub struct SubmoduleBranch {
+    /// The short name, for example `main` or `origin/main`.
+    pub name: String,
+    pub remote: bool,
+    /// The branch is checked out in the submodule.
+    pub current: bool,
+    /// The tip is the commit that the superproject records.
+    pub at_recorded: bool,
+    /// The commit time of the tip, in seconds.
+    #[ts(type = "number")]
+    pub time: i64,
+}
+
 #[derive(Default)]
 struct ModuleConfig {
     name: String,
@@ -242,6 +260,60 @@ impl Repo {
             );
         }
         Ok(range)
+    }
+
+    /// The local and the remote branches of a submodule, the newest tip first.
+    pub fn submodule_branches(&self, path: &str) -> Result<Vec<SubmoduleBranch>> {
+        let repo = self.submodule_repo(path)?;
+        let recorded = self.gitlink(None, path).unwrap_or_default();
+        let out = repo.git(&[
+            "for-each-ref",
+            "--sort=-committerdate",
+            "--format=%(refname)%00%(objectname)%00%(committerdate:unix)%00%(HEAD)",
+            "refs/heads",
+            "refs/remotes",
+        ])?;
+        let mut branches = Vec::new();
+        for line in String::from_utf8_lossy(&out).lines() {
+            let f: Vec<&str> = line.split('\0').collect();
+            if f.len() < 4 || f[0].ends_with("/HEAD") {
+                continue;
+            }
+            let (name, remote) = match (f[0].strip_prefix("refs/heads/"), f[0].strip_prefix("refs/remotes/")) {
+                (Some(n), _) => (n, false),
+                (_, Some(n)) => (n, true),
+                _ => continue,
+            };
+            branches.push(SubmoduleBranch {
+                name: name.to_string(),
+                remote,
+                current: f[3] == "*",
+                at_recorded: f[1] == recorded,
+                time: f[2].parse().unwrap_or(0),
+            });
+        }
+        Ok(branches)
+    }
+
+    /// Checks out a branch in a submodule. A remote branch checks out its local branch, and makes it
+    /// first when it is not there. The recorded commit of the superproject does not change.
+    pub fn checkout_submodule_branch(&self, path: &str, branch: &str, remote: bool) -> Result<OpResult> {
+        let repo = self.submodule_repo(path)?;
+        let branch = safe(branch)?;
+        let local = if remote { branch.split_once('/').map(|(_, b)| b).unwrap_or(branch) } else { branch };
+        let exists = repo.git(&["rev-parse", "--verify", "-q", &format!("refs/heads/{local}")]).is_ok();
+        let args: Vec<&str> = if remote && !exists { vec!["checkout", "-b", local, "--track", branch] } else { vec!["checkout", local] };
+        repo.git_write(&args, &[]).map_err(|(out, e)| GitError(if out.is_empty() { e } else { format!("{e}\n{out}") }))?;
+        Ok(OpResult::ok_msg(format!("Checked out {local} in {path}")))
+    }
+
+    /// The repository of an initialized submodule.
+    fn submodule_repo(&self, path: &str) -> Result<Repo> {
+        let sub = self.submodules()?.into_iter().find(|s| s.path == path).ok_or_else(|| GitError(format!("{path} is not a submodule")))?;
+        if sub.current.is_none() {
+            return Err(GitError(format!("The submodule {path} is not initialized")));
+        }
+        Ok(Repo { root: self.root.join(path) })
     }
 
     /// The commit of a submodule in a commit, or in the index when `commit` is None. None when the path

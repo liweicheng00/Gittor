@@ -2,8 +2,9 @@
 
 import { api, type Submodule } from "./api";
 import { showMenu } from "./context-menu";
-import { copyText } from "./dom";
-import { updateSubmodules } from "./operations";
+import { copyText, formatDate } from "./dom";
+import { toast } from "./notify";
+import { checkoutSubmoduleBranch, updateSubmodules } from "./operations";
 import { jumpToOid, loadSubmodules, openRepo } from "./repo";
 import { submodulePanel } from "./shell";
 import { app } from "./state";
@@ -37,6 +38,35 @@ submodulePanel.onOpen = (s) => void openRepo(submodulePath(s));
 submodulePanel.onOpenCommit = (s, oid) => void openCommit(s, oid);
 submodulePanel.onUpdate = (paths) => void updateSubmodules(paths);
 submodulePanel.onRefresh = () => void loadSubmodules();
+/** The menu of the branches of a submodule: local branches first, then remote branches. "recorded" marks
+ * a branch at the commit that the parent repository records. */
+async function branchMenu(s: Submodule, e: MouseEvent) {
+  const anchor = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  let branches;
+  try {
+    branches = await api.submoduleBranches(s.path);
+  } catch (err) {
+    toast(String(err).replace(/^Error: /, ""), "error");
+    return;
+  }
+  const item = (b: (typeof branches)[number]) => ({
+    label: b.name,
+    checked: b.current,
+    shortcut: b.atRecorded ? "recorded" : "",
+    detail: `Last commit ${formatDate(b.time)}`,
+    disabled: b.current,
+    action: () => void checkoutSubmoduleBranch(s.path, b.name, b.remote),
+  });
+  const local = branches.filter((b) => !b.remote);
+  const remote = branches.filter((b) => b.remote);
+  showMenu(anchor.left, anchor.bottom, [
+    { header: "Local Branches" },
+    ...(local.length ? local.map(item) : [{ label: "No local branch", disabled: true, action: () => {} }]),
+    ...(remote.length ? [{ header: "Remote Branches" }, ...remote.map(item)] : []),
+  ]);
+}
+
+submodulePanel.onBranchMenu = (s, e) => void branchMenu(s, e);
 submodulePanel.onMenu = (s, e) =>
   showMenu(e.clientX, e.clientY, [
     { label: "Open as Repository", disabled: s.state === "uninitialized", action: () => void openRepo(submodulePath(s)) },

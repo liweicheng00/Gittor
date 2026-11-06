@@ -42,6 +42,7 @@ import type { Row } from "./bindings/Row";
 import type { Stash } from "./bindings/Stash";
 import type { StashDetail } from "./bindings/StashDetail";
 import type { Submodule } from "./bindings/Submodule";
+import type { SubmoduleBranch } from "./bindings/SubmoduleBranch";
 import type { SubmoduleRange } from "./bindings/SubmoduleRange";
 import type { UndoAction } from "./bindings/UndoAction";
 import type { ViewResult } from "./bindings/ViewResult";
@@ -95,6 +96,7 @@ export type {
   Stash,
   StashDetail,
   Submodule,
+  SubmoduleBranch,
   SubmoduleRange,
   UndoAction,
   ViewResult,
@@ -226,6 +228,7 @@ export type Op =
   | { op: "markResolved"; paths: string[] }
   | { op: "rewrite"; base: string; plan: PlanEntry[]; what: string }
   | { op: "undo"; actions: UndoAction[] }
+  | { op: "checkoutSubmoduleBranch"; path: string; branch: string; remote: boolean }
   | { op: "updateSubmodules"; paths: string[] }
   | { op: "addRemote"; name: string; url: string }
   | { op: "removeRemote"; name: string }
@@ -323,6 +326,7 @@ export const api = {
   localHistory: (path: string) => call<LocalRevision[]>("local_history", { path }),
   localHistoryContent: (blob: string | null) => call<Omit<FileContent, "size">>("local_history_content", { blob }),
   submodules: () => call<Submodule[]>("submodules"),
+  submoduleBranches: (path: string) => call<SubmoduleBranch[]>("submodule_branches", { path }),
   submoduleRange: (path: string) => call<SubmoduleRange>("submodule_range", { path }),
   remotes: () => call<RemoteInfo[]>("remotes"),
   commitTemplate: () => call<string | null>("commit_template"),

@@ -446,23 +446,32 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .sm-row.selected { background: var(--select); }
 .sm-list:focus .sm-row.selected { background: var(--select-strong); }
 .sm-name { display: flex; align-items: center; gap: 5px; font-weight: 600; overflow: hidden; white-space: nowrap; }
-.sm-path { overflow: hidden; text-overflow: ellipsis; }
+.sm-path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sm-tools { display: flex; align-items: center; gap: 2px; flex: none; font-weight: 400; }
+.sm-branch { display: flex; align-items: center; gap: 3px; max-width: 130px; padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px; background: transparent; color: var(--local); font-size: 11px; cursor: pointer; }
+.sm-branch:hover { background: var(--hover); }
+.sm-branch.sm-detached { color: var(--warn, #b26a00); }
+.sm-branch-name { overflow: hidden; text-overflow: ellipsis; }
+.sm-branch .icon { width: 11px; height: 11px; flex: none; }
+.sm-open { width: 20px; height: 20px; }
+.sm-open .icon { width: 13px; height: 13px; }
 .sm-meta { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; padding-left: 19px; }
-.sm-detached { color: var(--warn, #b26a00); }
+.sm-stats { display: flex; flex-wrap: wrap; gap: 2px 10px; padding: 2px 10px 4px 26px; color: var(--muted); font-size: 11px; }
+.sm-stat.warn { color: var(--deleted); }
 .sm-badge { color: var(--deleted); }
 .sm-detail { padding: 6px 10px; border-top: 1px solid var(--border); }
-.sm-detail-head { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sm-actions { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
-.sm-summary { margin: 6px 0; line-height: 1.4; }
+.sm-detail-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.sm-actions { display: flex; flex-wrap: wrap; gap: 4px; }
+.sm-summary { line-height: 1.4; }
+.sm-changes { margin-top: 4px; color: var(--deleted); }
+.sm-more { padding: 2px 4px; font-size: 11px; }
 .sm-section { margin-top: 8px; }
 .sm-section-title { color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; padding: 2px 0; }
-.sm-commit, .sm-file { display: flex; gap: 8px; padding: 2px 4px; border-radius: 3px; white-space: nowrap; overflow: hidden; cursor: default; }
-.sm-commit:hover, .sm-file:hover { background: var(--hover); }
+.sm-commit { display: flex; gap: 8px; padding: 2px 4px; border-radius: 3px; white-space: nowrap; overflow: hidden; cursor: default; }
+.sm-commit:hover { background: var(--hover); }
 .sm-commit code { color: var(--muted); }
 .sm-subject { flex: 1; overflow: hidden; text-overflow: ellipsis; }
 .sm-author { color: var(--muted); font-size: 11px; }
-.sm-status { width: 10px; flex: none; font-weight: 700; }
-.sm-unversioned { color: var(--muted); }
 .stash-branch { color: var(--local); }
 
 /* merge window */

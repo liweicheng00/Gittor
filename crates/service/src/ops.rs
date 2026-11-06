@@ -99,6 +99,8 @@ pub enum Op {
     SetUpstream { branch: String, upstream: Option<String> },
     /// Rolls back the hunks of one changelist of a file that is in more than one changelist.
     RollbackHunks { path: String, ids: Vec<String> },
+    /// Checks out a branch in a submodule. A remote branch checks out its local branch.
+    CheckoutSubmoduleBranch { path: String, branch: String, #[serde(default)] remote: bool },
     /// Initializes the submodules and checks out their recorded commits. No paths means all submodules.
     UpdateSubmodules { #[serde(default)] paths: Vec<String> },
     /// Writes a Local History version back to the working tree. No blob deletes the file.
@@ -301,6 +303,7 @@ impl Service {
             Op::GetFromRevision { rev, paths } => repo.get_from_revision(&rev, &paths),
             Op::RevertToRevision { rev, paths } => repo.revert_to_revision(&rev, &paths),
             Op::WriteFile { path, text, expected } => repo.write_file(&path, &text, &expected),
+            Op::CheckoutSubmoduleBranch { path, branch, remote } => repo.checkout_submodule_branch(&path, &branch, remote),
             Op::UpdateSubmodules { paths } => repo.update_submodules(&paths),
             Op::AddRemote { name, url } => repo.add_remote(&name, &url),
             Op::RemoveRemote { name } => repo.remove_remote(&name),

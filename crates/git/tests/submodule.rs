@@ -215,3 +215,47 @@ fn partial_commit_runs_clean_filters() {
     assert!(r.ok, "{}", r.message);
     assert_eq!(git(&dir, &["show", "HEAD:a.up"]), "ONE\nTWO");
 }
+
+#[test]
+fn submodule_branches() {
+    std::env::set_var("GIT_CONFIG_COUNT", "1");
+    std::env::set_var("GIT_CONFIG_KEY_0", "protocol.file.allow");
+    std::env::set_var("GIT_CONFIG_VALUE_0", "always");
+    let base = temp("subbranch");
+    let lib = base.join("lib");
+    init(&lib);
+    std::fs::write(lib.join("lib.rs"), "One\n").unwrap();
+    git(&lib, &["add", "."]);
+    git(&lib, &["commit", "-q", "-m", "One"]);
+    git(&lib, &["checkout", "-q", "-b", "next"]);
+    std::fs::write(lib.join("lib.rs"), "Two\n").unwrap();
+    git(&lib, &["commit", "-q", "-am", "Two"]);
+    git(&lib, &["checkout", "-q", "main"]);
+    let app = base.join("app");
+    init(&app);
+    git(&app, &["submodule", "add", "-q", lib.to_str().unwrap(), "vendor/lib"]);
+    git(&app, &["commit", "-q", "-m", "Add lib"]);
+    let sub = app.join("vendor/lib");
+    let repo = Repo::open(&app).unwrap();
+
+    // The clone has main, and the remote branches main and next. main is at the recorded commit.
+    let b = repo.submodule_branches("vendor/lib").unwrap();
+    let main = b.iter().find(|b| b.name == "main").unwrap();
+    assert!(main.current && main.at_recorded && !main.remote);
+    let next = b.iter().find(|b| b.name == "origin/next").unwrap();
+    assert!(next.remote && !next.current && !next.at_recorded);
+    assert!(!b.iter().any(|b| b.name.ends_with("/HEAD")));
+
+    // A remote branch makes a local branch that tracks it.
+    repo.checkout_submodule_branch("vendor/lib", "origin/next", true).unwrap();
+    assert_eq!(git(&sub, &["rev-parse", "--abbrev-ref", "HEAD"]), "next");
+    assert_eq!(git(&sub, &["rev-parse", "--abbrev-ref", "next@{upstream}"]), "origin/next");
+    // A local branch: a plain checkout. The recorded commit does not change.
+    repo.checkout_submodule_branch("vendor/lib", "main", false).unwrap();
+    assert_eq!(git(&sub, &["rev-parse", "--abbrev-ref", "HEAD"]), "main");
+    // The remote branch again: its local branch is there now.
+    repo.checkout_submodule_branch("vendor/lib", "origin/next", true).unwrap();
+    assert_eq!(git(&sub, &["rev-parse", "--abbrev-ref", "HEAD"]), "next");
+    assert_eq!(repo.submodules().unwrap()[0].state, SubmoduleState::OtherCommit);
+    assert!(repo.submodule_branches("lib.rs").is_err());
+}
