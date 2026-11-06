@@ -2,18 +2,19 @@
 // for the selected one, the commits between the recorded commit and the checked-out commit.
 
 import type { OutgoingCommit, Submodule, SubmoduleRange } from "./api";
-import { formatDate, h, icon } from "./dom";
+import { h, icon } from "./dom";
 import { twisty } from "./icons";
 import { save, settings } from "./settings";
 
 /** The submodule is not at the recorded commit, or has local changes. */
 export const needsAttention = (s: Submodule) => s.state !== "clean" || s.dirty || s.untracked;
 
-const STATE_TEXT: Record<Submodule["state"], string> = {
-  uninitialized: "not initialized",
-  clean: "",
-  otherCommit: "other commit",
-  conflict: "conflict",
+/** The short badge of a state on its row, and the tooltip of the badge. */
+const STATE_TEXT: Record<Submodule["state"], [string, string]> = {
+  uninitialized: ["not initialized", "Its folder is empty"],
+  clean: ["", ""],
+  otherCommit: ["≠", "The checked-out commit is not the commit that the parent repository records"],
+  conflict: ["!", "The submodule has a merge conflict in the parent repository"],
 };
 
 export class SubmodulePanel {
@@ -33,15 +34,13 @@ export class SubmodulePanel {
   /** A click on the branch of a row: the menu of the branches of the submodule. */
   onBranchMenu: (s: Submodule, e: MouseEvent) => void = () => {};
   onUpdate: (paths: string[]) => void = () => {};
-  onRefresh: () => void = () => {};
 
   constructor() {
-    const refresh = h("button", { class: "icon-button", title: "Refresh the submodules" }, icon("refresh"));
-    refresh.addEventListener("click", () => this.onRefresh());
-    const updateAll = h("button", { class: "tb-button", title: "Initialize all submodules and check out their recorded commits" }, "Update All");
+    const updateAll = h("button", { class: "icon-button sm-update-all", title: "Update All: initialize all submodules and check out their recorded commits" }, icon("update"));
     updateAll.addEventListener("click", () => this.onUpdate([]));
     this.title = h("span", { class: "sm-title" }, "Submodules");
-    const head = h("div", { class: "sm-head", title: "Show or hide the submodules" }, (this.twist = twisty(!settings.submodulesCollapsed)), this.title, h("span", { class: "spacer" }), refresh, updateAll);
+    this.stats = h("span", { class: "sm-stats" });
+    const head = h("div", { class: "sm-head", title: "Show or hide the submodules" }, (this.twist = twisty(!settings.submodulesCollapsed)), this.title, this.stats, updateAll);
     head.addEventListener("click", (e) => {
       if ((e.target as HTMLElement).closest("button")) return;
       this.setCollapsed(!settings.submodulesCollapsed);
@@ -55,8 +54,7 @@ export class SubmodulePanel {
       this.select(this.subs[Math.max(0, Math.min(this.subs.length - 1, i + (e.key === "ArrowDown" ? 1 : -1)))]);
     });
     this.detail = h("div", { class: "sm-detail" });
-    this.stats = h("div", { class: "sm-stats" });
-    this.el = h("section", { class: "submodule-panel", hidden: true }, head, h("div", { class: "sm-body" }, this.stats, this.list, this.detail));
+    this.el = h("section", { class: "submodule-panel", hidden: true }, head, h("div", { class: "sm-body" }, this.list, this.detail));
     this.el.classList.toggle("collapsed", settings.submodulesCollapsed);
     this.render();
   }
@@ -96,7 +94,9 @@ export class SubmodulePanel {
     this.el.hidden = !subs.length;
     const n = this.attention;
     this.title.replaceChildren("Submodules", h("span", { class: "sm-count" + (n ? " attention" : ""), title: n ? `${n} need attention` : "" }, String(n || subs.length)));
-    this.stats.replaceChildren(...statistics(subs));
+    const stats = statistics(subs);
+    this.stats.replaceChildren(...stats);
+    this.stats.title = stats.map((e) => e.title).join("\n");
     if (!subs.some((s) => s.path === this.selected)) {
       this.selected = null;
       this.range = null;
@@ -126,9 +126,12 @@ export class SubmodulePanel {
   private render() {
     this.list.replaceChildren(
       ...this.subs.map((s) => {
-        const commit = (s.current ?? s.recorded).slice(0, 8);
-        const badges = [STATE_TEXT[s.state], s.dirty || s.untracked ? "uncommitted" : ""].filter(Boolean);
-        const tools = h("span", { class: "sm-tools" });
+        const [stateText, stateTitle] = STATE_TEXT[s.state];
+        const badges = [
+          stateText ? h("span", { class: "sm-badge", title: stateTitle }, stateText) : "",
+          s.dirty || s.untracked ? h("span", { class: "sm-badge", title: "The submodule has uncommitted changes" }, "*") : "",
+        ];
+        const tools: HTMLElement[] = [];
         if (s.state !== "uninitialized") {
           const branch = h(
             "button",
@@ -148,7 +151,7 @@ export class SubmodulePanel {
             e.stopPropagation();
             this.onOpen(s);
           });
-          tools.append(branch, open);
+          tools.push(branch, open);
         }
         const row = h(
           "div",
@@ -156,8 +159,10 @@ export class SubmodulePanel {
             class: "sm-row" + (s.path === this.selected ? " selected" : ""),
             title: `${s.path}\nrecorded ${s.recorded}${s.current ? `\nchecked out ${s.current}` : ""}${s.url ? `\n${s.url}` : ""}`,
           },
-          h("div", { class: "sm-name" }, h("span", { class: "branch-icon" }, icon("submodule")), h("span", { class: "sm-path" }, s.path), tools),
-          h("div", { class: "sm-meta" }, h("code", {}, commit), ...badges.map((b) => h("span", { class: "sm-badge" }, b))),
+          h("span", { class: "branch-icon" }, icon("submodule")),
+          h("span", { class: "sm-path" }, s.path),
+          ...badges,
+          ...tools,
         );
         row.addEventListener("mousedown", (e) => e.button === 0 && this.select(s));
         row.addEventListener("dblclick", () => s.state !== "uninitialized" && this.onOpen(s));
@@ -172,96 +177,61 @@ export class SubmodulePanel {
     this.renderDetail();
   }
 
+  /** One line about the selected submodule. It hides when the submodule is at the recorded commit and
+   * has no changes. */
   private renderDetail() {
     const s = this.selectedSubmodule;
-    this.detail.hidden = !s;
-    if (!s) {
-      this.detail.replaceChildren();
-      return;
-    }
+    const r = s && this.range?.path === s.path ? this.range : null;
     const parts: (HTMLElement | string)[] = [];
-    const button = (label: string, title: string, run: () => void) => {
-      const b = h("button", { class: "tb-button", title }, label);
-      b.addEventListener("click", run);
-      return b;
+    const link = (text: string, title: string, run: () => void, cls: string) => {
+      const a = h("button", { class: "sm-link " + cls, title }, text);
+      a.addEventListener("click", run);
+      return a;
     };
-    const actions = h("div", { class: "sm-actions" });
-    if (s.state === "uninitialized") {
-      parts.push(h("span", { class: "sm-summary" }, "Not initialized."));
-      actions.append(button("Initialize and Update", "Clone the submodule and check out the recorded commit", () => this.onUpdate([s.path])));
-    } else {
-      const r = this.range?.path === s.path ? this.range : null;
-      parts.push(h("span", { class: "sm-summary", title: `Recorded commit ${s.recorded}` }, summary(s, r)));
+    if (s?.state === "uninitialized") {
+      parts.push(link("Initialize and Update", "Clone the submodule and check out the recorded commit", () => this.onUpdate([s.path]), "sm-init"));
+    } else if (s && needsAttention(s)) {
+      if (s.state === "conflict") parts.push("Merge conflict");
+      else if (!r) parts.push("Loading…");
+      else if (r.recordedMissing) parts.push(h("span", { title: `The submodule does not have the recorded commit ${s.recorded}` }, "Recorded commit missing"));
+      if (r?.behind.length) {
+        parts.push(link(`${count(r.behind)} behind`, `Only in the recorded commit:\n${subjects(r.behind)}\nClick to show the newest one in the submodule`, () => this.onOpenCommit(s, r.behind[0].oid), "sm-behind"));
+      }
+      if (r?.ahead.length) {
+        parts.push(link(`${count(r.ahead)} ahead`, `Only in the checked-out commit:\n${subjects(r.ahead)}\nCommit the submodule to record them`, () => this.onOpenCommit(s, r.ahead[0].oid), "sm-ahead"));
+      }
+      if (r?.changes.length) {
+        const untracked = r.changes.filter((c) => c.status === "?").length;
+        const files = `${r.changes.length} uncommitted${untracked ? ` (${untracked} new)` : ""}`;
+        parts.push(h("span", { class: "sm-changes", title: r.changes.map((c) => `${c.status} ${c.path}`).join("\n") }, files));
+      }
       // Not when the submodule has commits of its own: on a detached HEAD, an update would leave them behind.
       if ((s.state === "otherCommit" && r && !r.ahead.length) || r?.recordedMissing) {
-        actions.append(button("Update to Recorded", "Check out the commit that the parent repository records", () => this.onUpdate([s.path])));
-      }
-      if (r) {
-        if (r.changes.length) {
-          const untracked = r.changes.filter((c) => c.status === "?").length;
-          const files = `${r.changes.length} uncommitted file${r.changes.length === 1 ? "" : "s"}${untracked ? ` (${untracked} unversioned)` : ""}`;
-          parts.push(h("div", { class: "sm-changes", title: r.changes.map((c) => `${c.status} ${c.path}`).join("\n") }, files));
-        }
-        if (r.behind.length) parts.push(this.commits(s, `Only in the recorded commit (${count(r.behind)})`, r.behind));
-        if (r.ahead.length) parts.push(this.commits(s, `Only in the checked-out commit (${count(r.ahead)})`, r.ahead));
+        parts.push(link("Update", "Check out the commit that the parent repository records", () => this.onUpdate([s.path]), "sm-update"));
       }
     }
-    this.detail.replaceChildren(h("div", { class: "sm-detail-line" }, ...parts.splice(0, 1), actions), ...parts);
-  }
-
-  private commits(s: Submodule, title: string, commits: OutgoingCommit[]) {
-    return h(
-      "div",
-      { class: "sm-section" },
-      h("div", { class: "sm-section-title" }, title),
-      ...commits.slice(0, MAX_COMMITS).map((c) => {
-        const row = h(
-          "div",
-          { class: "sm-commit", title: `${c.oid}\n${c.author}, ${formatDate(c.time)}\nDouble-click to show the commit in the submodule` },
-          h("code", {}, c.oid.slice(0, 8)),
-          h("span", { class: "sm-subject" }, c.subject),
-          h("span", { class: "sm-author" }, c.author),
-        );
-        row.addEventListener("dblclick", () => this.onOpenCommit(s, c.oid));
-        return row;
-      }),
-      commits.length > MAX_COMMITS ? h("div", { class: "sm-more muted" }, `${commits.length - MAX_COMMITS} more: open the submodule to see them`) : "",
-    );
+    this.detail.hidden = !parts.length;
+    this.detail.replaceChildren(...parts.flatMap((p, i) => (i ? [h("span", { class: "sm-sep" }, "·"), p] : [p])));
   }
 }
 
-/** The detail lists only the newest commits. */
+/** The subjects of the newest commits, for a tooltip. */
+const subjects = (commits: OutgoingCommit[]) =>
+  commits.slice(0, MAX_COMMITS).map((c) => `${c.oid.slice(0, 8)} ${c.subject}`).join("\n") + (commits.length > MAX_COMMITS ? `\n… ${commits.length - MAX_COMMITS} more` : "");
+
+/** A tooltip lists only the newest commits. */
 const MAX_COMMITS = 5;
 
 /** The counts of the states of the submodules, for the line under the header. */
 function statistics(subs: Submodule[]): HTMLElement[] {
   const n = (f: (s: Submodule) => boolean) => subs.filter(f).length;
-  const parts: [number, string, string][] = [
-    [n((s) => s.state === "clean"), "at the recorded commit", ""],
-    [n((s) => s.state === "otherCommit"), "at another commit", "warn"],
-    [n((s) => s.dirty || s.untracked), "with uncommitted changes", "warn"],
-    [n((s) => s.state === "uninitialized"), "not initialized", "warn"],
-    [n((s) => s.state === "conflict"), "in conflict", "warn"],
-    [n((s) => s.state !== "uninitialized" && !s.branch), "detached", ""],
+  const parts: [number, string, string, string][] = [
+    [n((s) => s.state === "otherCommit"), "≠ recorded", "at another commit than the recorded commit", "warn"],
+    [n((s) => s.dirty || s.untracked), "dirty", "with uncommitted changes", "warn"],
+    [n((s) => s.state === "uninitialized"), "not init", "not initialized", "warn"],
+    [n((s) => s.state === "conflict"), "conflict", "in conflict", "warn"],
   ];
-  return parts.filter(([c]) => c).map(([c, text, cls]) => h("span", { class: "sm-stat " + cls }, `${c} ${text}`));
+  return parts.filter(([c]) => c).map(([c, text, title, cls]) => h("span", { class: "sm-stat " + cls, title: `${c} ${title}` }, `${c} ${text}`));
 }
 
 const count = (commits: OutgoingCommit[]) => (commits.length >= 1000 ? "1000+" : String(commits.length));
-
-const plural = (n: number) => `${n} commit${n === 1 ? "" : "s"}`;
-
-/** One sentence about the checked-out commit compared with the recorded commit. */
-function summary(s: Submodule, r: SubmoduleRange | null): string {
-  const recorded = s.recorded.slice(0, 8);
-  if (s.state === "conflict") return "The submodule has a merge conflict in the parent repository.";
-  if (s.state === "clean") return `At the recorded commit ${recorded}.`;
-  if (!r) return "Loading…";
-  if (r.recordedMissing) return `The submodule does not have the recorded commit ${recorded}. Update fetches it.`;
-  const behind = r.behind.length;
-  const ahead = r.ahead.length;
-  if (behind && ahead) return `Diverged from the recorded commit ${recorded}: ${plural(ahead)} ahead, ${plural(behind)} behind.`;
-  if (behind) return `${plural(behind)} behind the recorded commit ${recorded}.`;
-  if (ahead) return `${plural(ahead)} ahead of the recorded commit ${recorded}. Commit the submodule to record them.`;
-  return `At another commit than the recorded commit ${recorded}.`;
-}

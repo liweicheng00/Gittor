@@ -58,28 +58,39 @@ const head = () => page.textContent(".sm-head .sm-title");
 const rowText = () => page.textContent(".sm-row");
 check("the tab lists vendor/lib on its branch", (await rowText()).includes("vendor/lib") && (await rowText()).includes("main"));
 await page.click(".sm-row");
-await within("a clean submodule is at the recorded commit", async () => (await page.textContent(".sm-detail")).includes("At the recorded commit"));
+await within("a clean submodule has no detail line", async () => await page.$eval(".sm-detail", (e) => e.hidden));
+// Each submodule takes one line.
+const noCut = async (when) => {
+  const cut = await page.$$eval(".sm-path, .sm-stats, .sm-head, .sm-detail", (els) => els.filter((e) => e.scrollWidth > e.clientWidth).map((e) => e.className));
+  check(`no text of the section is cut ${when} (${cut.join(", ")})`, cut.length === 0);
+};
+await noCut("for a clean submodule");
+check("the row is one line", (await page.$eval(".sm-row", (e) => e.getBoundingClientRect().height)) <= 26);
+// The section is under the commit message.
+check("the section is under the commit message", await page.evaluate(() => document.querySelector(".commit-bottom").getBoundingClientRect().bottom <= document.querySelector(".submodule-panel").getBoundingClientRect().top + 1));
 
 // The submodule at another commit: the tab counts it, and the detail lists the missing commit.
 run(sub, "checkout", "-q", c1);
 await page.keyboard.press("F5");
-await within("the row shows another commit and detached", async () => (await rowText()).includes("other commit") && (await rowText()).includes("detached"));
+await within("the row shows another commit and detached", async () => (await rowText()).includes("≠") && (await rowText()).includes("detached"));
 await within("the header counts the submodule", async () => (await page.$(".sm-count.attention")) !== null && (await head()).includes("1"));
-await within("the detail says one commit behind", async () => (await page.textContent(".sm-detail")).includes("1 commit behind the recorded commit"));
-check("the detail lists the commit Two", (await page.textContent(".sm-commit")).includes("Two"));
+await within("the detail says one commit behind", async () => ((await page.textContent(".sm-detail .sm-behind").catch(() => "")) ?? "").includes("1 behind"));
+check("the tooltip names the commit Two", ((await page.getAttribute(".sm-detail .sm-behind", "title")) ?? "").includes("Two"));
+check("the detail is one line", (await page.$eval(".sm-detail", (e) => e.getBoundingClientRect().height)) <= 24);
 
 // Local changes of the submodule: a changed file and a file that git does not track.
 writeFileSync(`${sub}/lib.rs`, "pub fn changed() {}\n");
 writeFileSync(`${sub}/extra.rs`, "pub fn extra() {}\n");
 await page.keyboard.press("F5");
-await within("the detail counts the uncommitted files", async () => (await page.textContent(".sm-detail")).includes("2 uncommitted files (1 unversioned)"));
-check("the row shows uncommitted changes", (await rowText()).includes("uncommitted"));
+await within("the detail counts the uncommitted files", async () => (await page.textContent(".sm-detail")).includes("2 uncommitted (1 new)"));
+check("the row shows uncommitted changes", (await rowText()).includes("*"));
 await within("the line under the header counts the states", async () => {
   const t = await page.textContent(".sm-stats");
-  return t.includes("1 at another commit") && t.includes("1 with uncommitted changes") && t.includes("1 detached");
+  return t.includes("1 ≠ recorded") && t.includes("1 dirty");
 });
 // The changed submodule shows in the changelist and in the section below it.
 await within("the submodule is in the changelist too", async () => (await page.$(".cl-file:has-text('lib')")) !== null);
+await noCut("with all marks");
 await shot("sm1-submodules-tab");
 // A click on the header hides the list, and the setting keeps it.
 await page.click(".sm-head .sm-title");
@@ -102,9 +113,9 @@ await shot("sm2-submodule-diff");
 // Update to the recorded commit, with the button of the detail.
 await page.keyboard.press("Control+5");
 await page.click(".sm-row");
-await page.click(".sm-actions button:has-text('Update to Recorded')");
+await page.click(".sm-detail .sm-update");
 await within("Update checks out the recorded commit", async () => run(sub, "rev-parse", "HEAD") === c2);
-await within("the row shows the submodule as clean", async () => !(await rowText()).includes("other commit"));
+await within("the row shows the submodule as clean", async () => !(await rowText()).includes("≠"));
 await within("the header has no count of attention", async () => (await page.$(".sm-count.attention")) === null);
 
 // The branch of the row opens the branches of the submodule. "recorded" marks main: its tip is the
@@ -141,12 +152,12 @@ git("checkout", "-q", "main");
 await page.keyboard.press("F5");
 await page.click(".lp-tab:text-is('Changes')");
 await page.click(".sm-row");
-await within("the detail says one commit ahead", async () => (await page.textContent(".sm-detail")).includes("1 commit ahead of the recorded commit"));
-check("no Update for a submodule with commits of its own", (await page.$(".sm-actions button:has-text('Update to Recorded')")) === null);
+await within("the detail says one commit ahead", async () => ((await page.textContent(".sm-detail .sm-ahead").catch(() => "")) ?? "").includes("1 ahead"));
+check("no Update for a submodule with commits of its own", (await page.$(".sm-detail .sm-update")) === null);
 await shot("sm4-ahead");
 
-// A double click on a commit opens the submodule in a tab and selects the commit there.
-await page.dblclick(".sm-commit:has-text('Three')");
+// A click on "1 ahead" opens the submodule in a tab and selects the commit there.
+await page.click(".sm-detail .sm-ahead");
 await within("the submodule opens in a tab", async () => (await page.textContent(".tab.on .tab-name")).includes("lib"));
 await within("the commit Three is selected", async () => (await page.textContent(".log-row.selected")).includes("Three"));
 await shot("sm5-open-commit");

@@ -5,7 +5,7 @@ import { showMenu } from "./context-menu";
 import { copyText, formatDate } from "./dom";
 import { toast } from "./notify";
 import { checkoutSubmoduleBranch, updateSubmodules } from "./operations";
-import { jumpToOid, loadSubmodules, openRepo } from "./repo";
+import { jumpToOid, openRepo } from "./repo";
 import { submodulePanel } from "./shell";
 import { app } from "./state";
 
@@ -37,7 +37,6 @@ submodulePanel.onSelect = (s) => void showRange(s);
 submodulePanel.onOpen = (s) => void openRepo(submodulePath(s));
 submodulePanel.onOpenCommit = (s, oid) => void openCommit(s, oid);
 submodulePanel.onUpdate = (paths) => void updateSubmodules(paths);
-submodulePanel.onRefresh = () => void loadSubmodules();
 /** The menu of the branches of a submodule: local branches first, then remote branches. "recorded" marks
  * a branch at the commit that the parent repository records. */
 async function branchMenu(s: Submodule, e: MouseEvent) {

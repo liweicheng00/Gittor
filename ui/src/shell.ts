@@ -83,12 +83,8 @@ export const tabBranches = h("button", { class: "lp-tab", title: `Branches (${mo
 export const tabCommit = h("button", { class: "lp-tab", title: `Local changes and commit (${mod}2)` }, "Changes");
 export const tabStash = h("button", { class: "lp-tab", title: `Stashes (${mod}3)` }, "Stash");
 export const tabReviews = h("button", { class: "lp-tab", title: `Reviews (${mod}4)` }, "Reviews");
-// The submodules show under the changelists, so that their changes show together with the files.
-// One scroll area holds both.
-const commitTree = commitPanel.el.querySelector(".commit-tree")!;
-const commitScroll = h("div", { class: "commit-scroll" });
-commitTree.replaceWith(commitScroll);
-commitScroll.append(commitTree, submodulePanel.el);
+// The submodules show under the commit message, so that their changes show together with the files.
+commitPanel.el.append(submodulePanel.el);
 const leftPane = h("aside", { class: "leftpane" }, h("div", { class: "lp-tabs" }, tabBranches, tabCommit, tabStash, tabReviews), sidebar.el, commitPanel.el, stashPanel.el, reviewPanel.el);
 export function showLeftTab(tab: "branches" | "commit" | "stash" | "reviews") {
   settings.leftTab = tab;

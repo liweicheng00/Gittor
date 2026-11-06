@@ -69,7 +69,7 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   no active changelist. The UI never checks a file in ".ignore", so no commit takes it.
 - Submodules: `Repo::submodules` reads all of them with three git commands (`.gitmodules`, the index,
   `git status --porcelain=v2`). The Submodules section is `submodule-panel.ts` and `submodule-flow.ts`.
-  It is under the changelists of the Changes tab (`shell.ts` puts it there); `Mod+5` opens it.
+  It is under the commit message of the Changes tab (`shell.ts` puts it there); `Mod+5` opens it.
   `loadSubmodules` in `repo.ts` loads it with the local changes. It hides when there are none.
 - App windows: a tab that the user drags out of the tab bar moves to a new window at the place of the
   mouse (`dragTab` in `tab-drag.ts`; `openWindow` in `api.ts`: the Tauri command `open_window`, or
