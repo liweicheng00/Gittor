@@ -155,7 +155,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
       const at = shown.indexOf(selected);
       const next = shown[Math.max(0, Math.min(shown.length - 1, at < 0 ? 0 : at + (e.key === "ArrowDown" ? 1 : -1)))];
       if (next !== undefined) void select(next);
-    } else if (document.activeElement === filesEl && e.key === " " && scope === "all" && rows[selected]) {
+    } else if (document.activeElement === filesEl && e.key === " " && rows[selected]) {
       e.preventDefault();
       void setViewed(rows[selected], !rows[selected].viewed);
     }
@@ -175,7 +175,17 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
     return scope === "all" ? { l: { commit: detail.mergeBase }, r: { commit: detail.head } } : { l: { parentOf: scope }, r: { commit: scope } };
   };
 
-  const fileNotes = (path: string): ReviewComment[] => (detail?.commentList ?? []).filter((c) => c.path === path).sort((a, b) => a.line - b.line);
+  /** The commit of the scope; null for the changes of the whole branch. */
+  const scopeCommit = () => (scope === "all" ? null : scope);
+  const progressOf = (oid: string) => detail?.commitProgress.find((p) => p.oid === oid);
+  const fileNotes = (path: string): ReviewComment[] =>
+    (detail?.commentList ?? []).filter((c) => c.path === path && (c.commit ?? null) === scopeCommit()).sort((a, b) => a.line - b.line);
+  /** The first commit, from the oldest, that has files that are not viewed. */
+  const nextCommit = () =>
+    [...(detail?.commitList ?? [])].reverse().find((c) => {
+      const p = progressOf(c.oid);
+      return c.oid !== scope && !!p && p.viewed.length < p.files;
+    });
 
   const renderStatus = () => {
     if (!detail) return;
@@ -190,10 +200,23 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
     status.replaceChildren(...parts);
     finishBtn.disabled = !s.exists || s.merged || s.baseIsRemote;
     finishBtn.title = s.baseIsRemote ? `${s.base} is a remote branch. Merge needs a local base` : "";
+    const p = scope === "all" ? null : progressOf(scope);
+    const [seen, total] = p ? [p.viewed.length, p.files] : [s.viewed, s.files];
+    const parts2: (Node | string)[] = [scope === "all" ? `Files · ${seen}/${total} viewed` : `Files of ${scope.slice(0, 8)} · ${seen}/${total} viewed`];
+    if (scope !== "all") {
+      const next = nextCommit();
+      const nextBtn = h(
+        "button",
+        { class: "tb-button review-next-commit", title: next ? `Review the next commit that has files that are not viewed:\n${next.subject}` : "Show the changes of the whole branch" },
+        next ? "Next Commit" : "All Changes",
+      );
+      nextBtn.addEventListener("click", () => void setScope(next ? next.oid : "all"));
+      parts2.push(nextBtn);
+    }
     filesTitle.replaceChildren(
-      scope === "all" ? `Files · ${s.viewed}/${s.files} viewed` : "Files of the commit",
+      ...parts2,
       treeBtn,
-      h("div", { class: "review-progress" }, h("div", { class: "review-progress-bar", style: { width: `${s.files ? Math.round((s.viewed / s.files) * 100) : 0}%` } })),
+      h("div", { class: "review-progress" }, h("div", { class: "review-progress-bar", style: { width: `${total ? Math.round((seen / total) * 100) : 0}%` } })),
     );
   };
 
@@ -202,11 +225,21 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
     const all = h("div", { class: "history-row review-commit" + (scope === "all" ? " selected" : "") }, h("b", {}, "All changes"), h("span", { class: "muted-inline" }, ` from ${detail.mergeBase.slice(0, 8)}`));
     all.addEventListener("mousedown", () => setScope("all"));
     const list = detail.commitList.map((c) => {
+      const p = progressOf(c.oid);
+      const done = !!p && p.files > 0 && p.viewed.length >= p.files;
+      // The box marks all files of the commit as viewed, or as not viewed.
+      const box = h("input", { type: "checkbox", class: "review-viewed", checked: done, disabled: !p?.files, title: "Viewed: all files of this commit" });
+      box.indeterminate = !!p && p.viewed.length > 0 && !done;
+      box.addEventListener("mousedown", (e) => e.stopPropagation());
+      box.addEventListener("change", () => void setCommitViewed(c.oid, box.checked));
       const row = h(
         "div",
-        { class: "history-row review-commit" + (scope === c.oid ? " selected" : ""), title: `${c.oid}\n${c.subject}\nDouble-click: show in the log` },
+        { class: "history-row review-commit" + (scope === c.oid ? " selected" : "") + (done ? " viewed" : ""), title: `${c.oid}\n${c.subject}\nDouble-click: show in the log` },
+        box,
         h("code", { class: "rebase-hash" }, c.oid.slice(0, 8)),
         h("span", { class: "rebase-subject" }, c.subject),
+        p?.comments ? h("span", { class: "review-file-notes", title: `${p.comments} note(s)` }, icon("note"), ` ${p.comments}`) : "",
+        h("span", { class: "review-commit-progress", title: "Viewed files of the commit" }, p ? `${p.viewed.length}/${p.files}` : ""),
         h("span", { class: "rebase-author" }, formatDate(c.time)),
       );
       row.addEventListener("mousedown", () => setScope(c.oid));
@@ -235,7 +268,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
         title: f.oldPath ? `${f.oldPath} → ${f.path}` : f.path,
         style: { paddingLeft: `${8 + depth * 14}px` },
       },
-      scope === "all" ? box : "",
+      box,
       fileIcon(f.path),
       h("span", { class: `rebase-subject status-text-${f.status}` }, f.path.slice(slash + 1)),
       h("span", { class: "rebase-author" }, withDir && slash > 0 ? f.path.slice(0, slash) : ""),
@@ -267,9 +300,9 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
           "div",
           { class: "history-row review-dir" + (count && viewed === count ? " viewed" : ""), style: { paddingLeft: `${8 + depth * 14}px` }, title: full },
           twisty(open),
-          scope === "all" ? box : "",
+          box,
           h("span", { class: "dir-name" }, label),
-          h("span", { class: "dir-count" }, scope === "all" ? `${viewed}/${count}` : String(count)),
+          h("span", { class: "dir-count" }, `${viewed}/${count}`),
         );
         row.addEventListener("mousedown", () => {
           if (open) collapsed.add(full);
@@ -294,14 +327,14 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
   };
   const addNote = async (line: number, endLine: number, text: string) => {
     const f = rows[selected];
-    if (!f || !text.trim() || scope !== "all") return;
-    await cb.edit({ action: "comment", branch: current, path: f.path, line, endLine, text: text.trim() });
+    if (!f || !text.trim()) return;
+    await cb.edit({ action: "comment", branch: current, path: f.path, line, endLine, text: text.trim(), commit: scopeCommit() ?? undefined });
     await reload();
   };
 
   const renderNotes = () => {
     const f = rows[selected];
-    const canFile = scope === "all" && !!f;
+    const canFile = !!f;
     fileNoteText.disabled = !canFile;
     fileNoteBtn.disabled = !canFile;
     if (!f) {
@@ -315,7 +348,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
     const copyAll = h("button", { class: "tb-button review-notes-copy", title: "Copy the open notes of the file, with the file and the lines", disabled: !open.length }, icon("copy"), "Copy All");
     copyAll.addEventListener("click", () => void copyText(formatNotes(f.path, open)));
     notesTitle.replaceChildren(
-      h("span", {}, scope === "all" ? `Notes in ${f.path}` : "Notes are on the changes of the whole branch. Choose All changes to add one."),
+      h("span", {}, scope === "all" ? `Notes in ${f.path}` : `Notes in ${f.path} of ${scope.slice(0, 8)}`),
       h("span", { class: "spacer" }),
       copyAll,
     );
@@ -352,13 +385,13 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
           copy(c),
           del(c.id),
         );
-        if (!onFile) row.addEventListener("click", () => scope === "all" && d.revealLine(c.line));
+        if (!onFile) row.addEventListener("click", () => d.revealLine(c.line));
         return row;
       }),
     );
     // A note on a line: only on a file that the branch has. A deleted file takes notes on the whole file.
     const handlers = { add: addNote, remove: deleteNote, resolve: resolveNote, copy: (n: { line: number; endLine: number; text: string }) => void copyText(formatNote(f.path, n)) };
-    if (scope === "all") d.setNotes(list, f.status === "D" ? null : handlers);
+    d.setNotes(list, f.status === "D" ? null : handlers);
   };
 
   const addFileNote = async () => {
@@ -382,7 +415,14 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
   const setViewed = (f: Row, viewed: boolean) => setViewedMany([f], viewed);
   const setViewedMany = async (files: Row[], viewed: boolean) => {
     if (!files.length) return;
-    await cb.edit({ action: "viewed", branch: current, paths: files.map((f) => f.path), viewed });
+    await cb.edit({ action: "viewed", branch: current, paths: files.map((f) => f.path), viewed, commit: scopeCommit() ?? undefined });
+    await reload();
+  };
+  /** Marks all files of a commit as viewed, or as not viewed. */
+  const setCommitViewed = async (oid: string, viewed: boolean) => {
+    const paths = (await cb.changes({ parentOf: oid }, { commit: oid })).map((c) => c.path);
+    if (!paths.length) return;
+    await cb.edit({ action: "viewed", branch: current, paths, viewed, commit: oid });
     await reload();
   };
 
@@ -429,7 +469,15 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
       d.setSides(`${detail.summary.base} (from ${detail.mergeBase.slice(0, 8)})`, detail.summary.branch);
     } else {
       const rv = revs()!;
-      rows = (await cb.changes(rv.l, rv.r)).map((c) => ({ status: c.status, path: c.path, oldPath: c.old_path }));
+      const p = progressOf(scope);
+      const notes = detail.commentList.filter((c) => c.commit === scope);
+      rows = (await cb.changes(rv.l, rv.r)).map((c) => ({
+        status: c.status,
+        path: c.path,
+        oldPath: c.old_path,
+        viewed: !!p?.viewed.includes(c.path),
+        comments: notes.filter((n) => n.path === c.path).length,
+      }));
       d.setSides(`${scope.slice(0, 8)}^`, scope.slice(0, 8));
     }
     if (settings.reviewAsTree) rows.sort((a, b) => treeOrder(a.path, b.path));

@@ -751,8 +751,11 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 
 .review-mode { align-items: flex-start; margin: 4px 0; }
 .review-merge-message { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-.review-commit { grid-template-columns: auto minmax(0, 1fr) auto; }
+.review-commit { display: flex; }
 .review-commit > b { white-space: nowrap; }
+.review-commit .rebase-subject { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.review-commit.viewed .rebase-subject { color: var(--muted); }
+.review-commit-progress { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .review-meta { flex-wrap: wrap; row-gap: 0; }
 .file-icon { flex: 0 0 16px; width: 16px; height: 16px; }
 .change .path { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -761,6 +764,7 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .change .status-end { margin-left: auto; padding-left: 6px; flex: 0 0 auto; text-align: right; }
 .review-files-title { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .review-files-title .review-progress { flex-basis: 100%; }
+.review-next-commit { margin-left: auto; padding: 0 6px; font-size: 11px; }
 .review-tree-toggle { margin-left: auto; }
 .review-dir { display: flex; gap: 6px; align-items: center; cursor: default; }
 .review-dir.viewed .dir-name { color: var(--muted); }

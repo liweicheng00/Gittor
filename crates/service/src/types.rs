@@ -121,7 +121,8 @@ pub enum ReviewEdit {
     /// Starts a review, or changes its base.
     Start { branch: String, base: String },
     Remove { branch: String },
-    Viewed { branch: String, paths: Vec<String>, viewed: bool },
+    /// With a commit, the files in the review of that commit.
+    Viewed { branch: String, paths: Vec<String>, viewed: bool, #[serde(default)] commit: Option<String> },
     /// A note on the lines `line` to `end_line`. Without `end_line`, a note on one line.
     Comment {
         branch: String,
@@ -130,6 +131,9 @@ pub enum ReviewEdit {
         #[serde(default)]
         end_line: u32,
         text: String,
+        /// A note on the version of the file in this commit.
+        #[serde(default)]
+        commit: Option<String>,
     },
     DeleteComment { branch: String, id: String },
     /// Marks a note as resolved, or as open again.

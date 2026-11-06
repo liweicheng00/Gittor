@@ -23,4 +23,9 @@ outdated: boolean,
 /**
  * The note is done: the diff shows only its icon.
  */
-resolved: boolean, };
+resolved: boolean, 
+/**
+ * The note is on the version of the file in this commit, in the review of one commit. None is a
+ * note on the changes of the whole branch.
+ */
+commit: string | null, };

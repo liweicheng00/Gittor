@@ -13,7 +13,7 @@ use crate::remote::OutgoingCommit;
 use crate::undo::{UndoAction, UndoMode};
 use crate::{GitError, Repo, Result, Rev};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::PathBuf;
 
 /// A note on a line of the branch version of a file.
@@ -39,6 +39,10 @@ pub struct ReviewComment {
     /// The note is done: the diff shows only its icon.
     #[serde(default)]
     pub resolved: bool,
+    /// The note is on the version of the file in this commit, in the review of one commit. None is a
+    /// note on the changes of the whole branch.
+    #[serde(default)]
+    pub commit: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -50,6 +54,10 @@ struct Stored {
     /// The path and the blob that the user saw. Another blob makes the file not viewed again.
     #[serde(default)]
     viewed: BTreeMap<String, String>,
+    /// The files that the user saw in the review of one commit, by commit. A commit does not change, so
+    /// no blob is necessary.
+    #[serde(default)]
+    commit_viewed: BTreeMap<String, BTreeSet<String>>,
     #[serde(default)]
     comments: Vec<ReviewComment>,
     /// Finish merged the branch. The branch can be gone then.
@@ -112,6 +120,23 @@ pub struct ReviewDetail {
     pub commit_list: Vec<OutgoingCommit>,
     pub file_list: Vec<ReviewFile>,
     pub comment_list: Vec<ReviewComment>,
+    /// The progress of the review of each commit, in the order of `commit_list`.
+    pub commit_progress: Vec<CommitProgress>,
+}
+
+/// The review of one commit: its files, and the files that the user saw.
+#[derive(Clone, Debug, Serialize)]
+#[derive(ts_rs::TS)]
+#[ts(export)]
+#[serde(rename_all = "camelCase")]
+pub struct CommitProgress {
+    pub oid: String,
+    /// The number of files that the commit changes.
+    pub files: usize,
+    /// The files of the commit that the user marked as viewed.
+    pub viewed: Vec<String>,
+    /// The notes on the commit.
+    pub comments: usize,
 }
 
 /// How Finish puts the branch into the base.
@@ -265,6 +290,7 @@ impl Repo {
                 commit_list: Vec::new(),
                 file_list: Vec::new(),
                 comment_list: s.comments.clone(),
+                commit_progress: Vec::new(),
             });
         };
         let merge_base = self.git(&["merge-base", &base_oid, &head]).map(text).unwrap_or_default();
@@ -274,12 +300,13 @@ impl Repo {
         let blob_of = |p: &str| blobs.get(p).cloned().unwrap_or_else(|| "deleted".into());
         let comments: Vec<ReviewComment> =
             // A note on the whole file has no line that can move, so it does not get old.
-            s.comments.iter().map(|c| ReviewComment { outdated: c.line > 0 && blob_of(&c.path) != c.blob, ..c.clone() }).collect();
+            // A note on a commit does not get old either: the commit does not change.
+            s.comments.iter().map(|c| ReviewComment { outdated: c.commit.is_none() && c.line > 0 && blob_of(&c.path) != c.blob, ..c.clone() }).collect();
         let file_list: Vec<ReviewFile> = changes
             .into_iter()
             .map(|c| ReviewFile {
                 viewed: s.viewed.get(&c.path).is_some_and(|b| *b == blob_of(&c.path)),
-                comments: comments.iter().filter(|x| x.path == c.path).count(),
+                comments: comments.iter().filter(|x| x.commit.is_none() && x.path == c.path).count(),
                 status: c.status,
                 path: c.path,
                 old_path: c.old_path,
@@ -304,7 +331,38 @@ impl Repo {
             subject: subject.to_string(),
             time: time.parse().unwrap_or(0),
         };
-        Ok(ReviewDetail { summary, head, base_oid, merge_base, commit_list, file_list, comment_list: comments })
+        let commit_files = self.commit_files(&format!("{base_oid}..{head}"));
+        let commit_progress = commit_list
+            .iter()
+            .map(|c| {
+                let files = commit_files.get(&c.oid).cloned().unwrap_or_default();
+                let seen = s.commit_viewed.get(&c.oid);
+                CommitProgress {
+                    oid: c.oid.clone(),
+                    files: files.len(),
+                    viewed: files.iter().filter(|f| seen.is_some_and(|v| v.contains(*f))).cloned().collect(),
+                    comments: comments.iter().filter(|x| x.commit.as_deref() == Some(c.oid.as_str())).count(),
+                }
+            })
+            .collect();
+        Ok(ReviewDetail { summary, head, base_oid, merge_base, commit_list, file_list, comment_list: comments, commit_progress })
+    }
+
+    /// The paths that each commit of a range changes, by commit, with one git command. A merge commit
+    /// has none.
+    fn commit_files(&self, range: &str) -> HashMap<String, Vec<String>> {
+        let out = self.git(&["-c", "core.quotePath=false", "log", "--format=%x01%H", "--name-only", range]).unwrap_or_default();
+        let mut map: HashMap<String, Vec<String>> = HashMap::new();
+        let mut oid = String::new();
+        for line in String::from_utf8_lossy(&out).lines() {
+            if let Some(o) = line.strip_prefix('\u{1}') {
+                oid = o.to_string();
+                map.entry(oid.clone()).or_default();
+            } else if !line.is_empty() && !oid.is_empty() {
+                map.entry(oid.clone()).or_default().push(line.to_string());
+            }
+        }
+        map
     }
 
     /// The reviews, the last made first.
@@ -320,8 +378,25 @@ impl Repo {
         self.review_detail(s)
     }
 
-    /// Marks files as viewed at the current version of the branch, or as not viewed.
-    pub fn set_viewed(&self, branch: &str, paths: &[String], viewed: bool) -> Result<()> {
+    /// Marks files as viewed at the current version of the branch, or as not viewed. With a commit, it
+    /// marks the files in the review of that commit.
+    pub fn set_viewed(&self, branch: &str, paths: &[String], viewed: bool, commit: Option<&str>) -> Result<()> {
+        if let Some(oid) = commit {
+            return self.edit_review(branch, |r| {
+                let seen = r.commit_viewed.entry(oid.to_string()).or_default();
+                for p in paths {
+                    if viewed {
+                        seen.insert(p.clone());
+                    } else {
+                        seen.remove(p);
+                    }
+                }
+                if seen.is_empty() {
+                    r.commit_viewed.remove(oid);
+                }
+                Ok(())
+            });
+        }
         let head = self.review_oid(branch).ok_or_else(|| GitError(format!("{branch} does not exist")))?;
         let blobs = self.blobs(&head, paths);
         self.edit_review(branch, |r| {
@@ -338,16 +413,20 @@ impl Repo {
 
     /// Adds a note on the lines `line` to `end_line`. `end_line` 0 (or `line`) is a note on one line,
     /// and `line` 0 is a note on the whole file.
-    pub fn add_review_comment(&self, branch: &str, path: &str, line: u32, end_line: u32, text: &str) -> Result<()> {
+    /// With a commit, the note is on the version of the file in that commit.
+    pub fn add_review_comment(&self, branch: &str, path: &str, line: u32, end_line: u32, text: &str, commit: Option<&str>) -> Result<()> {
         if text.trim().is_empty() {
             return Err(GitError("The note is empty".into()));
         }
-        let head = self.review_oid(branch).ok_or_else(|| GitError(format!("{branch} does not exist")))?;
+        let head = match commit {
+            Some(c) => safe(c)?.to_string(),
+            None => self.review_oid(branch).ok_or_else(|| GitError(format!("{branch} does not exist")))?,
+        };
         let blob = self.blobs(&head, &[path.to_string()]).remove(path).unwrap_or_else(|| "deleted".into());
         self.edit_review(branch, |r| {
             let n = r.comments.iter().filter_map(|c| c.id.parse::<u64>().ok()).max().unwrap_or(0) + 1;
             let end_line = if line > 0 && end_line > line { end_line } else { 0 };
-            r.comments.push(ReviewComment { id: n.to_string(), path: path.into(), line, end_line, text: text.trim().into(), time: now(), blob, outdated: false, resolved: false });
+            r.comments.push(ReviewComment { id: n.to_string(), path: path.into(), line, end_line, text: text.trim().into(), time: now(), blob, outdated: false, resolved: false, commit: commit.map(String::from) });
             Ok(())
         })
     }

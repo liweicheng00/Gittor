@@ -49,7 +49,7 @@ fn review_shows_the_changes_of_the_branch() {
     assert_eq!(d.commit_list[0].subject, "Add b");
 
     // Viewed: a new version of the file makes it not viewed again.
-    repo.set_viewed("feature", &["a.txt".into(), "b.txt".into()], true).unwrap();
+    repo.set_viewed("feature", &["a.txt".into(), "b.txt".into()], true, None).unwrap();
     assert_eq!(repo.review("feature").unwrap().summary.viewed, 2);
     git(&dir, &["checkout", "-q", "feature"]);
     commit(&dir, "a.txt", "one\nTWO\nTHREE\n", "Change a again");
@@ -59,8 +59,8 @@ fn review_shows_the_changes_of_the_branch() {
     assert!(!d.file_list[0].viewed && d.file_list[1].viewed);
 
     // Notes: a note on a changed file is outdated.
-    repo.add_review_comment("feature", "a.txt", 2, 0, "Why upper case?").unwrap();
-    repo.add_review_comment("feature", "b.txt", 1, 3, "Good").unwrap();
+    repo.add_review_comment("feature", "a.txt", 2, 0, "Why upper case?", None).unwrap();
+    repo.add_review_comment("feature", "b.txt", 1, 3, "Good", None).unwrap();
     let d = repo.review("feature").unwrap();
     assert_eq!(d.summary.comments, 2);
     assert_eq!(d.file_list[0].comments, 1);
@@ -186,8 +186,8 @@ fn review_of_a_remote_branch() {
     let d = repo.review("origin/feature").unwrap();
     assert!(d.summary.exists && d.summary.branch_is_remote && !d.summary.base_is_remote);
     assert_eq!((d.summary.commits, d.summary.files), (2, 2));
-    repo.set_viewed("origin/feature", &["a.txt".into()], true).unwrap();
-    repo.add_review_comment("origin/feature", "a.txt", 2, 0, "Why?").unwrap();
+    repo.set_viewed("origin/feature", &["a.txt".into()], true, None).unwrap();
+    repo.add_review_comment("origin/feature", "a.txt", 2, 0, "Why?", None).unwrap();
     assert_eq!((repo.review("origin/feature").unwrap().summary.viewed, repo.review("origin/feature").unwrap().summary.comments), (1, 1));
 
     // Merge into the local base. The remote branch stays, also when the user asks to delete it.
@@ -225,4 +225,42 @@ fn a_remote_base_shows_but_does_not_merge() {
     let e = repo.finish_review("feature", FinishMode::Merge, "m", false).unwrap_err();
     assert!(e.0.contains("Merge needs a local base"), "{}", e.0);
     assert_eq!(git(&dir, &["rev-parse", "main"]), main);
+}
+
+#[test]
+fn review_of_one_commit() {
+    let dir = setup("commit");
+    let repo = Repo::open(&dir).unwrap();
+    repo.start_review("feature", "main").unwrap();
+    let d = repo.review("feature").unwrap();
+    // The progress follows the order of the commits: "Add b", then "Change a".
+    let first = d.commit_list[1].oid.clone();
+    let files: Vec<usize> = d.commit_progress.iter().map(|p| p.files).collect();
+    assert_eq!(files, [1, 1]);
+    assert_eq!(d.commit_progress[1].oid, first);
+
+    // Viewed in the review of a commit: the file of the branch stays not viewed.
+    repo.set_viewed("feature", &["a.txt".into()], true, Some(&first)).unwrap();
+    let d = repo.review("feature").unwrap();
+    assert_eq!(d.commit_progress[1].viewed, ["a.txt"]);
+    assert!(d.commit_progress[0].viewed.is_empty());
+    assert_eq!(d.summary.viewed, 0);
+
+    // A note on a commit counts on the commit, not on the file of the branch. It does not get old when
+    // the branch changes the file again.
+    repo.add_review_comment("feature", "a.txt", 2, 0, "Why?", Some(&first)).unwrap();
+    git(&dir, &["checkout", "-q", "feature"]);
+    commit(&dir, "a.txt", "zero\none\nTWO\nthree\n", "Change a again");
+    git(&dir, &["checkout", "-q", "main"]);
+    let d = repo.review("feature").unwrap();
+    let c = &d.comment_list[0];
+    assert_eq!(c.commit.as_deref(), Some(first.as_str()));
+    assert!(!c.outdated);
+    let p = d.commit_progress.iter().find(|p| p.oid == first).unwrap();
+    assert_eq!((p.comments, p.viewed.len()), (1, 1));
+    assert_eq!(d.file_list.iter().find(|f| f.path == "a.txt").unwrap().comments, 0);
+
+    // Not viewed again.
+    repo.set_viewed("feature", &["a.txt".into()], false, Some(&first)).unwrap();
+    assert!(repo.review("feature").unwrap().commit_progress.iter().all(|p| p.viewed.is_empty()));
 }

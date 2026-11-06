@@ -164,9 +164,32 @@ await within("the note opens again", async () => (await page.$$(".review-window 
 await page.locator(".review-window .note-card:has-text('Second note') .note-card-delete").click();
 await within("the card is gone", async () => (await page.$$(".review-window .note-card")).length === 1);
 
-// One commit only.
-await page.click(".review-window .review-commit >> nth=1");
-await within("a commit shows its files without the viewed box", async () => (await files()) === "cli.rs" && (await page.$$(".review-window .review-viewed")).length === 0);
+// The review of one commit: its own viewed boxes, notes and progress.
+const commitRow = (n) => `.review-window .review-commit >> nth=${n}`;
+await page.click(commitRow(1));
+await within("a commit shows its files, not viewed yet", async () =>
+  (await files()).includes("cli.rs") && (await text(".review-window .review-files-title")).includes("0/"));
+check("the commit row shows its progress", /0\/\d/.test(await text(commitRow(1))));
+await page.click(".review-window .review-file:has-text('cli.rs') input.review-viewed");
+await within("the file is viewed in the commit", async () => (await page.isChecked(".review-window .review-file:has-text('cli.rs') input.review-viewed")));
+await page.fill(".review-window .review-file-note-input", "A note on this commit");
+await page.keyboard.press("Enter");
+await within("the note is on the commit", async () => (await text(".review-window .review-notes")).includes("A note on this commit") && /of [0-9a-f]{8}/.test(await text(".review-window .review-notes-title")));
+await within("the commit row counts the note", async () => (await page.$$(".review-window .review-commit .review-file-notes")).length === 1);
+await shot("rv2b-commit");
+// The box of a commit row marks all of its files.
+const second = commitRow(2);
+await page.click(`${second} >> input.review-viewed`);
+await within("the box of the commit marks all of its files", async () => (await page.isChecked(`${second} >> input.review-viewed`)) && (await page.getAttribute(second, "class")).includes("viewed"));
+await page.click(`${second} >> input.review-viewed`);
+await within("the box of the commit clears its files", async () => !(await page.isChecked(`${second} >> input.review-viewed`)));
+// Next Commit goes to the commit that has files that are not viewed.
+await page.click(commitRow(1));
+await page.click(".review-window .review-next-commit:has-text('Next Commit')");
+await within("Next Commit selects the other commit", async () => (await page.getAttribute(second, "class")).includes("selected"));
+// The note of the commit does not show in the changes of the whole branch.
+await page.click(commitRow(0));
+await within("All changes does not show the note of the commit", async () => !(await text(".review-window .review-notes")).includes("A note on this commit"));
 await page.keyboard.press("Escape");
 await page.waitForSelector(".review-window", { state: "detached" });
 
