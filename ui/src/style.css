@@ -493,6 +493,18 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .m-ours-gap-after, .m-theirs-gap-after, .m-both-gap-after { box-shadow: inset 0 -2px 0 var(--renamed); }
 .m-conflict-gap { box-shadow: inset 0 2px 0 var(--deleted); }
 .m-conflict-gap-after { box-shadow: inset 0 -2px 0 var(--deleted); }
+/* The decision on each side of a change: ✕ does not take it. */
+.m-arrow-group { position: absolute; right: 0; display: flex; pointer-events: auto; }
+.m-arrow-group .m-arrow { position: static; }
+.m-arrow-group > button { height: 100%; }
+.m-reject { width: 16px; padding: 0; border: 0; background: var(--bg); color: var(--muted); font-size: 11px; line-height: 1; cursor: pointer; }
+.m-reject:hover { color: var(--deleted); background: var(--hover); }
+.m-glyph-reject { cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.m-glyph-reject::before { content: "✕"; color: var(--muted); font-size: 11px; }
+.merge-done { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: color-mix(in srgb, var(--added) 16%, var(--bg)); border-bottom: 1px solid var(--border); color: var(--fg); font-weight: 600; }
+.merge-done[hidden] { display: none; }
+.merge-done .icon { color: var(--added); }
+.merge-done .tb-button { margin-left: auto; }
 .m-arrow-layer { position: absolute; top: 0; left: 0; pointer-events: none; }
 .m-arrow { position: absolute; right: 0; width: 18px; padding: 0; border: 0; background: var(--bg); color: var(--accent); font-size: 15px; font-weight: 700; line-height: 1; cursor: pointer; pointer-events: auto; }
 .m-arrow:hover { background: var(--hover); }

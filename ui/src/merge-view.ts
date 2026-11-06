@@ -24,10 +24,18 @@ interface MChunk extends Chunk {
   /** The range of this chunk in the result, in lines. */
   res: [number, number];
   applied: ("ours" | "theirs")[];
-  ignored: boolean;
+  /** The sides that the user does not take (✕). */
+  rejected: ("ours" | "theirs")[];
 }
 
-const resolved = (c: MChunk) => c.kind === "same" || c.ignored || c.applied.length > 0;
+type Side = "ours" | "theirs";
+
+/** The sides of a change that need a decision: take it or not (✕). A change that both sides made alike
+ * has one side. */
+const sidesOf = (c: MChunk): Side[] => (c.kind === "conflict" ? ["ours", "theirs"] : c.kind === "theirs" ? ["theirs"] : c.kind === "same" ? [] : ["ours"]);
+const decided = (c: MChunk, s: Side) => c.applied.includes(s) || c.rejected.includes(s);
+/** A change is resolved when each of its sides is taken or not taken. */
+const resolved = (c: MChunk) => sidesOf(c).every((s) => decided(c, s));
 
 /** Opens the merge window and resolves when the user closes it. */
 export function openMergeTool(input: MergeInput): Promise<MergeOutcome> {
@@ -54,6 +62,8 @@ class MergeWindow {
   private syncing = false;
   private dirty = false;
   private status: HTMLElement;
+  /** Shows when each side of each change is taken or not taken. */
+  private doneBar: HTMLElement;
   private current = -1;
   private refreshTimer = 0;
 
@@ -64,7 +74,7 @@ class MergeWindow {
     this.oursLines = splitLines(oursText);
     this.theirsLines = splitLines(theirsText);
     const baseLines = splitLines(base);
-    this.chunks = merge3(baseLines, this.oursLines, this.theirsLines).map((c) => ({ ...c, res: [c.base[0], c.base[1]], applied: [], ignored: false }));
+    this.chunks = merge3(baseLines, this.oursLines, this.theirsLines).map((c) => ({ ...c, res: [c.base[0], c.base[1]], applied: [], rejected: [] }));
 
     const lang = languageFor(input.path);
     const btn = (label: string | Node, title: string, run: () => void, cls = "") => {
@@ -73,6 +83,8 @@ class MergeWindow {
       return b;
     };
     this.status = h("span", { class: "merge-status" });
+    const applyNow = btn("Apply", "Save the result, mark the file resolved, and go to the next file with conflicts", () => void this.apply(), "primary");
+    this.doneBar = h("div", { class: "merge-done", hidden: true, role: "status" }, icon("resolved"), h("span", {}, "All conflicts are resolved. Check the result, then apply it."), applyNow);
     const oursHost = h("div", { class: "merge-editor" });
     const resultHost = h("div", { class: "merge-editor" });
     const theirsHost = h("div", { class: "merge-editor" });
@@ -95,6 +107,7 @@ class MergeWindow {
         h("span", { class: "spacer" }),
         this.status,
       ),
+      this.doneBar,
       h(
         "div",
         { class: "merge-titles" },
@@ -148,7 +161,7 @@ class MergeWindow {
       });
       e.onMouseDown((ev) => {
         if (ev.target.type !== monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN || !ev.target.position) return;
-        this.onGlyph(e, ev.target.position.lineNumber);
+        this.onGlyph(e, ev.target.position.lineNumber, (ev.target.detail as monaco.editor.IMouseTargetMarginData | undefined)?.glyphMarginLane);
       });
     }
     this.result.onDidChangeModelContent((ev) => {
@@ -248,10 +261,21 @@ class MergeWindow {
     this.refresh();
   }
 
+  /** Does not take any side that is still open: the result keeps what it has. */
   private ignore(c: MChunk) {
-    c.ignored = true;
+    for (const s of sidesOf(c)) if (!decided(c, s)) c.rejected.push(s);
     this.dirty = true;
     this.refresh();
+  }
+
+  /** Does not take one side (✕). */
+  private reject(c: MChunk, side: Side) {
+    if (decided(c, side)) return;
+    c.rejected.push(side);
+    this.dirty = true;
+    this.current = this.chunks.indexOf(c);
+    this.refresh();
+    if (resolved(c) && this.chunks.some((o) => !resolved(o))) this.go(1);
   }
 
   private applyNonConflicting(which: "ours" | "theirs" | "all", move = true) {
@@ -278,28 +302,32 @@ class MergeWindow {
     else if (action === "both") {
       if (this.canApply(c, "ours")) this.applySide(c, "ours");
       if (this.canApply(c, "theirs")) this.applySide(c, "theirs");
-    } else if (this.canApply(c, action)) this.applySide(c, action);
+    } else {
+      // One side: take it, and do not take the other.
+      if (this.canApply(c, action)) this.applySide(c, action);
+      this.ignore(c);
+    }
     if (this.chunks.some((o) => o.kind !== "same" && !resolved(o))) this.go(1);
   }
 
-  private canApply(c: MChunk, side: "ours" | "theirs") {
-    if (resolved(c) && !(c.kind === "conflict" && c.applied.length === 1 && !c.applied.includes(side))) return false;
-    if (c.kind === "same") return false;
-    return c.kind === "conflict" || c.kind === "both" || c.kind === side;
+  private canApply(c: MChunk, side: Side) {
+    return sidesOf(c).includes(side) && !decided(c, side);
   }
 
   private glyphLine(range: [number, number], lineCount: number) {
     return Math.min(range[0] + 1, lineCount);
   }
 
-  private onGlyph(e: monaco.editor.IStandaloneCodeEditor, line: number) {
+  /** A click in the gutter: « and ✕ of theirs (left and right lane), or ✕ of the result. */
+  private onGlyph(e: monaco.editor.IStandaloneCodeEditor, line: number, lane: monaco.editor.GlyphMarginLane | undefined) {
     const side = e === this.ours ? "ours" : e === this.theirs ? "theirs" : null;
     const count = e.getModel()!.getLineCount();
     for (const c of this.chunks) {
       if (c.kind === "same") continue;
       if (side) {
         const range = side === "ours" ? c.ours : c.theirs;
-        if (this.glyphLine(range, count) === line && this.canApply(c, side)) return this.applySide(c, side);
+        if (this.glyphLine(range, count) !== line || !this.canApply(c, side)) continue;
+        return lane === monaco.editor.GlyphMarginLane.Right ? this.reject(c, side) : this.applySide(c, side);
       } else if (this.glyphLine(c.res, count) === line && !resolved(c)) {
         return this.ignore(c);
       }
@@ -353,8 +381,20 @@ class MergeWindow {
       const cls = `${done ? "m-done" : ""}${i === this.current ? " m-current" : ""}`;
       if (c.kind !== "theirs") o.push(...lineDeco(c.ours, c.kind, cls, oc));
       if (c.kind !== "theirs" && this.canApply(c, "ours")) arrows.push({ line: this.glyphLine(c.ours, oc), chunk: c });
-      if (c.kind !== "ours") t.push(...lineDeco(c.theirs, c.kind, cls, tc, this.canApply(c, "theirs") ? "m-glyph-left" : undefined, c.applied.length ? "Append theirs" : "Apply theirs"));
-      r.push(...lineDeco(c.res, c.kind, cls, rc, done ? undefined : "m-glyph-ignore", "Ignore this change"));
+      if (c.kind !== "ours") {
+        t.push(...lineDeco(c.theirs, c.kind, cls, tc));
+        if (this.canApply(c, "theirs")) {
+          // « next to the result takes theirs; ✕ at its right does not take it.
+          const l = this.glyphLine(c.theirs, tc);
+          const glyph = (className: string, lane: monaco.editor.GlyphMarginLane, hover: string): monaco.editor.IModelDeltaDecoration => ({
+            range: new monaco.Range(l, 1, l, 1),
+            options: { glyphMarginClassName: className, glyphMargin: { position: lane }, glyphMarginHoverMessage: { value: hover } },
+          });
+          t.push(glyph("m-glyph-left", monaco.editor.GlyphMarginLane.Left, c.applied.length ? "Append theirs" : "Apply theirs"));
+          t.push(glyph("m-glyph-reject", monaco.editor.GlyphMarginLane.Right, "Do not take theirs"));
+        }
+      }
+      r.push(...lineDeco(c.res, c.kind, cls, rc, done ? undefined : "m-glyph-ignore", "Take no open side: keep the result as it is"));
     });
     this.deco.ours = this.ours.deltaDecorations(this.deco.ours, o);
     this.renderArrows(arrows);
@@ -365,21 +405,26 @@ class MergeWindow {
       ? `${open} change${open === 1 ? "" : "s"} left${conflicts ? `, ${conflicts} conflict${conflicts === 1 ? "" : "s"}` : ""}`
       : "All changes are resolved";
     this.status.classList.toggle("done", open === 0);
+    this.doneBar.hidden = open !== 0;
   }
 
   private renderArrows(arrows: { line: number; chunk: MChunk }[]) {
     this.arrows = arrows;
     this.arrowLayer.replaceChildren(
       ...arrows.map(({ chunk }) => {
-        const b = h("button", { class: "m-arrow", title: chunk.applied.length ? "Append yours" : "Apply yours" }, "»");
-        // Monaco takes the mouse after a press in the editor.
-        b.addEventListener("mousedown", (e) => {
-          if (e.button !== 0) return;
-          e.preventDefault();
-          e.stopPropagation();
-          this.applySide(chunk, "ours");
-        });
-        return b;
+        // Monaco takes the mouse after a press in the editor: the buttons act on the press.
+        const press = (el: HTMLElement, run: () => void) =>
+          el.addEventListener("mousedown", (e) => {
+            if (e.button !== 0) return;
+            e.preventDefault();
+            e.stopPropagation();
+            run();
+          });
+        const no = h("button", { class: "m-reject", title: "Do not take yours" }, "✕");
+        press(no, () => this.reject(chunk, "ours"));
+        const take = h("button", { class: "m-arrow", title: chunk.applied.length ? "Append yours" : "Apply yours" }, "»");
+        press(take, () => this.applySide(chunk, "ours"));
+        return h("div", { class: "m-arrow-group" }, no, take);
       }),
     );
     this.placeArrows();

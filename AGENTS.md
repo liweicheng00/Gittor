@@ -102,6 +102,8 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   window; `offerContinue` after the last file) and `merge-view.ts` (the merge window). `runOp` opens the
   dialog when an operation stops with conflicts. A bar of actions in a Monaco view zone gets the mouse
   only with `.view-zones { z-index: 1 }`, and it acts on `mousedown`: Monaco takes the mouse after a press.
+  Each side of a change needs a decision: taken (`applied`) or not taken (`rejected`, the ✕ buttons). A
+  change is resolved when each side has one; then the bar `.merge-done` shows.
 - Windows (Compare, History, Review, Show Repository): `windows.ts`. A window calls
   `registerWindow(close, kind, show)`, and listens with `onRepoChange`. `watch.ts` calls
   `notifyRepoChange("files" | "repo")`.

@@ -34,6 +34,14 @@ page.on("dialog", (d) => d.accept());
 const shot = async (name) => { await page.waitForTimeout(700); await page.screenshot({ path: `${outDir}/${name}.png` }); console.log("shot", name); };
 const check = (what, ok) => { console.log(ok ? "ok  " : "FAIL", what); if (!ok) errors.push("check: " + what); };
 const status = async () => (await page.textContent(".merge-status")).trim();
+const within = async (what, fn, ms = 6000) => {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    if (await fn()) return check(what, true);
+    await page.waitForTimeout(100);
+  }
+  check(what, false);
+};
 
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".op-banner:not([hidden])", { timeout: 30000 });
@@ -88,12 +96,19 @@ check(
   merged === edit(base, { 1: "    let a = 10; // yours\n    let a = 100; // theirs", 4: "    let d = 40; // yours", 7: "    let g = 70; // theirs" }),
 );
 
-// README.md: Alt+Right takes theirs.
+// README.md: each side needs a decision. ✕ does not take yours; theirs is still open.
 await page.waitForTimeout(800);
-await page.keyboard.press("Alt+ArrowRight");
+const doneBar = () => page.isVisible(".merge-done");
+check("the done bar hides while a conflict is open", !(await doneBar()));
+await page.click(".merge-window .m-reject");
 await page.waitForTimeout(300);
-check("Alt+Right resolves the conflict", (await status()) === "All changes are resolved");
-await page.click(".merge-footer button:has-text('Apply')");
+check("after ✕ on yours, theirs is still open", (await status()) === "1 change left, 1 conflict" && !(await doneBar()));
+// « takes theirs: each side has a decision now.
+await page.click(".merge-editor:nth-child(3) .m-glyph-left");
+await within("the conflict is resolved", async () => (await status()) === "All changes are resolved");
+check("the done bar says that all conflicts are resolved", await doneBar());
+await shot("m3c-done");
+await page.click(".merge-done button:has-text('Apply')");
 // The last file: Gittor offers to continue the merge.
 await page.waitForSelector(".dialog:has-text('All Conflicts Are Resolved')", { timeout: 10000 });
 check("no conflicts left", git("diff", "--name-only", "--diff-filter=U") === "");
