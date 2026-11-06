@@ -149,10 +149,12 @@ for (let i = 0; i < 12 && (await page.$$(".am-card[data-node='work']")).length =
 await page.keyboard.up("Control");
 await within("a zoom out past 25% goes back up", async () => !!(await page.$(".am-card[data-node='work']")) && !(await page.$(".am-flying")));
 
-// The fake agent goes into agents.json; the folder name is in the bar.
+// The fake agent goes into agents.json, next to the workflow folders; the folder of the workflow is in the bar.
 const dir = await page.textContent(".am-dir");
-const saved = Object.fromEntries(["agents.json", "layout.json"].map((f) => [f, readFileSync(join(dir, f), "utf8")]));
-writeFileSync(join(dir, "agents.json"), JSON.stringify([{ name: "Fake Agent", command: "node", args: [agentScript], env: {} }]));
+const root = join(dir, "..");
+check("the first workflow is Main, in its own folder", (await page.textContent(".am-wf-tab.active")).includes("Main") && existsSync(join(dir, "workflow.json")));
+const saved = Object.fromEntries([join(root, "agents.json"), join(dir, "layout.json")].map((f) => [f, readFileSync(f, "utf8")]));
+writeFileSync(join(root, "agents.json"), JSON.stringify([{ name: "Fake Agent", command: "node", args: [agentScript], env: {} }]));
 await page.click(".am-bar button:has-text('Reload')");
 await within("the picker lists the fake agent", async () => (await page.textContent(".x-chat-picker")) === "Fake Agent");
 
@@ -199,6 +201,38 @@ await within("a good edit loads at once", async () => (await page.textContent(".
 check("the error goes away", await page.$eval(".am-errors", (e) => e.hidden));
 await within("the error file goes away", async () => !existsSync(join(dir, "mods/hello/main.error")));
 
+// A new workflow opens in a new tab, in its own folder, with the repository of the Git side as its project.
+await page.click(".am-wf-add");
+await page.waitForTimeout(400);
+await page.click(".menu-item:has-text('New Workflow')");
+await page.fill(".overlay .dialog-input >> nth=0", "Release");
+await page.click(".overlay button:has-text('Create')");
+await within("the new workflow opens in the active tab", async () => ((await page.textContent(".am-wf-tab.active").catch(() => "")) ?? "").includes("Release"));
+await page.waitForSelector(".am-card[data-node='work']");
+const release = JSON.parse(readFileSync(join(root, "release", "workflow.json"), "utf8"));
+check("the workflow keeps its name and project", release.name === "Release" && release.projects.length === 1 && release.projects[0].endsWith(repo.split("/").pop()));
+await within("the panels of the new workflow work on its project", async () => (await page.$$(".x-branches-row")).length > 0);
+check("the new workflow has its own view: all cards fit", parseInt(await page.textContent(".am-zoom-label")) <= 100);
+check("the new workflow has its own agent", !(await page.$(".x-chat-agent")));
+await shot("am7-new-workflow");
+
+// Back in Main, a workflow card links to Release: it shows the project, and a click opens the workflow.
+await page.click(".am-wf-tab:has-text('Main')");
+await page.waitForSelector(".am-card[data-node='hello']");
+check("Main keeps its conversation", (await page.$$(".x-chat-agent")).length === 2);
+const mainLayout = JSON.parse(readFileSync(join(dir, "layout.json"), "utf8"));
+mainLayout.children[1].nodes.push({ id: "to-release", workflow: "release", x: 860, y: 600, w: 260 });
+mainLayout.children[1].edges.push({ from: "remotes", to: "to-release", label: "release" });
+writeFileSync(join(dir, "layout.json"), JSON.stringify(mainLayout, null, 2));
+await page.waitForSelector(".am-card.am-wf-card[data-node='to-release'] .am-wf-chip");
+check("the workflow card shows the name and the project", (await page.textContent(".am-wf-card .am-card-title")) === "Release" && (await page.textContent(".am-wf-chip")) === repo.split("/").pop());
+await page.click(".am-fit");
+await shot("am8-workflow-card");
+await page.click(".am-wf-card .am-card-open");
+await within("the card opens the workflow", async () => ((await page.textContent(".am-wf-tab.active").catch(() => "")) ?? "").includes("Release") && !(await page.$(".am-card[data-node='hello']")));
+await page.click(".am-wf-tab:has-text('Main')");
+await page.waitForSelector(".am-card[data-node='to-release']");
+
 // The keys of the Git side do not work on the back side; Ctrl+Shift+A turns back.
 await page.click(".x-chat-input");
 await page.keyboard.press("Control+3");
@@ -209,9 +243,10 @@ check("Ctrl+3 did not change the left tab", !(await page.$(".lp-tab.active:text-
 await shot("am6-git-side");
 
 // Clean up: the agent stops and the folder gets its files back.
-await api("agent_stop");
-for (const [f, text] of Object.entries(saved)) writeFileSync(join(dir, f), text);
+await api("agent_stop", { workflow: "main" });
+for (const [f, text] of Object.entries(saved)) writeFileSync(f, text);
 rmSync(join(dir, "mods/hello"), { recursive: true, force: true });
+rmSync(join(root, "release"), { recursive: true, force: true });
 rmSync(agentScript, { force: true });
 
 await browser.close();

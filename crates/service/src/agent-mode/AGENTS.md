@@ -2,9 +2,11 @@
 
 <!-- Gittor writes this file again at each start. Edits here are lost. -->
 
-This folder is **the whole interface of the Agent mode of Gittor, as files**. Gittor is a desktop git
-client. Agent mode is the back side of its window: the user turns the window around, and Gittor draws
-this side from the files here. When a file changes, the window changes within a second.
+This folder is **one workflow of the Agent mode of Gittor, as files**. Gittor is a desktop git client.
+Agent mode is the back side of its window: the user turns the window around and sees the workflows in
+tabs at the top. A workflow is the unit of work: one work flow, with its projects (repositories), its
+knowledge folders, its own panels, canvas and agent. Gittor draws the workflow from the files here. When
+a file changes, the window changes within a second.
 
 When the user asks for something ("a card with the last commits", "connect the changes to the
 branches", "make it warmer"), do it by editing these files or by writing a mod. Nothing in this side is
@@ -15,6 +17,7 @@ as yours.
 
 | File | What it decides |
 | --- | --- |
+| `workflow.json` | The name of the workflow, its `projects` (repository folders) and its `knowledge` folders. |
 | `layout.json` | The panels of the window, the canvas, its cards and the edges between them. |
 | `style.css` | The look of all panels and cards. It loads after the styles of Gittor. |
 | `mods/<name>/main.js` | The code of one panel or card (a "mod"). |
@@ -22,6 +25,21 @@ as yours.
 | `gittor.d.ts` | The API that a mod gets. Read it before you write a mod. |
 
 `AGENTS.md` and `gittor.d.ts` are written again at each start. Do not edit them.
+
+The folders of the other workflows are next to this one (`../<id>/`), and `../agents.json` lists the
+agent programs of all workflows.
+
+## workflow.json
+
+```json
+{ "name": "Release", "projects": ["/Users/me/code/app", "/Users/me/code/api"], "knowledge": ["/Users/me/notes/release"] }
+```
+
+- `projects`: the repositories of the workflow. Gittor opens them when the workflow opens. The mods
+  get their roots from `g.projects()`, and `g.call` works on the first one unless the arguments name
+  another `root`. Without projects, the mods work on the repository of the active tab of the Git side.
+- `knowledge`: folders with documents, notes or code that the work needs. Gittor shows them; read them
+  when the user asks about the work.
 
 ## layout.json
 
@@ -76,6 +94,10 @@ The canvas:
 - **Detail view.** A card without `children` opens to a large view of one mod: `detail` names that mod,
   or the card mod shows again. The mod gets `g.props.detail === true` there, so one mod can draw a short
   version in the card and a full version in the detail view.
+- **Workflow cards.** A card with `"workflow": "<id>"` and no `mod` is a link to another workflow: it
+  shows the projects of that workflow, and a click on it opens that workflow in a tab. The id is the
+  name of the folder of the workflow. Example: `{ "id": "to-release", "workflow": "release", "x": 900,
+  "y": 40, "w": 260 }`.
 - When the user drags a card, Gittor writes the new `x` and `y` into this file. Read the file again
   before you change it, so that you keep the places of the user.
 - Put a new card where there is free space, for example to the right of the last card.
@@ -129,6 +151,8 @@ The bar at the top of the window is not a mod. Its Reset button moves this folde
 ## agents.json
 
 A list of agent programs that speak the Agent Client Protocol (ACP) over stdin and stdout:
+
+`agents.json` is in the folder of all workflows (`../agents.json`):
 
 ```json
 [{ "name": "Claude Code", "command": "npx", "args": ["-y", "@agentclientprotocol/claude-agent-acp"], "env": {} }]

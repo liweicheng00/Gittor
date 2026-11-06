@@ -117,8 +117,11 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   change is resolved when each side has one; then the bar `.merge-done` shows.
 - Agent mode (an experiment, branch `claude/agent-mode-experiment`): the back side of the window.
   `agent-mode-flow.ts` turns the window (Web Animations, two halves of 90 degrees) and draws the back side
-  from the files of `<config dir>/agent-mode`: `layout.json`, `style.css`, `mods/<name>/main.js`. The
-  defaults and the guide for agents are in `crates/service/src/agent-mode/`. A broken file keeps the last
+  in workflow tabs. A workflow is a folder of `<config dir>/workflows` (or `workflowsDir`): `workflow.json`
+  (name, projects, knowledge), `layout.json`, `style.css`, `mods/<name>/main.js`; `agents.json` is in the
+  root. Each workflow has its own agent (`Service.agents` by id) and its own canvas views. A card with
+  `workflow` links to another workflow; `workflow_open_projects` opens the projects without a change of
+  the active Git tab. The defaults and the guide for agents are in `crates/service/src/agent-mode/`. A broken file keeps the last
   good version and writes `<name>.error`. Hide the Git side with `opacity`, not `visibility`: Monaco sets
   `visibility: visible` on its own elements. Mod classes start with `x-`, because Gittor uses short class
   names. `agent.rs` is an ACP client (JSON-RPC on stdio); its messages come as `Event::Agent`. The Tauri

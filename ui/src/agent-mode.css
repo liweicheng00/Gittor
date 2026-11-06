@@ -87,3 +87,27 @@ body.am-turning #app, body.am-turning .agent-mode { transform-origin: 50% 50%; b
 .am-crumb-sep { color: var(--muted); }
 .am-detail { position: absolute; inset: 0; display: flex; padding: 52px 16px 16px; }
 .am-detail-body { flex: 1; min-height: 0; overflow: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); }
+
+/* The workflow tabs in the bar. */
+.am-wf-tabs { display: flex; align-items: stretch; gap: 2px; min-width: 0; overflow-x: auto; scrollbar-width: none; align-self: stretch; }
+.am-wf-tab { display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; font: inherit; color: var(--muted); white-space: nowrap; background: none; border: 0; border-bottom: 2px solid transparent; cursor: pointer; }
+.am-wf-tab:hover { color: var(--fg); background: var(--hover); }
+.am-wf-tab.active { color: var(--fg); font-weight: 600; border-bottom-color: var(--accent); }
+.am-wf-tab > .icon { width: 14px; height: 14px; }
+.am-wf-tab.active > .icon { color: var(--accent); }
+.am-wf-close { display: inline-flex; padding: 1px; border-radius: 3px; opacity: 0; }
+.am-wf-tab:hover .am-wf-close, .am-wf-tab.active .am-wf-close { opacity: 0.7; }
+.am-wf-close:hover { opacity: 1; background: var(--panel-2); }
+.am-wf-close .icon { width: 12px; height: 12px; }
+.am-bar .am-dir { margin-left: 8px; }
+
+/* A card of another workflow: a link, with the projects of that workflow. */
+.am-card.am-wf-card { border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border)); background: color-mix(in srgb, var(--accent) 5%, var(--bg)); }
+.am-wf-card .am-card-head > .icon { width: 14px; height: 14px; color: var(--accent); }
+.am-wf-card .am-card-open { color: var(--accent); opacity: 1; }
+.am-wf-card-body { padding: 2px 12px 12px; cursor: pointer; }
+.am-wf-card-projects { display: flex; flex-wrap: wrap; gap: 5px; }
+.am-wf-chip { padding: 1px 8px; font-size: 12px; color: var(--local); background: var(--panel); border: 1px solid var(--border); border-radius: 10px; }
+.am-wf-none, .am-wf-card-meta { color: var(--muted); font-size: 12px; }
+.am-wf-card-meta { margin-top: 6px; }
+.am-wf-card-go { margin-top: 10px; color: var(--accent); font-size: 12px; }

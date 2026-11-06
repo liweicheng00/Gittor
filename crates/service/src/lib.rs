@@ -21,7 +21,7 @@ mod types;
 mod view;
 pub mod watch;
 
-pub use agent_mode::{AgentConfig, ModFile, ModeFiles};
+pub use agent_mode::{AgentConfig, ModFile, ModeFiles, ProjectState, WorkflowInfo};
 pub use ops::{HunkSelection, Op};
 pub use types::*;
 
@@ -42,8 +42,8 @@ pub struct Service {
     config_dir: Option<std::path::PathBuf>,
     settings: Mutex<config::BackendSettings>,
     events: std::sync::Arc<events::Events>,
-    /// True after the agent-mode folder got its files in this run.
-    mode_ready: Mutex<bool>,
-    /// The agent of Agent mode, when one runs.
-    agent: Mutex<Option<agent::Agent>>,
+    /// The workflows whose folder got its docs in this run.
+    mode_ready: Mutex<std::collections::HashSet<String>>,
+    /// The agent of each workflow that runs one.
+    agents: Mutex<std::collections::HashMap<String, agent::Agent>>,
 }

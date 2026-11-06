@@ -75,7 +75,7 @@
 .x-chat-btn:disabled { opacity: 0.5; cursor: default; }
 .x-chat-send:not(:disabled) { color: #fff; background: var(--accent); border-color: var(--accent); }
 .x-chat-log { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; scrollbar-width: none; }
-.x-chat-empty { margin: auto; max-width: 420px; text-align: center; color: var(--muted); }
+.x-chat-empty { margin: auto; max-width: 420px; text-align: center; color: var(--muted); overflow-wrap: anywhere; }
 .x-chat-msg { max-width: 82%; padding: 7px 11px; border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .x-chat-user { align-self: flex-end; color: #fff; background: var(--accent); border-bottom-right-radius: 3px; }
 .x-chat-agent { align-self: flex-start; background: var(--panel); border-bottom-left-radius: 3px; }

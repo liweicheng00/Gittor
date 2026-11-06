@@ -8,7 +8,10 @@ import { icon } from "./icons";
 
 export interface CanvasNode {
   id: string;
-  mod: string;
+  /** The mod that draws the body of the card. A workflow card has none. */
+  mod?: string;
+  /** The id of another workflow: the card links to it, and opens it. */
+  workflow?: string;
   x: number;
   y: number;
   w?: number;
@@ -45,7 +48,9 @@ export function checkCanvas(c: { nodes?: CanvasNode[]; edges?: CanvasEdge[] }, a
     if (typeof n.id !== "string" || !n.id) return `${p}.id is not a string`;
     if (ids.has(n.id)) return `${p}.id "${n.id}" is there two times`;
     ids.add(n.id);
-    if (typeof n.mod !== "string") return `${p}.mod is not a string`;
+    if (n.workflow !== undefined) {
+      if (typeof n.workflow !== "string" || !n.workflow) return `${p}.workflow is not a string`;
+    } else if (typeof n.mod !== "string") return `${p} needs "mod", or "workflow" for a card of another workflow`;
     if (typeof n.x !== "number" || typeof n.y !== "number") return `${p} needs the numbers "x" and "y"`;
     if (n.detail !== undefined && typeof n.detail !== "string") return `${p}.detail is not a string`;
     if (n.children !== undefined) {
@@ -70,6 +75,11 @@ export interface CanvasHost {
   moved(): void;
   /** The width at the left that a window covers; Fit keeps the cards out of it. */
   insetLeft?(): number;
+  /** Draws the body of a card of another workflow. */
+  workflowCard(body: HTMLElement, id: string): void;
+  workflowName(id: string): string;
+  /** Shows another workflow. False when it cannot. */
+  openWorkflow(id: string): Promise<boolean>;
 }
 
 const SVG = "http://www.w3.org/2000/svg";
@@ -107,6 +117,8 @@ export class Canvas {
     private readonly host: CanvasHost,
     /** The ids of the open cards, for example from the canvas before a reload. */
     openIds: string[] = [],
+    /** The part of the storage key of the views, for example the id of the workflow. */
+    private readonly scope = "",
   ) {
     this.lines = svg("svg", { class: "am-edges" });
     const defs = svg("defs");
@@ -180,7 +192,7 @@ export class Canvas {
   }
 
   private key(): string {
-    return [VIEW_KEY, ...this.openIds()].join("/");
+    return [VIEW_KEY, this.scope, ...this.openIds()].join("/");
   }
 
   private clearLevel() {
@@ -205,7 +217,7 @@ export class Canvas {
     if (detail) {
       this.detail.hidden = false;
       this.detail.dataset.node = top.id;
-      this.host.mount(this.detailBody, top.detail ?? top.mod, { ...(top.props ?? {}), detail: true });
+      this.host.mount(this.detailBody, top.detail ?? top.mod ?? "", { ...(top.props ?? {}), detail: true });
       return;
     }
     for (const n of this.level().nodes) this.addCard(n);
@@ -230,6 +242,7 @@ export class Canvas {
   async open(n: CanvasNode) {
     const card = this.cards.get(n.id);
     if (this.flying || !card) return;
+    if (n.workflow) return this.openWorkflow(n, card.el);
     this.flying = true;
     saveView(this.key(), this.view);
     try {
@@ -246,6 +259,29 @@ export class Canvas {
       this.flying = false;
       this.el.focus({ preventScroll: true });
     }
+  }
+
+  /** Flies into the card of another workflow, then shows that workflow. The view of this level stays as
+   * it was before the flight, for the way back. */
+  private async openWorkflow(n: CanvasNode, el: HTMLElement) {
+    this.flying = true;
+    const back = { ...this.view };
+    saveView(this.key(), back);
+    try {
+      el.classList.add("am-focus");
+      this.el.classList.add("am-flying");
+      await this.tween(this.viewOf(el, 0.98), 420);
+      await this.fade(false);
+    } finally {
+      this.flying = false;
+    }
+    if (await this.host.openWorkflow(n.workflow!)) return;
+    // The workflow did not open: this level comes back.
+    this.view = back;
+    this.apply();
+    await this.fade(true);
+    el.classList.remove("am-focus");
+    this.el.classList.remove("am-flying");
   }
 
   /** Goes back to the level with `depth` open cards: the inner level fades out, and the camera flies out of
@@ -327,10 +363,14 @@ export class Canvas {
 
   private addCard(n: CanvasNode) {
     const inner = n.children?.length ?? 0;
-    const openBtn = h("button", { class: "am-card-open", title: inner ? `Open: ${inner} cards inside` : "Open the details", onclick: () => void this.open(n) }, icon("open-card"), inner ? h("span", {}, String(inner)) : null);
-    const head = h("div", { class: "am-card-head", title: "Drag to move the card. Double-click to open it." }, h("span", { class: "am-card-title" }, n.title ?? n.mod), openBtn);
-    const body = h("div", { class: "am-card-body am-block", "data-mod": n.mod });
-    const el = h("div", { class: `am-card${inner ? " am-stack" : ""}`, "data-node": n.id }, head, body);
+    const wf = n.workflow;
+    const openBtn = wf
+      ? h("button", { class: "am-card-open", title: "Open the workflow", onclick: () => void this.open(n) }, icon("workflow"), h("span", {}, "Open"))
+      : h("button", { class: "am-card-open", title: inner ? `Open: ${inner} cards inside` : "Open the details", onclick: () => void this.open(n) }, icon("open-card"), inner ? h("span", {}, String(inner)) : null);
+    const title = n.title ?? (wf ? this.host.workflowName(wf) : n.mod);
+    const head = h("div", { class: "am-card-head", title: "Drag to move the card. Double-click to open it." }, wf ? icon("workflow") : null, h("span", { class: "am-card-title" }, title), openBtn);
+    const body = h("div", { class: "am-card-body am-block", "data-mod": n.mod ?? "" });
+    const el = h("div", { class: `am-card${inner ? " am-stack" : ""}${wf ? " am-wf-card" : ""}`, "data-node": n.id }, head, body);
     if (n.class) el.classList.add(...n.class.split(/\s+/).filter(Boolean));
     el.style.left = `${n.x}px`;
     el.style.top = `${n.y}px`;
@@ -343,7 +383,10 @@ export class Canvas {
     this.cards.set(n.id, { node: n, el, body });
     this.resize.observe(el);
     this.world.append(el);
-    this.host.mount(body, n.mod, n.props ?? {});
+    if (wf) {
+      this.host.workflowCard(body, wf);
+      body.addEventListener("dblclick", () => void this.open(n));
+    } else this.host.mount(body, n.mod ?? "", n.props ?? {});
   }
 
   private startDrag(e: MouseEvent, n: CanvasNode, el: HTMLElement) {

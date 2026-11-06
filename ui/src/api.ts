@@ -6,6 +6,8 @@
 import type { Action } from "./bindings/Action";
 import type { AgentConfig } from "./bindings/AgentConfig";
 import type { ModeFiles } from "./bindings/ModeFiles";
+import type { ProjectState } from "./bindings/ProjectState";
+import type { WorkflowInfo } from "./bindings/WorkflowInfo";
 import type { BackendSettings } from "./bindings/BackendSettings";
 import type { Event as BackendEvent } from "./bindings/Event";
 import type { ErrorKind } from "./bindings/ErrorKind";
@@ -58,6 +60,8 @@ export type {
   Action,
   AgentConfig,
   ModeFiles,
+  ProjectState,
+  WorkflowInfo,
   BackendEvent,
   ErrorKind,
   BackendSettings,
@@ -285,19 +289,23 @@ export type ChangeListOp =
 export const api = {
   open: (path: string, view: ViewSettings) => call<ViewResult>("open", { path, ...view }),
   /** Makes an open repository active, for a tab switch; opens it when it is not open. */
-  /** Agent mode: the agent programs of agents.json, and one agent that runs. */
+  /** Agent mode: the agent programs of agents.json, and the agent of each workflow. */
   agentList: () => call<AgentConfig[]>("agent_list"),
-  agentStart: (index: number, cwd = "") => call<string>("agent_start", { index, cwd }),
-  agentPrompt: (text: string) => call<null>("agent_prompt", { text }),
-  agentCancel: () => call<null>("agent_cancel"),
-  agentAnswer: (token: number, optionId: string | null) => call<null>("agent_answer", { token, optionId }),
-  agentStop: () => call<null>("agent_stop"),
-  /** Agent mode: the files of its interface. */
-  modeFiles: () => call<ModeFiles>("mode_files"),
-  modeStamp: () => call<string>("mode_stamp"),
-  modeError: (name: string, message: string | null) => call<null>("mode_error", { name, message }),
-  modeReset: () => call<string>("mode_reset"),
-  modeSaveLayout: (text: string) => call<null>("mode_save_layout", { text }),
+  agentStart: (workflow: string, index: number) => call<string>("agent_start", { workflow, index }),
+  agentPrompt: (workflow: string, text: string) => call<null>("agent_prompt", { workflow, text }),
+  agentCancel: (workflow: string) => call<null>("agent_cancel", { workflow }),
+  agentAnswer: (workflow: string, token: number, optionId: string | null) => call<null>("agent_answer", { workflow, token, optionId }),
+  agentStop: (workflow: string) => call<null>("agent_stop", { workflow }),
+  /** Agent mode: the files of the interface of a workflow. */
+  modeFiles: (workflow: string) => call<ModeFiles>("mode_files", { workflow }),
+  modeStamp: (workflow: string) => call<string>("mode_stamp", { workflow }),
+  modeError: (workflow: string, name: string, message: string | null) => call<null>("mode_error", { workflow, name, message }),
+  modeReset: (workflow: string) => call<string>("mode_reset", { workflow }),
+  modeSaveLayout: (workflow: string, text: string) => call<null>("mode_save_layout", { workflow, text }),
+  /** Agent mode: the workflows, each a folder with its own interface, projects and knowledge folders. */
+  workflowList: () => call<WorkflowInfo[]>("workflow_list"),
+  workflowCreate: (name: string, projects: string[]) => call<WorkflowInfo>("workflow_create", { name, projects }),
+  workflowOpenProjects: (workflow: string) => call<ProjectState[]>("workflow_open_projects", { workflow }),
   activate: (path: string, view: ViewSettings) => call<ViewResult>("activate", { path, ...view }),
   close: (path: string) => call<null>("close", { path }),
   /** The version of a git program; it changes nothing. Empty means git from PATH. */

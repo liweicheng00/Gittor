@@ -28,6 +28,8 @@ pub struct BackendSettings {
     /// The command that opens a terminal in a folder, with `{dir}`. Empty opens the terminal app of the
     /// system.
     pub terminal: String,
+    /// The folder of the workflows of Agent mode. Empty means `workflows` in the configuration directory.
+    pub workflows_dir: String,
     /// False until the settings were saved once. The front end then moves its old copy here.
     pub stored: bool,
 }

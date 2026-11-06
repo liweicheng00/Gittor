@@ -23,6 +23,9 @@ export function scheduleAutoFetch() {
 
 /** The settings that the backend keeps in its settings file. The front end keeps a copy for the dialog.
  * An old front end kept them in the browser storage; the first start moves them to the backend. */
+/** The folder of the workflows of Agent mode. The settings page does not show it; a save keeps it. */
+let workflowsDir = "";
+
 export async function applyBackendSettings() {
   let b: BackendSettings;
   try {
@@ -30,7 +33,8 @@ export async function applyBackendSettings() {
   } catch {
     return;
   }
-  const local = { gitPath: settings.gitPath, editor: settings.editor, terminal: settings.terminal, history: { days: settings.historyDays, maxMb: settings.historyMaxMb } };
+  workflowsDir = b.workflowsDir;
+  const local = { gitPath: settings.gitPath, editor: settings.editor, terminal: settings.terminal, history: { days: settings.historyDays, maxMb: settings.historyMaxMb }, workflowsDir };
   const changedLocally = local.gitPath !== "" || local.history.days !== b.history.days || local.history.maxMb !== b.history.maxMb;
   if (!b.stored && changedLocally) {
     try {
@@ -81,7 +85,7 @@ export async function openSettings(page?: Page, ignoreAdd?: string[]) {
   const backendChanged = gitChanged || next.editor !== settings.editor || next.terminal !== settings.terminal || next.historyDays !== settings.historyDays || next.historyMaxMb !== settings.historyMaxMb;
   if (backendChanged) {
     try {
-      const version = await api.setBackendSettings({ gitPath: next.gitPath, editor: next.editor, terminal: next.terminal, history: { days: next.historyDays, maxMb: next.historyMaxMb }, stored: true });
+      const version = await api.setBackendSettings({ gitPath: next.gitPath, editor: next.editor, terminal: next.terminal, history: { days: next.historyDays, maxMb: next.historyMaxMb }, workflowsDir, stored: true });
       statusActivity.textContent = `git ${version}`;
     } catch (e) {
       toast(String(e).replace(/^Error: /, ""), "error");

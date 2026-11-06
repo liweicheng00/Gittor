@@ -54,12 +54,17 @@ export interface Gittor {
   h<K extends keyof HTMLElementTagNameMap>(tag: K, props?: Record<string, unknown>, ...children: (Node | string | null | undefined | false)[]): HTMLElementTagNameMap[K];
   /** The props of the block in layout.json. */
   props: Record<string, unknown>;
-  /** The agent-mode folder. */
+  /** The folder of the workflow. */
   dir: string;
-  /** The repository of the active tab, or null. */
+  /** The workflow of the mod: its id (the folder name), name, folder, projects and knowledge folders. */
+  workflow: { id: string; name: string; dir: string; projects: string[]; knowledge: string[] };
+  /** The repository roots of the projects of the workflow that opened. */
+  projects(): string[];
+  /** The first project of the workflow, else the repository of the active tab of the Git side, or null. */
   repo(): string | null;
-  /** Runs a command of the Gittor backend on the active repository, for example "local_changes",
-   * "refs", "stashes", "worktrees", "reviews", "head_message", "repo_state". It returns parsed JSON. */
+  /** Runs a command of the Gittor backend, for example "local_changes", "refs", "stashes", "worktrees",
+   * "reviews", "head_message", "repo_state". It returns parsed JSON. It works on `g.repo()`; give
+   * `{ root: <one of g.projects()> }` in args for another project. */
   call<T = unknown>(command: string, args?: Record<string, unknown>): Promise<T>;
   /** Calls fn on an event. "repo": the repository or its files changed. "agent": the log or the state
    * of the agent changed. Returns a function that stops the calls. */

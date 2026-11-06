@@ -1,10 +1,13 @@
 // Agent mode: the back side of the window. The agent button or its key turns the window around. The back
-// side is drawn from the files of the agent-mode folder: layout.json, style.css and mods/<name>/main.js.
-// An agent (ACP) edits these files, and the window loads them again within a second.
+// side shows workflows in tabs. Each workflow is a folder: workflow.json (its projects and knowledge
+// folders), layout.json, style.css and mods/<name>/main.js. An agent (ACP) edits these files, and the
+// window loads them again within a second.
 
 import "./agent-mode.css";
 import { Canvas, checkCanvas, type CanvasSpec } from "./agent-canvas";
-import { api, call, getRepoRoot, onBackendEvent, type ModeFiles } from "./api";
+import { api, call, getRepoRoot, onBackendEvent, type ModeFiles, type WorkflowInfo } from "./api";
+import { menuBelow } from "./context-menu";
+import { formDialog } from "./dialogs";
 import { h } from "./dom";
 import { icon } from "./icons";
 import { toast } from "./notify";
@@ -21,124 +24,281 @@ type LogEntry =
   | { kind: "permission"; token: number; title: string; options: Option[]; answer?: string | null };
 type AgentState = "off" | "starting" | "ready" | "busy" | "error";
 
-const agent = { log: [] as LogEntry[], state: "off" as AgentState, name: null as string | null, stderr: [] as string[] };
+/** The conversation with the agent of one workflow. */
+type AgentSession = { log: LogEntry[]; state: AgentState; name: string | null; stderr: string[] };
+const sessions = new Map<string, AgentSession>();
+function sessionOf(workflow: string): AgentSession {
+  let s = sessions.get(workflow);
+  if (!s) sessions.set(workflow, (s = { log: [], state: "off", name: null, stderr: [] }));
+  return s;
+}
 
 const listeners = { agent: new Set<() => void>(), repo: new Set<() => void>() };
 const emit = (k: keyof typeof listeners) => listeners[k].forEach((fn) => fn());
 
 /** Adds an entry, or replaces the entry at `i` with a new object, so that a mod sees what changed. */
-function put(e: LogEntry, i = agent.log.length) {
-  agent.log = agent.log.slice();
-  agent.log[i] = e;
+function put(a: AgentSession, e: LogEntry, i = a.log.length) {
+  a.log = a.log.slice();
+  a.log[i] = e;
 }
 
-function appendText(kind: "agent" | "thought", text: string) {
-  const last = agent.log[agent.log.length - 1];
-  if (last && last.kind === kind) put({ kind, text: last.text + text }, agent.log.length - 1);
-  else put({ kind, text });
+function appendText(a: AgentSession, kind: "agent" | "thought", text: string) {
+  const last = a.log[a.log.length - 1];
+  if (last && last.kind === kind) put(a, { kind, text: last.text + text }, a.log.length - 1);
+  else put(a, { kind, text });
 }
 
 /** Turns an ACP message of the backend (see crates/service/src/agent.rs) into entries of the log. */
-function onAgentMessage(d: Record<string, any>) {
+function onAgentMessage(workflow: string, d: Record<string, any>) {
+  const a = sessionOf(workflow);
   switch (d.type) {
     case "status":
-      agent.state = d.state === "ready" ? "ready" : "starting";
-      put({ kind: "info", text: d.state === "ready" ? `${d.info?.agent?.title ?? d.info?.agent?.name ?? agent.name} is ready.` : `Starting ${agent.name}…` });
+      a.state = d.state === "ready" ? "ready" : "starting";
+      put(a, { kind: "info", text: d.state === "ready" ? `${d.info?.agent?.title ?? d.info?.agent?.name ?? a.name} is ready.` : `Starting ${a.name}…` });
       break;
     case "update": {
       const u = d.update ?? {};
       const text = u.content?.type === "text" ? String(u.content.text ?? "") : "";
-      if (u.sessionUpdate === "agent_message_chunk") appendText("agent", text);
-      else if (u.sessionUpdate === "agent_thought_chunk") appendText("thought", text);
-      else if (u.sessionUpdate === "tool_call") put({ kind: "tool", id: u.toolCallId, title: u.title ?? "", status: u.status ?? "pending", toolKind: u.kind ?? "" });
+      if (u.sessionUpdate === "agent_message_chunk") appendText(a, "agent", text);
+      else if (u.sessionUpdate === "agent_thought_chunk") appendText(a, "thought", text);
+      else if (u.sessionUpdate === "tool_call") put(a, { kind: "tool", id: u.toolCallId, title: u.title ?? "", status: u.status ?? "pending", toolKind: u.kind ?? "" });
       else if (u.sessionUpdate === "tool_call_update") {
-        const i = agent.log.findIndex((e) => e.kind === "tool" && e.id === u.toolCallId);
+        const i = a.log.findIndex((e) => e.kind === "tool" && e.id === u.toolCallId);
         if (i >= 0) {
-          const old = agent.log[i] as Extract<LogEntry, { kind: "tool" }>;
-          put({ ...old, title: u.title ?? old.title, status: u.status ?? old.status }, i);
+          const old = a.log[i] as Extract<LogEntry, { kind: "tool" }>;
+          put(a, { ...old, title: u.title ?? old.title, status: u.status ?? old.status }, i);
         }
       } else if (u.sessionUpdate === "plan") {
-        const i = agent.log.findIndex((e) => e.kind === "plan");
-        put({ kind: "plan", entries: (u.entries ?? []).map((p: any) => ({ content: String(p.content ?? ""), status: String(p.status ?? "") })) }, i >= 0 ? i : undefined);
+        const i = a.log.findIndex((e) => e.kind === "plan");
+        put(a, { kind: "plan", entries: (u.entries ?? []).map((p: any) => ({ content: String(p.content ?? ""), status: String(p.status ?? "") })) }, i >= 0 ? i : undefined);
       } else return;
       break;
     }
     case "permission":
-      put({ kind: "permission", token: d.token, title: d.toolCall?.title ?? "The agent asks for permission", options: d.options ?? [] });
+      put(a, { kind: "permission", token: d.token, title: d.toolCall?.title ?? "The agent asks for permission", options: d.options ?? [] });
       break;
     case "done":
-      agent.state = "ready";
-      if (d.stopReason && d.stopReason !== "end_turn") put({ kind: "info", text: `Stopped: ${d.stopReason}` });
+      a.state = "ready";
+      if (d.stopReason && d.stopReason !== "end_turn") put(a, { kind: "info", text: `Stopped: ${d.stopReason}` });
       break;
     case "error": {
-      const tail = agent.state === "starting" && agent.stderr.length ? `\n${agent.stderr.slice(-6).join("\n")}` : "";
-      agent.state = agent.state === "starting" ? "error" : "ready";
-      put({ kind: "error", text: String(d.message) + tail });
+      const tail = a.state === "starting" && a.stderr.length ? `\n${a.stderr.slice(-6).join("\n")}` : "";
+      a.state = a.state === "starting" ? "error" : "ready";
+      put(a, { kind: "error", text: String(d.message) + tail });
       break;
     }
     case "log":
-      agent.stderr.push(String(d.text));
-      if (agent.stderr.length > 200) agent.stderr.splice(0, 100);
+      a.stderr.push(String(d.text));
+      if (a.stderr.length > 200) a.stderr.splice(0, 100);
       return;
     case "exit":
-      if (agent.state !== "error") agent.state = "off";
-      put({ kind: "info", text: "The agent stopped." });
+      if (a.state !== "error") a.state = "off";
+      put(a, { kind: "info", text: "The agent stopped." });
       break;
     default:
       return;
   }
-  emit("agent");
+  renderTabs();
+  if (workflow === active) emit("agent");
 }
 
 void onBackendEvent((e) => {
-  if (e.kind === "agent") onAgentMessage(e.data);
+  if (e.kind === "agent") onAgentMessage(e.workflow, e.data);
 });
 
-const agentApi = {
-  list: () => api.agentList(),
-  async start(index: number, cwd?: string) {
-    const list = await api.agentList();
-    agent.name = list[index]?.name ?? null;
-    agent.stderr = [];
-    agent.state = "starting";
-    emit("agent");
+/** The agent API of the mods of a workflow. */
+function agentApiFor(workflow: string) {
+  const a = sessionOf(workflow);
+  const changed = () => {
+    renderTabs();
+    if (workflow === active) emit("agent");
+  };
+  return {
+    list: () => api.agentList(),
+    async start(index: number) {
+      const list = await api.agentList();
+      a.name = list[index]?.name ?? null;
+      a.stderr = [];
+      a.state = "starting";
+      changed();
+      try {
+        await api.agentStart(workflow, index);
+      } catch (e) {
+        a.state = "error";
+        put(a, { kind: "error", text: String(e).replace(/^Error: /, "") });
+        changed();
+        throw e;
+      }
+    },
+    async send(text: string) {
+      put(a, { kind: "user", text });
+      a.state = "busy";
+      changed();
+      try {
+        await api.agentPrompt(workflow, text);
+      } catch (e) {
+        a.state = "ready";
+        put(a, { kind: "error", text: String(e).replace(/^Error: /, "") });
+        changed();
+      }
+    },
+    cancel: () => api.agentCancel(workflow).then(() => undefined),
+    async stop() {
+      await api.agentStop(workflow);
+      a.state = "off";
+      changed();
+    },
+    async answer(token: number, optionId: string | null) {
+      const i = a.log.findIndex((e) => e.kind === "permission" && e.token === token);
+      if (i >= 0) put(a, { ...(a.log[i] as Extract<LogEntry, { kind: "permission" }>), answer: optionId }, i);
+      changed();
+      await api.agentAnswer(workflow, token, optionId);
+    },
+    log: () => a.log,
+    state: () => a.state,
+    name: () => a.name,
+  };
+}
+
+/** True while the agent of the workflow waits for an answer of the user. */
+const asks = (a: AgentSession) => a.log.some((e) => e.kind === "permission" && e.answer === undefined);
+
+// ---- Workflows: the tabs at the top of the back side ----
+
+let workflows: WorkflowInfo[] = [];
+/** The id of the workflow on the screen. */
+let active = "";
+/** The ids of the open tabs. */
+let tabs: string[] = [];
+/** The repository roots of the projects of the active workflow that opened. */
+let projectRoots: string[] = [];
+/** The open cards of the canvas of each workflow, for a switch back. */
+const openIdsOf = new Map<string, string[]>();
+const WF_KEY = "gittor.workflowTabs";
+const wfTabs = h("div", { class: "am-wf-tabs" });
+const addBtn = h("button", { class: "tb-button tb-icon am-wf-add", title: "Open or make a workflow", "aria-label": "Add workflow", onclick: () => addMenu() }, icon("add"));
+const baseName = (p: string) => p.replace(/[\\/]+$/, "").split(/[\\/]/).pop() ?? p;
+
+function saveTabs() {
+  try {
+    localStorage.setItem(WF_KEY, JSON.stringify({ tabs, active }));
+  } catch {
+    // Without storage the first workflow opens at the next start.
+  }
+}
+
+/** Reads the workflows. The first call opens the tabs of the last time. */
+async function loadWorkflows() {
+  workflows = await api.workflowList();
+  if (!active) {
+    let saved: { tabs?: string[]; active?: string } = {};
     try {
-      await api.agentStart(index, cwd ?? "");
-    } catch (e) {
-      agent.state = "error";
-      put({ kind: "error", text: String(e).replace(/^Error: /, "") });
-      emit("agent");
-      throw e;
+      saved = JSON.parse(localStorage.getItem(WF_KEY) ?? "{}") ?? {};
+    } catch {
+      // A damaged entry opens the first workflow.
     }
-  },
-  async send(text: string) {
-    put({ kind: "user", text });
-    agent.state = "busy";
-    emit("agent");
-    try {
-      await api.agentPrompt(text);
-    } catch (e) {
-      agent.state = "ready";
-      put({ kind: "error", text: String(e).replace(/^Error: /, "") });
-      emit("agent");
-    }
-  },
-  cancel: () => api.agentCancel().then(() => undefined),
-  async stop() {
-    await api.agentStop();
-    agent.state = "off";
-    emit("agent");
-  },
-  async answer(token: number, optionId: string | null) {
-    const i = agent.log.findIndex((e) => e.kind === "permission" && e.token === token);
-    if (i >= 0) put({ ...(agent.log[i] as Extract<LogEntry, { kind: "permission" }>), answer: optionId }, i);
-    emit("agent");
-    await api.agentAnswer(token, optionId);
-  },
-  log: () => agent.log,
-  state: () => agent.state,
-  name: () => agent.name,
-};
+    const ids = new Set(workflows.map((w) => w.id));
+    tabs = (saved.tabs ?? []).filter((id) => ids.has(id));
+    if (!tabs.length && workflows.length) tabs = [workflows[0].id];
+    active = saved.active && tabs.includes(saved.active) ? saved.active : (tabs[0] ?? "");
+  }
+  renderTabs();
+}
+
+let tabsDrawn = "";
+/** Draws the tabs, only when they changed: a new element under the mouse loses the click. */
+function renderTabs() {
+  const state = (id: string) => {
+    const a = sessions.get(id);
+    return a && a.state !== "off" ? (asks(a) ? "asks" : a.state) : "";
+  };
+  const key = JSON.stringify([tabs, active, tabs.map(state), workflows.map((w) => w.name)]);
+  if (key === tabsDrawn) return;
+  tabsDrawn = key;
+  wfTabs.replaceChildren(
+    ...tabs.map((id) => {
+      const w = workflows.find((x) => x.id === id);
+      const st = state(id);
+      const close = tabs.length > 1 ? h("span", { class: "am-wf-close", title: "Close the tab", onclick: (e: MouseEvent) => (e.stopPropagation(), closeTab(id)) }, icon("close")) : null;
+      return h(
+        "button",
+        { class: `am-wf-tab${id === active ? " active" : ""}`, "data-workflow": id, title: w?.dir ?? id, onclick: () => void openWorkflow(id) },
+        icon("workflow"),
+        h("span", { class: "am-wf-name" }, w?.name ?? id),
+        st ? h("span", { class: "am-dock-state", "data-state": st }) : null,
+        close,
+      );
+    }),
+  );
+}
+
+/** Shows a workflow: opens its tab when it has none. */
+export async function openWorkflow(id: string): Promise<boolean> {
+  if (!workflows.some((w) => w.id === id)) workflows = await api.workflowList();
+  if (!workflows.some((w) => w.id === id)) {
+    toast(`There is no workflow "${id}".`, "error");
+    return false;
+  }
+  if (!tabs.includes(id)) tabs.push(id);
+  if (id === active && files) {
+    renderTabs();
+    return true;
+  }
+  if (canvas) openIdsOf.set(active, canvas.openIds());
+  active = id;
+  saveTabs();
+  renderTabs();
+  canvas?.dispose();
+  canvas = null;
+  blocks.splice(0).forEach(unmount);
+  files = null;
+  layoutText = "";
+  layout = null;
+  for (const name of [...errors.keys()]) errors.delete(name);
+  errorBar.hidden = true;
+  stamp = "";
+  await reload(true);
+  // reload() sets the files.
+  stamp = (files as ModeFiles | null)?.stamp ?? "";
+  return true;
+}
+
+function closeTab(id: string) {
+  tabs = tabs.filter((t) => t !== id);
+  saveTabs();
+  if (id === active && tabs.length) void openWorkflow(tabs[0]);
+  else renderTabs();
+}
+
+function addMenu() {
+  const others = workflows.filter((w) => !tabs.includes(w.id));
+  menuBelow(addBtn, [
+    ...others.map((w) => ({ label: w.name, detail: w.projects.map(baseName).join(", "), icon: "workflow" as const, action: () => void openWorkflow(w.id) })),
+    ...(others.length ? [{ separator: true as const }] : []),
+    { label: "New Workflow…", action: () => void newWorkflow() },
+  ]);
+}
+
+async function newWorkflow() {
+  const r = await formDialog(
+    "New Workflow",
+    [
+      { key: "name", label: "Name", placeholder: "Release" },
+      { key: "projects", label: "Projects: the folders of the repositories, one on each line", type: "textarea", value: getRepoRoot() ?? "" },
+    ],
+    "Create",
+    "A workflow is a folder with its own canvas, panels and agent. Gittor makes it in the folder of the workflows.",
+  );
+  if (!r || !String(r.name).trim()) return;
+  try {
+    const projects = String(r.projects).split("\n").map((p) => p.trim()).filter(Boolean);
+    const w = await api.workflowCreate(String(r.name), projects);
+    workflows = await api.workflowList();
+    await openWorkflow(w.id);
+  } catch (e) {
+    toast(String(e).replace(/^Error: /, ""), "error");
+  }
+}
 
 // ---- The back side and the turn ----
 
@@ -149,7 +309,9 @@ const dirLabel = h("span", { class: "am-dir" });
 const bar = h(
   "div",
   { class: "am-bar", "data-tauri-drag-region": "" },
-  h("span", { class: "am-title" }, icon("agent"), "Agent Mode"),
+  h("span", { class: "am-title", title: "Agent Mode: the workflows" }, icon("agent")),
+  wfTabs,
+  addBtn,
   dirLabel,
   h("span", { class: "spacer" }),
   h("button", { class: "tb-button", title: "Load the files of this side again", onclick: () => void reload(true) }, "Reload"),
@@ -253,6 +415,22 @@ function removeBlock(el: HTMLElement) {
 }
 
 const canvasHost = {
+  workflowName: (id: string) => workflows.find((w) => w.id === id)?.name ?? id,
+  openWorkflow: (id: string) => openWorkflow(id),
+  /** The body of a card of another workflow: its projects, and a hint to open it. */
+  workflowCard(body: HTMLElement, id: string) {
+    const w = workflows.find((x) => x.id === id);
+    if (!w) return void body.append(h("div", { class: "am-missing" }, `There is no workflow "${id}".`));
+    body.append(
+      h(
+        "div",
+        { class: "am-wf-card-body" },
+        h("div", { class: "am-wf-card-projects" }, ...(w.projects.length ? w.projects.map((p) => h("span", { class: "am-wf-chip", title: p }, baseName(p))) : [h("span", { class: "am-wf-none" }, "No projects")])),
+        w.knowledge.length ? h("div", { class: "am-wf-card-meta" }, `${w.knowledge.length} knowledge folder${w.knowledge.length > 1 ? "s" : ""}`) : null,
+        h("div", { class: "am-wf-card-go" }, "Open the workflow →"),
+      ),
+    );
+  },
   mount: (body: HTMLElement, mod: string, props: Record<string, unknown>) => addBlock(body, { mod, props }),
   unmount: removeBlock,
   moved: () => saveLayout(),
@@ -264,7 +442,7 @@ function setError(name: string, message: string | null) {
   if ((errors.get(name) ?? null) === message) return;
   if (message) errors.set(name, message);
   else errors.delete(name);
-  void api.modeError(name, message).catch(() => {});
+  void api.modeError(active, name, message).catch(() => {});
   errorBar.hidden = !errors.size;
   errorBar.replaceChildren(...[...errors].map(([n, m]) => h("div", {}, h("b", {}, n === "layout" ? "layout.json" : `mods/${n}/main.js`), ": ", m)));
 }
@@ -290,7 +468,8 @@ function checkLayout(n: unknown, at: string): string | null {
 
 async function loadModule(name: string): Promise<ModFn | null> {
   const file = files?.mods.find((m) => m.name === name);
-  const last = good.get(name);
+  const key = `${active}/${name}`;
+  const last = good.get(key);
   if (!file) {
     setError(name, "the file is missing");
     return last?.fn ?? null;
@@ -300,7 +479,7 @@ async function loadModule(name: string): Promise<ModFn | null> {
   try {
     const m = await import(/* @vite-ignore */ url);
     if (typeof m.default !== "function") throw new Error("the module has no default function");
-    good.set(name, { code: file.code, fn: m.default });
+    good.set(key, { code: file.code, fn: m.default });
     setError(name, null);
     return m.default;
   } catch (e) {
@@ -332,8 +511,12 @@ async function mount(b: (typeof blocks)[number]) {
     h,
     props: b.node.props ?? {},
     dir: files?.dir ?? "",
-    repo: getRepoRoot,
-    call: (cmd: string, args?: Record<string, unknown>) => call(cmd, args),
+    workflow: files?.workflow ?? null,
+    /** The repository roots of the projects of the workflow that opened. */
+    projects: () => projectRoots.slice(),
+    /** The first project of the workflow, else the repository of the active tab of the Git side. */
+    repo: () => projectRoots[0] ?? getRepoRoot(),
+    call: (cmd: string, args?: Record<string, unknown>) => call(cmd, projectRoots[0] ? { root: projectRoots[0], ...args } : args),
     on(event: "repo" | "agent", fn: () => void) {
       const set = listeners[event];
       if (!set) throw new Error(`no event ${event}`);
@@ -344,7 +527,7 @@ async function mount(b: (typeof blocks)[number]) {
     },
     toast: (m: string, kind?: "info" | "success" | "error") => toast(m, kind),
     flip: () => void toggleAgentMode(false),
-    agent: agentApi,
+    agent: agentApiFor(active),
   };
   try {
     const r = fn(b.el, g);
@@ -377,7 +560,7 @@ function setFolded(key: string, folded: boolean) {
 function build(n: LayoutNode, later: [HTMLElement, LayoutNode][], openIds: string[]): HTMLElement {
   let el: HTMLElement;
   if (n.type === "canvas") {
-    canvas = new Canvas(n as unknown as CanvasSpec, canvasHost, openIds);
+    canvas = new Canvas(n as unknown as CanvasSpec, canvasHost, openIds, active);
     el = h("div", { class: "am-node am-canvas-node" }, canvas.el);
   } else if (n.mod === undefined) {
     el = h("div", { class: `am-node am-${n.type}` }, ...(n.children ?? []).map((c) => build(c, later, openIds)));
@@ -460,10 +643,11 @@ function showDock() {
 
 /** The dot of the agent state, also on the folded button: a question of the agent is easy to see. */
 function showAgentState() {
-  const asks = agent.log.some((e) => e.kind === "permission" && e.answer === undefined);
+  const a = sessionOf(active);
+  const asking = asks(a);
   for (const el of [dockState, pillState, ...document.querySelectorAll<HTMLElement>(".agent-mode .am-agent-state")]) {
-    el.dataset.state = asks ? "asks" : agent.state;
-    el.title = asks ? "The agent asks for permission" : agent.state;
+    el.dataset.state = asking ? "asks" : a.state;
+    el.title = asking ? "The agent asks for permission" : a.state;
   }
 }
 listeners.agent.add(showAgentState);
@@ -474,20 +658,23 @@ function saveLayout() {
   const text = JSON.stringify(layout, null, 2) + "\n";
   // The poll then finds the same text and does not draw the canvas again.
   layoutText = text;
-  void api.modeSaveLayout(text).catch((e) => toast(String(e).replace(/^Error: /, ""), "error"));
+  void api.modeSaveLayout(active, text).catch((e) => toast(String(e).replace(/^Error: /, ""), "error"));
 }
 
 /** Loads the files, and draws again what changed: the whole layout, or only the blocks of changed mods. */
 async function reload(force: boolean) {
   let next: ModeFiles;
   try {
-    next = await api.modeFiles();
+    if (!active) await loadWorkflows();
+    if (!active) throw new Error("There is no workflow.");
+    next = await api.modeFiles(active);
   } catch (e) {
     content.replaceChildren(h("div", { class: "am-missing" }, String(e)));
     return;
   }
   const changedMods = new Set(next.mods.filter((m) => force || files?.mods.find((o) => o.name === m.name)?.code !== m.code).map((m) => m.name));
   for (const old of files?.mods ?? []) if (!next.mods.some((m) => m.name === old.name)) changedMods.add(old.name);
+  const switched = files?.workflow.id !== next.workflow.id;
   files = next;
   dirLabel.textContent = next.dir;
   dirLabel.title = next.dir;
@@ -508,7 +695,13 @@ async function reload(force: boolean) {
     layoutText = next.layout;
     layout = fresh;
     // The open cards of the canvas stay open after a reload.
-    const openIds = canvas?.openIds() ?? [];
+    const openIds = canvas?.openIds() ?? openIdsOf.get(active) ?? [];
+    // The mods of a workflow work on its projects: open them in the backend first.
+    if (switched || force) {
+      const states = await api.workflowOpenProjects(active).catch(() => []);
+      projectRoots = states.flatMap((p) => (p.root ? [p.root] : []));
+      for (const p of states) if (p.error) toast(`The project ${p.path} did not open: ${p.error}`, "error");
+    }
     canvas?.dispose();
     canvas = null;
     blocks.splice(0).forEach(unmount);
@@ -527,7 +720,7 @@ async function reload(force: boolean) {
 
 async function resetFiles() {
   try {
-    const backup = await api.modeReset();
+    const backup = await api.modeReset(active);
     good.clear();
     await reload(true);
     toast(`The old files are in ${backup}`, "success");
@@ -554,7 +747,7 @@ function startPolling() {
       emit("repo");
     }
     try {
-      const s = await api.modeStamp();
+      const s = await api.modeStamp(active);
       if (s !== stamp && on) {
         stamp = s;
         await reload(false);

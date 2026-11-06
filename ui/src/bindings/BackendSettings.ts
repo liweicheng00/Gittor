@@ -17,6 +17,10 @@ editor: string,
  */
 terminal: string, 
 /**
+ * The folder of the workflows of Agent mode. Empty means `workflows` in the configuration directory.
+ */
+workflowsDir: string, 
+/**
  * False until the settings were saved once. The front end then moves its old copy here.
  */
 stored: boolean, };

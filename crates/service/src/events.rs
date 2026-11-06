@@ -17,6 +17,8 @@ pub enum Event {
     Askpass { prompts: Vec<Prompt> },
     /// A message of the agent of Agent mode; see `agent.rs`.
     Agent {
+        /// The id of the workflow of the agent.
+        workflow: String,
         #[ts(type = "any")]
         data: serde_json::Value,
     },
