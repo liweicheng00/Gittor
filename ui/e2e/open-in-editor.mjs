@@ -52,6 +52,17 @@ await page.waitForSelector(".log-row", { timeout: 30000 });
 await setEditor(null);
 await page.selectOption(".editor-preset", { label: "Visual Studio Code" });
 check("the preset fills the command", (await page.inputValue(".editor-command")) === "code --goto {file}:{line}:{column}");
+// The page names the parameters and shows the commands that the setting makes.
+const preview = () => page.$$eval(".command-preview code", (els) => els.map((e) => e.textContent));
+await within("the preview shows the commands of F4 and of the IDE button", async () => {
+  const p = await preview();
+  return p[0] === `code --goto ${repo}/src/main.rs:12:5` && p[1] === `code ${repo} --goto ${repo}/src/main.rs:12:5`;
+});
+check("the page names the parameters", (await page.$$eval(".param-chip", (els) => els.map((e) => e.textContent).join(" "))) === "{file} {line} {column}");
+await page.fill(".editor-command", "subl ");
+await page.click(".param-chip:text-is('{file}')");
+await within("a click on a parameter inserts it at the cursor", async () => (await page.inputValue(".editor-command")) === "subl {file}");
+await within("the preview follows the command", async () => (await preview())[0] === `subl ${repo}/src/main.rs`);
 await shot("oe1-settings");
 await page.fill(".editor-command", `${script} --goto {file}:{line}`);
 check("another command shows as Other command", (await page.$eval(".editor-preset", (e) => e.selectedOptions[0].textContent)) === "Other command");

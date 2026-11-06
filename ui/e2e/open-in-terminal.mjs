@@ -53,6 +53,8 @@ check("the toolbar has the Terminal button", await page.isEnabled(".tb-terminal"
 await setTerminal(null);
 await page.selectOption(".terminal-preset", { label: "iTerm2" });
 check("the preset fills the command", (await page.inputValue(".terminal-command")) === "open -a iTerm {dir}");
+await within("the preview shows the command of the Terminal button", async () =>
+  (await page.$$eval(".command-preview code", (els) => els.map((e) => e.textContent)))[0] === `open -a iTerm ${repo}`);
 await shot("ot1-settings");
 await page.fill(".terminal-command", `${script} --cwd {dir}`);
 check("another command shows as Other command", (await page.$eval(".terminal-preset", (e) => e.selectedOptions[0].textContent)) === "Other command");

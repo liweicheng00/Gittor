@@ -58,6 +58,7 @@ export async function openSettings(page?: Page, ignoreAdd?: string[]) {
   const next = await openSettingsDialog({
     keymap,
     testGit: (p) => api.gitVersion(p),
+    preview: (editor, terminal) => api.commandPreview(editor, terminal),
     pickFile: () => pickFile("Git executable"),
     ignore: {
       load: () => api.globalIgnore(),

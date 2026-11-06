@@ -163,6 +163,26 @@ pub struct SaveIgnoreArgs {
     pub expected: String,
 }
 
+/// The commands of the Editor and Terminal settings, for their preview.
+#[derive(Deserialize)]
+pub struct PreviewArgs {
+    #[serde(default)]
+    pub editor: String,
+    #[serde(default)]
+    pub terminal: String,
+}
+
+/// The commands that the Editor and Terminal settings make, for a sample file at line 12, column 5.
+#[derive(Serialize)]
+#[derive(ts_rs::TS)]
+#[ts(export)]
+#[serde(rename_all = "camelCase")]
+pub struct CommandPreview {
+    pub open_in_editor: String,
+    pub open_in_ide: String,
+    pub open_terminal: String,
+}
+
 /// A file of the working tree and a line in it, both 1-based.
 #[derive(Deserialize)]
 pub struct EditorArgs {

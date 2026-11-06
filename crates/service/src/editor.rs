@@ -116,6 +116,26 @@ pub fn project_file_command(template: &str, dir: &Path, file: Option<(&Path, u32
     Ok((program, args))
 }
 
+/// A command as one line for the eyes: a word with a space gets quotes.
+fn shown(program: &str, args: &[String]) -> String {
+    std::iter::once(program).chain(args.iter().map(String::as_str)).map(|w| if w.contains(' ') { format!("\"{w}\"") } else { w.to_string() }).collect::<Vec<_>>().join(" ")
+}
+
+/// The commands that the settings make, for a sample file in `root`, as the Settings page shows them.
+pub fn preview(editor: &str, terminal: &str, root: &Path) -> crate::CommandPreview {
+    let file = root.join("src").join("main.rs");
+    let line = |r: Result<(String, Vec<String>)>| r.map(|(p, a)| shown(&p, &a)).unwrap_or_else(|e| e);
+    crate::CommandPreview {
+        open_in_editor: line(editor_command(editor, &file, 12, 5)),
+        open_in_ide: line(project_file_command(editor, root, Some((&file, 12, 5)))),
+        open_terminal: match crate::terminal::terminal_command(terminal, root) {
+            Ok(Some((p, a))) => shown(&p, &a),
+            Ok(None) => line(crate::terminal::system_terminal(&root.to_string_lossy())),
+            Err(e) => e,
+        },
+    }
+}
+
 /// The default app of the system for a file.
 fn system_open(file: &str) -> (String, Vec<String>) {
     if cfg!(target_os = "macos") {
@@ -197,6 +217,13 @@ impl Service {
         start_editor(&program, &list, &root)
     }
 
+    /// The commands of the Editor and Terminal settings, for the Settings page. They use the open
+    /// repository, or a sample folder.
+    pub fn command_preview(&self, args: crate::PreviewArgs) -> Result<crate::CommandPreview> {
+        let root = self.with_repo(|r| Ok(r.root.clone())).unwrap_or_else(|_| PathBuf::from("/path/to/repository"));
+        Ok(preview(&args.editor, &args.terminal, &root))
+    }
+
     /// Opens the working tree of the current repository in the editor of the settings, as a project. With
     /// a path, the editor also shows that file at the line. A path that is not in the working tree (for
     /// example a file of another branch) opens the project only.
@@ -248,6 +275,17 @@ mod tests {
         assert_eq!(a, ["/r/x;rm -rf y:1"]);
         let (p, a) = editor_command("", f, 1, 1).unwrap();
         assert!(!p.is_empty() && a.last().unwrap() == "/r/a b.rs");
+    }
+
+    #[test]
+    fn preview_shows_the_commands() {
+        let p = preview("code --goto {file}:{line}:{column}", "", Path::new("/r/my app"));
+        assert_eq!(p.open_in_editor, "code --goto \"/r/my app/src/main.rs:12:5\"");
+        assert_eq!(p.open_in_ide, "code \"/r/my app\" --goto \"/r/my app/src/main.rs:12:5\"");
+        assert!(!p.open_terminal.is_empty(), "the terminal of the system, or why there is none");
+        let p = preview("", "open -a iTerm {dir}", Path::new("/r/app"));
+        assert!(p.open_in_ide.contains("Settings › Editor"), "without an editor, the IDE asks for one");
+        assert_eq!(p.open_terminal, "open -a iTerm /r/app");
     }
 
     #[test]

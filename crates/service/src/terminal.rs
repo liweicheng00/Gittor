@@ -23,7 +23,7 @@ pub fn terminal_command(template: &str, dir: &Path) -> Result<Option<(String, Ve
 }
 
 /// The terminal app of the system.
-fn system_terminal(dir: &str) -> Result<(String, Vec<String>)> {
+pub(crate) fn system_terminal(dir: &str) -> Result<(String, Vec<String>)> {
     if cfg!(target_os = "macos") {
         Ok(("open".into(), vec!["-a".into(), "Terminal".into(), dir.into()]))
     } else if cfg!(windows) {

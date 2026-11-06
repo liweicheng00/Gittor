@@ -21,6 +21,7 @@ import type { MergedBranches } from "./bindings/MergedBranches";
 import type { FinishMode } from "./bindings/FinishMode";
 import type { ReviewComment } from "./bindings/ReviewComment";
 import type { LocalNote } from "./bindings/LocalNote";
+import type { CommandPreview } from "./bindings/CommandPreview";
 import type { ReviewDetail } from "./bindings/ReviewDetail";
 import type { ReviewFile } from "./bindings/ReviewFile";
 import type { ReviewSummary } from "./bindings/ReviewSummary";
@@ -73,6 +74,7 @@ export type {
   FinishMode,
   ReviewComment,
   LocalNote,
+  CommandPreview,
   ReviewDetail,
   ReviewFile,
   ReviewSummary,
@@ -339,6 +341,8 @@ export const api = {
   /** Clones a repository; returns the path of the new folder. An empty name uses the name of the URL. */
   cloneRepo: (url: string, parent: string, name: string) => call<string>("clone", { url, parent, name }),
   openInEditor: (path: string, line: number, column: number) => call<null>("open_in_editor", { path, line, column }),
+  /** The commands that the Editor and Terminal settings make, for the Settings page. */
+  commandPreview: (editor: string, terminal: string) => call<CommandPreview>("command_preview", { editor, terminal }),
   openInTerminal: () => call<null>("open_in_terminal"),
   /** Opens the repository in the editor; with a file, the editor also shows it at the line. */
   openProjectInEditor: (file?: { path: string; line: number; column: number }) => call<null>("open_project_in_editor", file ?? {}),

@@ -2,7 +2,7 @@
 // The dialog edits a copy of the settings; OK returns the copy and the caller applies it. The global
 // ignore file is not a setting: OK saves it when it has changes.
 
-import type { GlobalIgnore, IgnoreMatch } from "./api";
+import type { CommandPreview, GlobalIgnore, IgnoreMatch } from "./api";
 import { h, icon } from "./dom";
 import { addIgnoreLine, COMMON_IGNORES } from "./ignore-patterns";
 import { eventKey, formatKey, type Keymap } from "./keymap";
@@ -10,6 +10,8 @@ import { settings, type Settings, type Theme } from "./settings";
 
 export interface SettingsContext {
   keymap: Keymap;
+  /** The commands that the Editor and Terminal settings make, for a sample file. */
+  preview?: (editor: string, terminal: string) => Promise<CommandPreview>;
   /** Checks a git program and returns its version. It throws when the program is not git. */
   testGit: (path: string) => Promise<string>;
   pickFile: () => Promise<string | null>;
@@ -352,6 +354,37 @@ export function openSettingsDialog(ctx: SettingsContext): Promise<Settings | nul
       ];
     };
 
+    /** The parameters of a command: a click inserts one at the cursor. Then the commands that it makes. */
+    const commandHelp = (input: HTMLInputElement, params: [string, string][], lines: (p: CommandPreview) => [string, string][]) => {
+      const rows = params.map(([name, meaning]) => {
+        const chip = h("button", { class: "param-chip", type: "button", title: `Insert ${name} at the cursor` }, name);
+        chip.addEventListener("click", (e) => {
+          e.preventDefault();
+          const at = input.selectionStart ?? input.value.length;
+          const end = input.selectionEnd ?? at;
+          input.value = input.value.slice(0, at) + name + input.value.slice(end);
+          input.dispatchEvent(new Event("input"));
+          input.focus();
+          input.setSelectionRange(at + name.length, at + name.length);
+        });
+        return h("div", { class: "param-row" }, chip, h("span", { class: "settings-hint" }, meaning));
+      });
+      const box = h("div", { class: "command-preview" });
+      let request = 0;
+      const update = () => {
+        const n = ++request;
+        void ctx.preview?.(draft.editor, draft.terminal).then((p) => {
+          if (n !== request) return;
+          box.replaceChildren(...lines(p).map(([label, cmd]) => h("div", { class: "preview-row" }, h("span", { class: "preview-label" }, label), h("code", {}, cmd))));
+        });
+      };
+      input.addEventListener("input", update);
+      update();
+      // Plain rows, not labels: a click on a text of a label would press the first button in it.
+      const plain = (label: string, control: Node) => h("div", { class: "settings-row" }, h("span", { class: "settings-label" }, label), h("div", { class: "settings-control" }, control));
+      return [plain("Parameters", h("div", { class: "param-list" }, ...rows)), plain("Runs", box), update] as const;
+    };
+
     const editor = () => {
       const custom: [string, string] = ["custom", "Other command"];
       const pick = h("select", { class: "dialog-input editor-preset" }, ...[...EDITORS, custom].map(([v, l]) => h("option", { value: v }, l)));
@@ -359,20 +392,35 @@ export function openSettingsDialog(ctx: SettingsContext): Promise<Settings | nul
       input.classList.add("editor-command");
       const sync = () => (pick.value = EDITORS.some(([v]) => v === draft.editor) ? draft.editor : "custom");
       sync();
+      const [params, runs, update] = commandHelp(
+        input,
+        [
+          ["{file}", "The full path of the file. A command without it gets the file at its end."],
+          ["{line}", "The line of the cursor in the diff."],
+          ["{column}", "The column of the cursor in the diff."],
+        ],
+        (p) => [
+          ["Open in Editor (F4)", p.openInEditor],
+          ["IDE (Shift+F4)", p.openInIde],
+        ],
+      );
       pick.addEventListener("change", () => {
         if (pick.value === "custom") return input.focus();
         draft.editor = pick.value;
         input.value = pick.value;
+        update();
       });
       input.addEventListener("input", sync);
       return [
         row("Editor", pick),
         row("Command", input),
+        params,
+        runs,
         h(
           "p",
           { class: "settings-hint" },
-          "Open in Editor (F4) runs this command. The IDE button (Shift+F4) runs it with the folder of the repository and without the line. {file} is the full path of the file, and {line} and {column} are the place of the cursor in the diff. " +
-            "A command without {file} gets the file at its end. No shell runs the command. Gittor also looks for the program in the PATH of your login shell. " +
+          "The IDE button opens the folder of the repository as a project, then the file at the line. The preview uses src/main.rs at line 12, column 5. " +
+            "No shell runs the command. Gittor also looks for the program in the PATH of your login shell. " +
             "A JetBrains IDE needs its command-line launcher: Tools › Create Command-line Launcher, or the shell scripts of the Toolbox app.",
         ),
       ];
@@ -385,21 +433,20 @@ export function openSettingsDialog(ctx: SettingsContext): Promise<Settings | nul
       input.classList.add("terminal-command");
       const sync = () => (pick.value = TERMINALS.some(([v]) => v === draft.terminal) ? draft.terminal : "custom");
       sync();
+      const [params, runs, update] = commandHelp(input, [["{dir}", "The full path of the folder of the repository."]], (p) => [["Terminal button (Alt+F12)", p.openTerminal]]);
       pick.addEventListener("change", () => {
         if (pick.value === "custom") return input.focus();
         draft.terminal = pick.value;
         input.value = pick.value;
+        update();
       });
       input.addEventListener("input", sync);
       return [
         row("Terminal", pick),
         row("Command", input),
-        h(
-          "p",
-          { class: "settings-hint" },
-          "Open in Terminal (the Terminal button) runs this command in the folder of the repository. {dir} is the full path of the folder. " +
-            "No shell runs the command. Gittor also looks for the program in the PATH of your login shell.",
-        ),
+        params,
+        runs,
+        h("p", { class: "settings-hint" }, "The command runs in the folder of the repository. No shell runs it. Gittor also looks for the program in the PATH of your login shell."),
       ];
     };
 

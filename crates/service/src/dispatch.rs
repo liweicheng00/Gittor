@@ -86,6 +86,7 @@ impl Service {
             "tag_info" => serde_json::to_string(&self.tag_info(parse(body)?)?),
             "remote_tags" => serde_json::to_string(&self.remote_tags(parse(body)?)?),
             "open_url" => serde_json::to_string(&self.open_url(parse(body)?)?),
+            "command_preview" => serde_json::to_string(&self.command_preview(parse(body)?)?),
             "open_in_editor" => serde_json::to_string(&self.open_in_editor(parse(body)?)?),
             "open_project_in_editor" => serde_json::to_string(&self.open_project_in_editor(parse(body)?)?),
             "open_in_terminal" => serde_json::to_string(&self.open_in_terminal()?),
