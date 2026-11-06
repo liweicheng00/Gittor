@@ -24,6 +24,8 @@ const DEFAULTS: &[(&str, &str)] = &[
     ("mods/branches/main.js", include_str!("agent-mode/mods/branches/main.js")),
     ("mods/intro/main.js", include_str!("agent-mode/mods/intro/main.js")),
     ("mods/remotes/main.js", include_str!("agent-mode/mods/remotes/main.js")),
+    ("mods/stashes/main.js", include_str!("agent-mode/mods/stashes/main.js")),
+    ("mods/work/main.js", include_str!("agent-mode/mods/work/main.js")),
 ];
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

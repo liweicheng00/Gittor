@@ -37,8 +37,9 @@ createInterface({ input: process.stdin }).on("line", async (line) => {
   const code = 'export default function (root, g) { root.append(g.h("div", { class: "hello-panel" }, "Hello from the agent")); }';
   await ask("fs/write_text_file", { sessionId: "s1", path: cwd + "/mods/hello/main.js", content: code });
   const layout = JSON.parse((await ask("fs/read_text_file", { sessionId: "s1", path: cwd + "/layout.json" })).content);
-  layout.nodes.push({ id: "hello", mod: "hello", title: "Hello", x: 1240, y: 240, w: 240 });
-  layout.edges.push({ from: "remotes", to: "hello", label: "greets" });
+  const flow = layout.children.find((n) => n.type === "canvas");
+  flow.nodes.push({ id: "hello", mod: "hello", title: "Hello", x: 860, y: 250, w: 240 });
+  flow.edges.push({ from: "remotes", to: "hello", label: "greets" });
   await ask("fs/write_text_file", { sessionId: "s1", path: cwd + "/layout.json", content: JSON.stringify(layout, null, 2) });
   update({ sessionUpdate: "tool_call_update", toolCallId: "t1", status: "completed" });
   update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: " Done." } });
@@ -83,31 +84,70 @@ await halfTurn("am1-turning-in");
 await page.waitForSelector(".agent-mode:not([hidden]) .x-chat");
 await within("the turn ends", async () => !(await page.$("body.am-turning")));
 check("the Git side is hidden", await page.$eval("#app", (e) => e.style.opacity === "0" && e.inert));
-check("the canvas shows four cards", (await page.$$(".am-card")).length === 4);
-check("the canvas draws the two edges", (await page.$$(".am-edges g[data-edge]")).length === 2);
-check("the edges have their labels", (await page.$$eval(".am-edge-label", (els) => els.map((e) => e.textContent))).join(",") === "commit,push");
-const dockBox = await page.locator(".am-dock").boundingBox();
-check("the agent window is at the bottom left", dockBox.x < 30 && dockBox.y + dockBox.height > 1000 - 30);
-await within("the cards load their content", async () => (await page.$$(".x-branches-row")).length > 0 && (await page.$$(".x-remotes-row")).length > 0);
+// Fixed panels at the left, the agent at the bottom left, and the canvas in the rest of the window.
+check("the left column has the Branches and Agent panels", (await page.$$eval(".am-panel-title", (els) => els.map((e) => e.textContent))).join(",") === "Branches,Agent");
+const agentBox = await page.locator(".am-panel[data-panel='chat']").boundingBox();
+check("the agent panel is at the bottom left", agentBox.x < 5 && agentBox.y + agentBox.height > 1000 - 5);
+check("the canvas shows three cards", (await page.$$(".am-card")).length === 3);
+check("the card with cards inside looks like a stack", !!(await page.$(".am-card.am-stack[data-node='work']")));
+check("the edge has its label", (await page.textContent(".am-edge-label")) === "commit, push");
+await within("the panels and cards load their content", async () => (await page.$$(".x-branches-row")).length > 0 && (await page.$$(".x-remotes-row")).length > 0 && !!(await page.$(".x-work-stat")));
 await shot("am2-back-side");
 
-// The agent window folds to a small button and opens again.
-await page.click(".am-dock-fold");
-check("the window folds", (await page.$eval(".am-dock", (e) => e.hidden)) && (await page.isVisible(".am-dock-pill")));
+// The agent panel folds to its title bar and opens again; the Branches panel takes the space.
+await page.click(".am-panel[data-panel='chat'] .am-panel-fold");
+check("the agent panel folds", (await page.locator(".am-panel[data-panel='chat']").boundingBox()).height < 40 && !(await page.isVisible(".x-chat")));
 await shot("am2b-folded");
-await page.click(".am-dock-pill");
-check("the window opens again", await page.isVisible(".am-dock .x-chat"));
+await page.click(".am-panel[data-panel='chat'] .am-panel-fold");
+check("the agent panel opens again", await page.isVisible(".x-chat"));
 
 // Ctrl+wheel zooms the canvas; Fit shows all cards again.
 const zoomText = () => page.textContent(".am-zoom-label");
 const zoomBefore = await zoomText();
-await page.mouse.move(1300, 120);
+const canvasBox = await page.locator(".am-canvas").boundingBox();
+await page.mouse.move(canvasBox.x + canvasBox.width - 60, canvasBox.y + canvasBox.height - 120);
 await page.keyboard.down("Control");
 await page.mouse.wheel(0, -300);
 await page.keyboard.up("Control");
 await within("Ctrl+wheel zooms in", async () => parseInt(await zoomText()) > parseInt(zoomBefore));
 await page.click(".am-fit");
 check("Fit goes back", (await zoomText()) === zoomBefore);
+
+// The open button of a card with cards inside flies into it; the trail goes back.
+await page.click(".am-card[data-node='work'] .am-card-open");
+await page.waitForTimeout(150);
+await page.screenshot({ path: `${outDir}/am2c-flying-in.png` });
+await page.waitForSelector(".am-card[data-node='changes'] .x-changes");
+await within("the inner level shows its two cards", async () => (await page.$$(".am-card")).length === 2 && !(await page.$(".am-flying")));
+check("the inner edge shows", (await page.textContent(".am-edge-label")) === "stash");
+check("the trail names the open card", (await page.textContent(".am-crumbs")).replace(/\s/g, "") === "Flow›Workinprogress");
+await shot("am2d-inside");
+await page.click(".am-crumb:text-is('Flow')");
+await within("the trail goes back to the top level", async () => (await page.$$(".am-card")).length === 3 && (await page.isHidden(".am-crumbs")) && !(await page.$(".am-flying")));
+
+// A double click on the title of a card without cards opens its detail view; Esc goes back.
+await page.dblclick(".am-card[data-node='remotes'] .am-card-title");
+await page.waitForSelector(".am-detail:not([hidden]) .x-remotes-detail .x-remotes-subject");
+await shot("am2e-detail");
+await page.keyboard.press("Escape");
+await within("Esc goes back from the detail view", async () => (await page.$$(".am-card")).length === 3 && (await page.isHidden(".am-detail")) && !(await page.$(".am-flying")));
+
+// A zoom past the largest size opens the card under the mouse; a zoom out past the smallest goes back.
+const workHead = await page.locator(".am-card[data-node='work'] .am-card-head").boundingBox();
+await page.mouse.move(workHead.x + 60, workHead.y + workHead.height + 20);
+await page.keyboard.down("Control");
+for (let i = 0; i < 12 && (await page.$$(".am-card[data-node='changes']")).length === 0; i++) {
+  await page.mouse.wheel(0, -400);
+  await page.waitForTimeout(120);
+}
+await within("a zoom in past 200% opens the card", async () => !!(await page.$(".am-card[data-node='changes']")));
+await page.mouse.move(canvasBox.x + canvasBox.width / 2, canvasBox.y + canvasBox.height - 40);
+for (let i = 0; i < 12 && (await page.$$(".am-card[data-node='work']")).length === 0; i++) {
+  await page.mouse.wheel(0, 400);
+  await page.waitForTimeout(120);
+}
+await page.keyboard.up("Control");
+await within("a zoom out past 25% goes back up", async () => !!(await page.$(".am-card[data-node='work']")) && !(await page.$(".am-flying")));
 
 // The fake agent goes into agents.json; the folder name is in the bar.
 const dir = await page.textContent(".am-dir");
@@ -122,9 +162,9 @@ await page.mouse.move(hb.x + 40, hb.y + 10);
 await page.mouse.down();
 await page.mouse.move(hb.x + 140, hb.y + 70, { steps: 6 });
 await page.mouse.up();
-const introX = () => JSON.parse(readFileSync(join(dir, "layout.json"), "utf8")).nodes.find((n) => n.id === "intro").x;
+const introX = () => JSON.parse(readFileSync(join(dir, "layout.json"), "utf8")).children[1].nodes.find((n) => n.id === "intro").x;
 await within("the new place is in layout.json", async () => introX() > 40);
-check("the canvas keeps its cards after the save", (await page.$$(".am-card")).length === 4);
+check("the canvas keeps its cards after the save", (await page.$$(".am-card")).length === 3);
 await page.click(".x-chat-head button:has-text('Start')");
 await within("the agent is ready", async () => (await page.textContent(".x-chat-state")).includes("ready"));
 
@@ -138,7 +178,7 @@ await page.click(".x-chat-perm button:has-text('Allow')");
 
 // The agent writes a mod and the layout: the window shows the new block, and the chat keeps its log.
 await page.waitForSelector(".am-card[data-node='hello'] .hello-panel");
-check("the agent connects the new card", (await page.$$(".am-edges g[data-edge]")).length === 3);
+check("the agent connects the new card", (await page.$$(".am-edges g[data-edge]")).length === 2);
 check("the agent keeps the place that the user gave", introX() > 40);
 await within("the turn of the agent ends", async () => (await page.textContent(".x-chat-state")).includes("ready"));
 check("the chat keeps the conversation", (await page.$$eval(".x-chat-agent", (els) => els.map((e) => e.textContent))).join("|") === "I will add a hello panel.| Done.");

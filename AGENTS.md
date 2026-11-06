@@ -123,10 +123,14 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   `visibility: visible` on its own elements. Mod classes start with `x-`, because Gittor uses short class
   names. `agent.rs` is an ACP client (JSON-RPC on stdio); its messages come as `Event::Agent`. The Tauri
   CSP allows `blob:` scripts for the mods. The e2e scenario `agent-mode` uses a fake ACP agent.
-  The default layout is a canvas (`agent-canvas.ts`): cards at `x`/`y`, SVG edges, pan, Ctrl+wheel zoom.
+  The default layout is fixed panels (a block with `title`, `collapsible`) at the left, the agent panel at
+  the bottom left, and a canvas node (`agent-canvas.ts`): cards at `x`/`y`, SVG edges, pan, Ctrl+wheel
+  zoom. A card with `children` is a nested canvas; a card without opens a detail view. `Canvas.open` flies
+  into a card (a tween of the view, then a fade), `goTo` flies out; each level keeps its own view in the
+  storage. The canvas mounts the mods of its cards through `canvasHost` (`addBlock`, `removeBlock`).
   A drag of a card writes `layout.json` (`mode_save_layout`) and sets `layoutText` first, so the poll does
-  not draw the canvas again. `dock` in the layout is the agent window at the bottom left; it folds to a
-  button, and Fit keeps the cards out of its width. A test drags a card only after a reload ends.
+  not draw the canvas again. A test measures a card only when `.am-flying` is gone, and drags a card
+  only after a reload ends.
 - Windows (Compare, History, Review, Show Repository): `windows.ts`. A window calls
   `registerWindow(close, kind, show)`, and listens with `onRepoChange`. `watch.ts` calls
   `notifyRepoChange("files" | "repo")`.

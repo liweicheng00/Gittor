@@ -28,6 +28,24 @@
 .x-changes-path { overflow: hidden; text-overflow: ellipsis; }
 .x-changes-empty { padding: 8px 12px; color: var(--muted); }
 
+/* work */
+.x-work { padding: 2px 14px 14px; }
+.x-work-stats { display: flex; gap: 18px; }
+.x-work-stat { display: flex; flex-direction: column; }
+.x-work-stat b { font-size: 22px; font-weight: 600; }
+.x-work-stat span { color: var(--muted); font-size: 12px; }
+.x-work-hint { margin-top: 10px; color: var(--muted); font-size: 12px; }
+.x-work-empty { color: var(--muted); }
+
+/* stashes */
+.x-stashes { height: 100%; overflow: auto; padding: 4px 6px 10px; scrollbar-width: none; }
+.x-stashes-row { display: flex; align-items: baseline; gap: 8px; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
+.x-stashes-row:hover { background: var(--hover); }
+.x-stashes-index { color: var(--muted); font-family: ui-monospace, monospace; font-size: 12px; }
+.x-stashes-message { overflow: hidden; text-overflow: ellipsis; }
+.x-stashes-branch { margin-left: auto; color: var(--local); font-size: 12px; }
+.x-stashes-empty { padding: 8px 10px; color: var(--muted); }
+
 /* branches and remotes */
 .x-branches, .x-remotes { height: 100%; overflow: auto; padding: 4px 6px 10px; scrollbar-width: none; }
 .x-branches-row, .x-remotes-row { display: flex; align-items: baseline; gap: 8px; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
@@ -39,6 +57,10 @@
 .x-branches-ahead { color: var(--added); font-size: 12px; }
 .x-branches-behind { color: var(--deleted); font-size: 12px; }
 .x-remotes-author { margin-left: auto; color: var(--muted); font-size: 12px; }
+.x-remotes-detail { max-width: 980px; margin: 0 auto; padding: 16px; font-size: 14px; }
+.x-remotes-detail .x-remotes-row { padding: 8px 12px; border-bottom: 1px solid var(--border); border-radius: 0; }
+.x-remotes-subject { overflow: hidden; text-overflow: ellipsis; color: var(--fg); }
+.x-remotes-oid { color: var(--muted); font-size: 12px; }
 .x-branches-empty, .x-remotes-empty { padding: 8px 10px; color: var(--muted); }
 
 /* chat */

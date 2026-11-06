@@ -52,3 +52,38 @@ body.am-turning #app, body.am-turning .agent-mode { transform-origin: 50% 50%; b
 .am-dock-state[data-state="asks"] { background: var(--tag); opacity: 1; animation: am-pulse 0.6s ease-in-out infinite; }
 .am-dock-state[data-state="error"] { background: var(--deleted); opacity: 1; }
 @keyframes am-pulse { 50% { opacity: 0.35; } }
+
+/* Panels: a block with a title bar, as a tool window. A folded panel keeps only its title bar. */
+.am-panel { flex-direction: column; overflow: hidden; background: var(--bg); }
+.am-panel-head { flex: none; display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 4px 0 12px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); background: var(--panel); border-bottom: 1px solid var(--border); user-select: none; }
+.am-panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.am-panel.am-folded .am-panel-body { display: none; }
+.am-panel-fold .icon { transition: transform 0.15s; }
+.am-panel.am-folded .am-panel-fold .icon { transform: rotate(-90deg); }
+.am-column > .am-panel + .am-panel { border-top: 1px solid var(--border); }
+.am-canvas-node { position: relative; }
+.am-canvas-node > .am-canvas { flex: 1; outline: none; }
+.am-stage { position: absolute; inset: 0; transform-origin: 50% 50%; }
+
+/* A card that holds cards looks like a small stack of cards. */
+.am-card.am-stack { box-shadow: 4px 4px 0 -1px var(--bg), 4px 4px 0 0 var(--border), 8px 8px 0 -1px var(--bg), 8px 8px 0 0 var(--border), 0 6px 18px rgba(0, 0, 0, 0.12); }
+.am-card-head { display: flex; align-items: center; gap: 6px; }
+.am-card-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.am-card-open { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; color: var(--muted); font: inherit; font-size: 11px; font-weight: 600; background: none; border: 1px solid transparent; border-radius: 5px; cursor: pointer; opacity: 0.55; }
+.am-card:hover .am-card-open, .am-stack .am-card-open { opacity: 1; }
+.am-card-open:hover { color: var(--accent); background: var(--hover); border-color: var(--border); }
+.am-card-open .icon { width: 13px; height: 13px; }
+.am-stack .am-card-open { color: var(--accent); }
+
+/* While the camera flies into a card, the other cards fade. */
+.am-flying .am-card:not(.am-focus) { opacity: 0.12; transition: opacity 0.25s; }
+.am-flying .am-edges { opacity: 0.12; transition: opacity 0.25s; }
+
+/* The trail of open cards, and the detail view of an open card without cards inside. */
+.am-crumbs { position: absolute; left: 12px; top: 10px; z-index: 1; display: flex; align-items: center; gap: 4px; padding: 3px 6px; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; box-shadow: var(--shadow); }
+.am-crumb { padding: 2px 6px; font: inherit; color: var(--accent); background: none; border: 0; border-radius: 4px; cursor: pointer; }
+.am-crumb:hover { background: var(--hover); }
+.am-crumb-here { color: var(--fg); font-weight: 600; cursor: default; }
+.am-crumb-sep { color: var(--muted); }
+.am-detail { position: absolute; inset: 0; display: flex; padding: 52px 16px 16px; }
+.am-detail-body { flex: 1; min-height: 0; overflow: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); }

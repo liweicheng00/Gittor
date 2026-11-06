@@ -8,16 +8,16 @@ this side from the files here. When a file changes, the window changes within a 
 
 When the user asks for something ("a card with the last commits", "connect the changes to the
 branches", "make it warmer"), do it by editing these files or by writing a mod. Nothing in this side is
-special: the chat with you, the list of changes and the branch lists are mods, made from the same parts
+special: the chat with you, the branch panel and the cards are mods, made from the same parts
 as yours.
 
 ## The files
 
 | File | What it decides |
 | --- | --- |
-| `layout.json` | The cards on the canvas, the edges between them, and the agent window. |
-| `style.css` | The look of all cards. It loads after the styles of Gittor. |
-| `mods/<name>/main.js` | The code of one card (a "mod"). |
+| `layout.json` | The panels of the window, the canvas, its cards and the edges between them. |
+| `style.css` | The look of all panels and cards. It loads after the styles of Gittor. |
+| `mods/<name>/main.js` | The code of one panel or card (a "mod"). |
 | `agents.json` | The agent programs that the chat can start. |
 | `gittor.d.ts` | The API that a mod gets. Read it before you write a mod. |
 
@@ -25,41 +25,64 @@ as yours.
 
 ## layout.json
 
-The default layout is a canvas, like a flow chart: cards at free places, and arrows between them.
+The window is a tree of rows and columns. Its leaves are panels (fixed windows, as the tool windows of an
+IDE) and one canvas (cards at free places, with arrows between them, as a flow chart).
 
 ```json
 {
-  "type": "canvas",
-  "nodes": [
-    { "id": "changes", "mod": "changes", "title": "Local Changes", "x": 40, "y": 240, "w": 300, "h": 280 },
-    { "id": "branches", "mod": "branches", "title": "Local Branches", "x": 440, "y": 240, "w": 300 }
-  ],
-  "edges": [{ "from": "changes", "to": "branches", "label": "commit" }],
-  "dock": { "mod": "chat", "title": "Agent", "width": 440, "height": 560 }
+  "type": "row",
+  "children": [
+    { "type": "column", "size": 340, "children": [
+      { "mod": "branches", "title": "Branches", "collapsible": true, "grow": 1 },
+      { "mod": "chat", "title": "Agent", "badge": "agent", "collapsible": true, "size": 460 }
+    ] },
+    { "type": "canvas", "title": "Flow", "grow": 1,
+      "nodes": [
+        { "id": "work", "mod": "work", "title": "Work in progress", "x": 40, "y": 40, "w": 300,
+          "children": [
+            { "id": "changes", "mod": "changes", "title": "Local Changes", "x": 40, "y": 40, "w": 320, "h": 320 },
+            { "id": "stashes", "mod": "stashes", "title": "Stashes", "x": 460, "y": 40, "w": 300 }
+          ],
+          "edges": [{ "from": "changes", "to": "stashes", "label": "stash" }] },
+        { "id": "remotes", "mod": "remotes", "title": "Remote Branches", "x": 460, "y": 40, "w": 300 }
+      ],
+      "edges": [{ "from": "work", "to": "remotes", "label": "commit, push" }] }
+  ]
 }
 ```
 
-- `nodes`: the cards. `id` is unique. `mod` is the name of a folder in `mods/`; the mod draws the body of
-  the card. `x` and `y` are the place of the top left corner, in pixels of the canvas. `w` and `h` are
-  the size; without `h`, the card is as high as its content. `title` is the text of the title bar.
-  `class` adds CSS classes. `props` is an object that the mod gets as `g.props`.
-- `edges`: arrows from the card `from` to the card `to`, with an optional `label`.
-- `dock`: the window at the bottom left, over the canvas. The user can fold it to a small button. The
-  chat with you is in it.
+Rows, columns and panels:
+
+- `type`: `"row"` (children side by side), `"column"` (children on top of each other) or `"canvas"`.
+- `mod`: the name of a folder in `mods/`. A node with `mod` is a block that shows that mod.
+- `size`: a fixed width (in a row) or height (in a column), in pixels. `grow`: a share of the free space.
+  A node without `size` and `grow` gets `grow: 1`.
+- `title`: a title bar over the block; then the block is a panel. `collapsible: true` lets the user fold
+  the panel to its title bar. `badge: "agent"` shows the state of the agent in the title bar.
+- `class` adds CSS classes. `props` is an object that the mod gets as `g.props`.
+- `dock` (on the top node only, optional): `{ "mod": "chat", "title": "Agent", "width": 440, "height": 560 }`
+  makes a window that floats at the bottom left and folds to a small button.
+
+The canvas:
+
+- `nodes`: the cards. `id` is unique on its level. `mod` draws the body of the card. `x` and `y` are the
+  place of the top left corner, in pixels of the canvas. `w` and `h` are the size; without `h`, the card
+  is as high as its content. `title` is the text of the title bar of the card.
+- `edges`: arrows from the card `from` to the card `to` of the same level, with an optional `label`.
+- **Nested cards.** A card can hold its own canvas: `children` (cards) and `edges`. Then the card looks
+  like a stack. The user opens it (a double click on its title, its open button, or a zoom in past
+  200%); the view flies into the card and shows the cards inside. A trail at the top left and Esc go
+  back. Use this for details: keep the outer card short (a summary), and put the details inside.
+- **Detail view.** A card without `children` opens to a large view of one mod: `detail` names that mod,
+  or the card mod shows again. The mod gets `g.props.detail === true` there, so one mod can draw a short
+  version in the card and a full version in the detail view.
 - When the user drags a card, Gittor writes the new `x` and `y` into this file. Read the file again
   before you change it, so that you keep the places of the user.
 - Put a new card where there is free space, for example to the right of the last card.
 
-A layout can also be a tree of rows and columns, without a canvas:
-
-```json
-{ "type": "row", "children": [{ "mod": "changes", "size": 280 }, { "mod": "branches", "grow": 1 }], "dock": { "mod": "chat" } }
-```
-
-`size` is a fixed width (in a row) or height (in a column), and `grow` is a share of the free space.
-
-The canvas has these classes for `style.css`: `.am-canvas` (the grid; its color is `--grid`), `.am-card`,
-`.am-card-head`, `.am-card-body`, `.am-edge` (an SVG path), `.am-edge-label`, and `.am-dock`.
+The classes for `style.css`: `.am-panel`, `.am-panel-head`, `.am-canvas` (the grid; its color is
+`--grid`), `.am-card`, `.am-stack` (a card with cards inside), `.am-card-head`, `.am-card-body`,
+`.am-edge` (an SVG path), `.am-edge-label`, `.am-detail-body`, `.am-crumbs`, and `.am-dock`.
 
 ## Mods
 

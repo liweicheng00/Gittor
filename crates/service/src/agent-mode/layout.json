@@ -1,14 +1,36 @@
 {
-  "type": "canvas",
-  "nodes": [
-    { "id": "intro", "mod": "intro", "title": "Agent mode", "x": 40, "y": 40, "w": 520 },
-    { "id": "changes", "mod": "changes", "title": "Local Changes", "x": 40, "y": 240, "w": 300, "h": 280 },
-    { "id": "branches", "mod": "branches", "title": "Local Branches", "x": 440, "y": 240, "w": 300, "h": 280 },
-    { "id": "remotes", "mod": "remotes", "title": "Remote Branches", "x": 840, "y": 240, "w": 300, "h": 280 }
-  ],
-  "edges": [
-    { "from": "changes", "to": "branches", "label": "commit" },
-    { "from": "branches", "to": "remotes", "label": "push" }
-  ],
-  "dock": { "mod": "chat", "title": "Agent", "width": 440, "height": 560 }
+  "type": "row",
+  "children": [
+    {
+      "type": "column",
+      "size": 340,
+      "children": [
+        { "mod": "branches", "title": "Branches", "collapsible": true, "grow": 1 },
+        { "mod": "chat", "title": "Agent", "badge": "agent", "collapsible": true, "size": 460 }
+      ]
+    },
+    {
+      "type": "canvas",
+      "title": "Flow",
+      "grow": 1,
+      "nodes": [
+        { "id": "intro", "mod": "intro", "title": "Agent mode", "x": 40, "y": 40, "w": 520 },
+        {
+          "id": "work",
+          "mod": "work",
+          "title": "Work in progress",
+          "x": 40,
+          "y": 250,
+          "w": 300,
+          "children": [
+            { "id": "changes", "mod": "changes", "title": "Local Changes", "x": 40, "y": 40, "w": 320, "h": 320 },
+            { "id": "stashes", "mod": "stashes", "title": "Stashes", "x": 460, "y": 40, "w": 300, "h": 320 }
+          ],
+          "edges": [{ "from": "changes", "to": "stashes", "label": "stash" }]
+        },
+        { "id": "remotes", "mod": "remotes", "title": "Remote Branches", "x": 460, "y": 250, "w": 300, "h": 220 }
+      ],
+      "edges": [{ "from": "work", "to": "remotes", "label": "commit, push" }]
+    }
+  ]
 }

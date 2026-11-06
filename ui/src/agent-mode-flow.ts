@@ -206,10 +206,25 @@ agentBtn.addEventListener("click", () => void toggleAgentMode());
 
 // ---- The files of the back side ----
 
-type LayoutNode = { type?: "row" | "column"; children?: LayoutNode[]; mod?: string; size?: number; grow?: number; class?: string; props?: Record<string, unknown> };
+/** A node of the layout: a row, a column, a canvas, or a block with a mod. A block with a title is a panel
+ * with a title bar; `collapsible` lets the user fold it to its title bar. */
+type LayoutNode = {
+  type?: "row" | "column" | "canvas";
+  children?: LayoutNode[];
+  mod?: string;
+  id?: string;
+  title?: string;
+  collapsible?: boolean;
+  /** "agent" shows the state of the agent in the title bar. */
+  badge?: string;
+  size?: number;
+  grow?: number;
+  class?: string;
+  props?: Record<string, unknown>;
+};
 /** A window at the bottom left of the back side, over the layout. It folds to a small button. */
 type DockSpec = { mod: string; title?: string; width?: number; height?: number; props?: Record<string, unknown> };
-type LayoutRoot = (LayoutNode | CanvasSpec) & { dock?: DockSpec };
+type LayoutRoot = LayoutNode & { dock?: DockSpec };
 type ModFn = (root: HTMLElement, g: unknown) => void | (() => void);
 
 let files: ModeFiles | null = null;
@@ -221,6 +236,28 @@ let canvas: Canvas | null = null;
 const good = new Map<string, { code: string; fn: ModFn }>();
 /** The blocks on the screen. */
 const blocks: { el: HTMLElement; node: LayoutNode; cleanup: (() => void) | null; offs: (() => void)[] }[] = [];
+
+/** Adds a block and draws its mod. */
+function addBlock(el: HTMLElement, node: LayoutNode) {
+  const b = { el, node, cleanup: null, offs: [] };
+  blocks.push(b);
+  void mount(b);
+}
+
+/** Stops the mod of a block and forgets the block. */
+function removeBlock(el: HTMLElement) {
+  const i = blocks.findIndex((b) => b.el === el);
+  if (i < 0) return;
+  unmount(blocks[i]);
+  blocks.splice(i, 1);
+}
+
+const canvasHost = {
+  mount: (body: HTMLElement, mod: string, props: Record<string, unknown>) => addBlock(body, { mod, props }),
+  unmount: removeBlock,
+  moved: () => saveLayout(),
+  insetLeft: () => (dock.hidden ? 0 : dock.offsetWidth + 12),
+};
 const errors = new Map<string, string>();
 
 function setError(name: string, message: string | null) {
@@ -234,15 +271,15 @@ function setError(name: string, message: string | null) {
 
 function checkRoot(r: LayoutRoot): string | null {
   if (r && typeof r === "object" && r.dock !== undefined && (typeof r.dock !== "object" || typeof r.dock?.mod !== "string")) return "layout.dock needs a \"mod\"";
-  if (r && typeof r === "object" && r.type === "canvas") return checkCanvas(r as CanvasSpec, "layout");
   return checkLayout(r, "layout");
 }
 
 function checkLayout(n: unknown, at: string): string | null {
   if (!n || typeof n !== "object") return `${at} is not an object`;
   const node = n as LayoutNode;
+  if (node.type === "canvas") return checkCanvas(node as unknown as CanvasSpec, at);
   if (node.mod !== undefined) return typeof node.mod === "string" ? null : `${at}.mod is not a string`;
-  if (node.type !== "row" && node.type !== "column") return `${at} needs "mod", or "type": "row" or "column"`;
+  if (node.type !== "row" && node.type !== "column") return `${at} needs "mod", or "type": "row", "column" or "canvas"`;
   if (!Array.isArray(node.children)) return `${at}.children is not a list`;
   for (let i = 0; i < node.children.length; i++) {
     const e = checkLayout(node.children[i], `${at}.children[${i}]`);
@@ -318,19 +355,71 @@ async function mount(b: (typeof blocks)[number]) {
   }
 }
 
-function build(n: LayoutNode): HTMLElement {
-  const el = n.mod !== undefined ? h("div", { class: "am-node am-block", "data-mod": n.mod }) : h("div", { class: `am-node am-${n.type}` }, ...(n.children ?? []).map(build));
+const PANELS_KEY = "gittor.agentPanels";
+
+function foldedPanels(): Record<string, boolean> {
+  try {
+    return JSON.parse(localStorage.getItem(PANELS_KEY) ?? "{}") ?? {};
+  } catch {
+    return {};
+  }
+}
+
+function setFolded(key: string, folded: boolean) {
+  try {
+    localStorage.setItem(PANELS_KEY, JSON.stringify({ ...foldedPanels(), [key]: folded }));
+  } catch {
+    // Without storage the panel opens at the next start.
+  }
+}
+
+/** Builds the elements of a layout node. The mods of the blocks start later, in `addBlock`. */
+function build(n: LayoutNode, later: [HTMLElement, LayoutNode][], openIds: string[]): HTMLElement {
+  let el: HTMLElement;
+  if (n.type === "canvas") {
+    canvas = new Canvas(n as unknown as CanvasSpec, canvasHost, openIds);
+    el = h("div", { class: "am-node am-canvas-node" }, canvas.el);
+  } else if (n.mod === undefined) {
+    el = h("div", { class: `am-node am-${n.type}` }, ...(n.children ?? []).map((c) => build(c, later, openIds)));
+  } else if (n.title === undefined && !n.collapsible) {
+    el = h("div", { class: "am-node am-block", "data-mod": n.mod });
+    later.push([el, n]);
+  } else {
+    // A panel: a title bar over the block, as a tool window.
+    const key = n.id ?? n.mod;
+    const body = h("div", { class: "am-panel-body am-block", "data-mod": n.mod });
+    const fold = n.collapsible ? h("button", { class: "tb-button tb-icon am-panel-fold", title: "Fold or open the panel", "aria-label": "Fold" }, icon("chevron-down")) : null;
+    const head = h("div", { class: "am-panel-head" }, h("span", { class: "am-panel-title" }, n.title ?? n.mod), n.badge === "agent" ? h("span", { class: "am-dock-state am-agent-state" }) : null, h("span", { class: "spacer" }), fold);
+    el = h("div", { class: "am-node am-panel", "data-panel": key }, head, body);
+    const flex = typeof n.size === "number" ? `0 0 ${n.size}px` : `${typeof n.grow === "number" ? n.grow : 1} 1 0`;
+    const show = (folded: boolean) => {
+      el.classList.toggle("am-folded", folded);
+      el.style.flex = folded ? "0 0 auto" : flex;
+    };
+    if (fold) {
+      const toggle = () => {
+        const folded = !el.classList.contains("am-folded");
+        setFolded(key, folded);
+        show(folded);
+      };
+      fold.addEventListener("click", toggle);
+      head.addEventListener("dblclick", (e) => !(e.target as Element).closest("button") && toggle());
+    }
+    show(!!n.collapsible && !!foldedPanels()[key]);
+    later.push([body, n]);
+    if (n.class) el.classList.add(...n.class.split(/\s+/).filter(Boolean));
+    return el;
+  }
   if (n.class) el.classList.add(...n.class.split(/\s+/).filter(Boolean));
   el.style.flex = typeof n.size === "number" ? `0 0 ${n.size}px` : `${typeof n.grow === "number" ? n.grow : 1} 1 0`;
-  if (n.mod !== undefined) blocks.push({ el, node: n, cleanup: null, offs: [] });
   return el;
 }
 
 // ---- The dock: the agent window at the bottom left ----
 
 const DOCK_KEY = "gittor.agentDock";
-const dockState = h("span", { class: "am-dock-state" });
-const pillState = h("span", { class: "am-dock-state" });
+const dockState = h("span", { class: "am-dock-state am-agent-state" });
+const pillState = h("span", { class: "am-dock-state am-agent-state" });
 const dockTitle = h("span", { class: "am-dock-title" });
 const pillTitle = h("span", {});
 const dockBody = h("div", { class: "am-dock-body am-block" });
@@ -372,7 +461,7 @@ function showDock() {
 /** The dot of the agent state, also on the folded button: a question of the agent is easy to see. */
 function showAgentState() {
   const asks = agent.log.some((e) => e.kind === "permission" && e.answer === undefined);
-  for (const el of [dockState, pillState]) {
+  for (const el of [dockState, pillState, ...document.querySelectorAll<HTMLElement>(".agent-mode .am-agent-state")]) {
     el.dataset.state = asks ? "asks" : agent.state;
     el.title = asks ? "The agent asks for permission" : agent.state;
   }
@@ -418,21 +507,19 @@ async function reload(force: boolean) {
   if (fresh) {
     layoutText = next.layout;
     layout = fresh;
-    blocks.splice(0).forEach(unmount);
+    // The open cards of the canvas stay open after a reload.
+    const openIds = canvas?.openIds() ?? [];
     canvas?.dispose();
     canvas = null;
-    if (fresh.type === "canvas") {
-      canvas = new Canvas(fresh as CanvasSpec, saveLayout, () => (dock.hidden ? 0 : dock.offsetWidth + 12));
-      for (const { node, body } of canvas.bodies()) blocks.push({ el: body, node, cleanup: null, offs: [] });
-      content.replaceChildren(canvas.el);
-    } else {
-      content.replaceChildren(build(fresh as LayoutNode));
-    }
-    content.append(dock, pill);
-    if (fresh.dock) blocks.push({ el: dockBody, node: { mod: fresh.dock.mod, props: fresh.dock.props }, cleanup: null, offs: [] });
+    blocks.splice(0).forEach(unmount);
+    const later: [HTMLElement, LayoutNode][] = [];
+    content.replaceChildren(build(fresh, later, openIds), dock, pill);
+    if (fresh.dock) later.push([dockBody, { mod: fresh.dock.mod, props: fresh.dock.props }]);
     showDock();
-    await Promise.all(blocks.map(mount));
-    if (!backSide.hidden) canvas?.shown();
+    later.forEach(([el, n]) => addBlock(el, n));
+    showAgentState();
+    // build() sets the canvas.
+    if (!backSide.hidden) (canvas as Canvas | null)?.shown();
   } else {
     await Promise.all(blocks.filter((b) => changedMods.has(b.node.mod!)).map(mount));
   }
