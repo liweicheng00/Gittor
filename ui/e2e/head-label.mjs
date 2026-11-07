@@ -46,7 +46,7 @@ await within("the node of HEAD is a ring with a clear inside", async () => {
 check("the row of the ring has main", ((await page.textContent(".log-row.head .subject")) ?? "").includes("main"));
 await shot("hl1-branch");
 
-// A detached HEAD: the ring moves to the commit, which also has the HEAD label.
+// A detached HEAD: the ring moves to the commit, which also has the label "detached".
 const parent = git("rev-parse", "HEAD~1");
 git("checkout", "-q", "--detach", parent);
 await page.keyboard.press("F5");
@@ -55,7 +55,9 @@ await within("the ring moves to the detached commit", async () => {
   const r = await ring();
   return parent.startsWith(oid || "-") && !!r && r.line > 0;
 });
-check("the detached commit has the HEAD label", (await page.$$(".log-row.head .ref-head")).length === 1);
+check("the detached commit has the label detached", ((await page.textContent(".log-row.head .ref-head").catch(() => "")) ?? "") === "detached");
+await page.click(".log-row.head .subject-text");
+await within("the details say detached too", async () => ((await page.textContent(".details-refs").catch(() => "")) ?? "").includes("detached"));
 await shot("hl2-detached");
 
 git("checkout", "-q", "main");

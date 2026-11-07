@@ -3,6 +3,7 @@
 import { api, type Row } from "./api";
 import { dragResize, formatDate, h, icon } from "./dom";
 import { ELEMENT_WIDTH, ROW_HEIGHT, foldAt, foldMarks, maxPosition, paintRow } from "./graph-paint";
+import { refLabel } from "./ref-label";
 import { save, settings } from "./settings";
 
 const CHUNK = 200;
@@ -272,7 +273,8 @@ export class LogView {
     }
     const subject = h("span", { class: "subject", title: r.subject });
     for (const ref of r.refs) {
-      subject.append(h("span", { class: `ref ref-${ref.kind}`, title: `${ref.name}\nClick to copy the name. Double-click to show only ${ref.name} in the log`, "data-ref": ref.name }, ref.name));
+      const what = ref.kind === "head" ? "Detached HEAD: no branch is checked out" : ref.name;
+      subject.append(h("span", { class: `ref ref-${ref.kind}`, title: `${what}\nClick to copy the name. Double-click to show only ${ref.name} in the log`, "data-ref": ref.name }, refLabel(ref)));
     }
     subject.append(h("span", { class: "subject-text" }, r.subject));
     const div = h(
