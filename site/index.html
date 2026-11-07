@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gittor: a light git client with the IntelliJ workflow</title>
+<meta name="description" content="Gittor is a light desktop git client. It draws the commit graph with the rules of IntelliJ, and has changelists, safe history edits, conflicts and local reviews. Free download for macOS.">
+<meta property="og:title" content="Gittor">
+<meta property="og:description" content="A light desktop git client with the IntelliJ workflow.">
+<meta property="og:image" content="poster.jpg">
+<link rel="icon" href="icon.png">
+<style>
+  :root {
+    --bg: #15171b;
+    --panel: #1d2025;
+    --line: #2c3038;
+    --text: #e8eaed;
+    --muted: #a3a9b4;
+    --accent: #3d7bf2;
+    --accent-hover: #5a8ff5;
+    --warn-bg: #2b2414;
+    --warn-line: #6b5420;
+    --warn-text: #f1d48a;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: radial-gradient(1200px 600px at 50% -10%, #262b35 0%, var(--bg) 60%) no-repeat, var(--bg);
+    color: var(--text);
+    font: 17px/1.55 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  a { color: #8db4ff; }
+  main { max-width: 1080px; margin: 0 auto; padding: 56px 20px 40px; }
+  header { text-align: center; }
+  header img { width: 104px; height: 104px; }
+  h1 { font-size: 56px; line-height: 1.1; margin: 14px 0 10px; letter-spacing: -0.02em; }
+  .lead { font-size: 21px; color: var(--muted); max-width: 640px; margin: 0 auto; }
+  .download { margin: 34px 0 0; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .button {
+    display: inline-flex; align-items: center; gap: 12px; padding: 16px 34px; border-radius: 14px;
+    background: var(--accent); color: #fff; font-size: 20px; font-weight: 600; text-decoration: none;
+    box-shadow: 0 10px 30px rgba(61, 123, 242, 0.35); transition: background 0.15s, transform 0.15s;
+  }
+  .button:hover { background: var(--accent-hover); transform: translateY(-1px); }
+  .button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  .button svg { width: 24px; height: 24px; fill: currentColor; }
+  body.mac .button { font-size: 23px; padding: 20px 44px; }
+  .meta { color: var(--muted); font-size: 15px; }
+  .meta a { color: var(--muted); }
+  .notice {
+    display: none; max-width: 560px; margin: 4px auto 0; padding: 10px 16px; border-radius: 10px;
+    background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn-text); font-size: 15px;
+  }
+  body.other .notice { display: block; }
+  .video {
+    margin: 48px auto 0; border-radius: 14px; overflow: hidden; border: 1px solid var(--line);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5); background: #000; aspect-ratio: 16 / 9;
+  }
+  .video video { display: block; width: 100%; height: 100%; }
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-top: 48px; }
+  .feature { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
+  .feature h2 { font-size: 17px; margin: 0 0 6px; }
+  .feature p { margin: 0; color: var(--muted); font-size: 15px; }
+  footer { text-align: center; color: var(--muted); font-size: 14px; margin-top: 48px; }
+  footer a { color: var(--muted); }
+  @media (max-width: 600px) {
+    main { padding-top: 36px; }
+    h1 { font-size: 42px; }
+    .lead { font-size: 18px; }
+    .button, body.mac .button { font-size: 19px; padding: 15px 26px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="icon.png" alt="" width="104" height="104">
+    <h1>Gittor</h1>
+    <p class="lead">A light desktop git client with the IntelliJ workflow: the IntelliJ commit graph, changelists, safe history edits and a merge window, without a JVM.</p>
+  </header>
+
+  <section class="download" aria-label="Download">
+    <a class="button" id="download" href="https://github.com/liweicheng00/Gittor/releases/latest/download/Gittor.dmg">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.37 12.62c-.02-2.2 1.8-3.26 1.88-3.31-1.03-1.5-2.62-1.7-3.18-1.73-1.35-.14-2.64.8-3.33.8-.69 0-1.74-.78-2.87-.76-1.47.02-2.83.86-3.59 2.18-1.53 2.66-.39 6.6 1.1 8.76.73 1.06 1.6 2.24 2.73 2.2 1.1-.04 1.51-.71 2.84-.71 1.32 0 1.7.71 2.86.69 1.18-.02 1.93-1.07 2.65-2.13.83-1.23 1.18-2.42 1.2-2.48-.03-.01-2.3-.88-2.32-3.5zM14.19 6.15c.6-.73 1.01-1.75.9-2.76-.87.04-1.92.58-2.54 1.31-.56.65-1.05 1.68-.92 2.68.97.08 1.96-.49 2.56-1.23z"/></svg>
+      Download for macOS
+    </a>
+    <div class="meta">
+      <span id="version">Universal app for Apple Silicon and Intel Macs</span>
+    </div>
+    <p class="notice" role="note">Gittor is only for macOS at the moment. You can download it here on a Mac.</p>
+  </section>
+
+  <div class="video">
+    <video controls muted playsinline preload="metadata" poster="poster.jpg">
+      <source src="gittor-intro.mp4" type="video/mp4">
+      <a href="gittor-intro.mp4">Watch the intro video</a>
+    </video>
+  </div>
+
+  <section class="features" aria-label="Features">
+    <div class="feature"><h2>The IntelliJ log</h2><p>The same graph layout, IntelliSort and branch colors. Large repositories scroll without a commit limit.</p></div>
+    <div class="feature"><h2>Safe history edits</h2><p>Squash, drop, reword and fixups run in memory. Almost every operation has Undo.</p></div>
+    <div class="feature"><h2>Changelists</h2><p>Group local changes, move single hunks between changelists, and commit only the checked changes.</p></div>
+    <div class="feature"><h2>Conflicts and reviews</h2><p>A three-way merge window, and local reviews of a branch with notes, without a remote.</p></div>
+  </section>
+
+  <footer>
+    <a href="https://github.com/liweicheng00/Gittor">Source on GitHub</a> ·
+    <a href="https://github.com/liweicheng00/Gittor/releases">All releases</a> ·
+    Apache License 2.0
+  </footer>
+</main>
+<script>
+  // The system of the visitor: a Mac gets the large button; another system gets a note.
+  (function () {
+    var platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "";
+    var mac = /mac/i.test(platform) || /Macintosh/.test(navigator.userAgent);
+    document.body.classList.add(mac ? "mac" : "other");
+  })();
+
+  // The version and the date of the latest release. The button keeps its link when the request fails.
+  (function () {
+    var repo = "liweicheng00/Gittor";
+    fetch("https://api.github.com/repos/" + repo + "/releases/latest", { headers: { Accept: "application/vnd.github+json" } })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function (release) {
+        var version = String(release.tag_name || "").replace(/^v/, "");
+        var date = new Date(release.published_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+        var meta = document.getElementById("version");
+        meta.textContent = "Version " + version + " · " + date + " · Apple Silicon and Intel · ";
+        var notes = document.createElement("a");
+        notes.href = release.html_url;
+        notes.textContent = "Release notes";
+        meta.appendChild(notes);
+        // A release made before Gittor.dmg existed has the disk image with the version in its name only.
+        var assets = release.assets || [];
+        var fixed = assets.some(function (a) { return a.name === "Gittor.dmg"; });
+        var dmg = assets.filter(function (a) { return /\.dmg$/.test(a.name); })[0];
+        if (!fixed && dmg) document.getElementById("download").href = dmg.browser_download_url;
+      })
+      .catch(function () { /* The static link and text stay. */ });
+  })();
+</script>
+</body>
+</html>
