@@ -61,7 +61,7 @@ jobs:
       - run: npm --prefix ui audit --audit-level=high
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
       - run: cargo install --locked cargo-audit@0.22.2
-      - run: cargo audit
+      - run: cargo audit --deny warnings
 
   e2e:
     name: e2e (${{ matrix.shard }}/4)

@@ -1,0 +1,14 @@
+# Settings of `cargo audit` (the audit job of CI). CI runs it with --deny warnings, so a new
+# unmaintained, unsound or yanked crate fails the job until someone reads its advisory. Each ignored
+# advisory below has the reason. Remove an entry when the crate leaves Cargo.lock.
+
+[advisories]
+ignore = [
+    # glib 0.18: unsound VariantStrIter. Linux only (the GTK 3 stack of Tauri: tao, wry, muda), not in
+    # the macOS app. No crate in the build calls VariantStrIter. The fix is in glib 0.20, but the GTK 3
+    # bindings end at 0.18, and Tauri on Linux needs GTK 3 (webkit2gtk-4.1).
+    "RUSTSEC-2024-0429",
+    # proc-macro-error 1.0.4: unmaintained. A proc macro of glib-macros, so it runs only in the
+    # compiler and is not in the app. Linux only. It goes away with the GTK 3 stack.
+    "RUSTSEC-2024-0370",
+]
