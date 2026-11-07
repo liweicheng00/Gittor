@@ -157,6 +157,27 @@ The workflow needs these repository settings (Settings › Secrets and variables
 
 Keep a copy of the private key. Without it, no update can reach the apps that users have now.
 
+#### Protection of the releases
+
+The app installs only an update that has a valid signature of the updater key, and only a newer
+version. A changed file on GitHub cannot pass. The risk is the workflow that has the keys. These
+parts of the repository protect it:
+
+- Each action of the workflows is pinned to the commit of a release. Dependabot proposes new commits.
+- The release workflow uses no cache. npm and cargo use the lock files only (`npm ci`, `--locked`).
+- The `audit` job of CI checks the npm packages and the crates for known vulnerabilities.
+- The release has a provenance record from GitHub. Check a file with
+  `gh attestation verify <file> --repo liweicheng00/Gittor`.
+
+Set these in the settings of the repository too:
+
+1. Settings › Environments: make an environment `release` with you as the required reviewer, and
+   move the secrets of the table above into it. Then each release waits for your approval before the
+   workflow gets the keys.
+2. Settings › Rules › Rulesets: only you can make tags `v*`.
+3. Settings › General › Releases: turn on immutable releases.
+4. Use two-factor authentication on the GitHub account, and keep the updater key also offline.
+
 ## Develop
 
 | Path | Contents |

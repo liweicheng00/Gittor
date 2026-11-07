@@ -1,20 +1,29 @@
 # Builds, signs and publishes a release when a tag v<version> arrives (scripts/release.sh pushes it).
 # The release has the disk image for new users, and Gittor.app.tar.gz, its .sig and latest.json for the
 # updater of the app. The release is public at once: the apps that run see it at their next check.
+#
+# The workflow builds from nothing: no cache, so no file of an earlier run can get into a release. Each
+# action is pinned to the commit of a release, and npm and cargo use the lock files only.
 name: Release
 
 on:
   push:
     tags: ["v*"]
 
+# contents: the release. id-token and attestations: the provenance of the files.
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 concurrency: release
 
 jobs:
   macos:
     runs-on: macos-latest
+    # With a required reviewer on this environment (Settings › Environments), the job waits for an
+    # approval before it gets the secrets.
+    environment: release
     env:
       APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
       APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -24,7 +33,7 @@ jobs:
       TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
       TAURI_UPDATER_PUBKEY: ${{ vars.TAURI_UPDATER_PUBKEY }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
@@ -47,17 +56,14 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: ui/package-lock.json
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
 
-      - uses: Swatinem/rust-cache@v2
 
       # codesign and build-dmg.sh find the Developer ID certificate in this keychain.
       - name: Import the signing certificate
@@ -78,6 +84,15 @@ jobs:
 
       - name: Build, sign and notarize
         run: scripts/build-dmg.sh --universal --updater
+
+      # A record, signed by GitHub, that this workflow made these files from this commit. Check a file with:
+      # gh attestation verify <file> --repo liweicheng00/Gittor
+      - name: Attest the provenance of the files
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        with:
+          subject-path: |
+            target/universal-apple-darwin/release/bundle/dmg/*.dmg
+            target/universal-apple-darwin/release/bundle/macos/Gittor.app.tar.gz
 
       - name: Write the release notes
         run: |

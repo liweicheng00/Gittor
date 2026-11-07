@@ -1,0 +1,10 @@
+# Dependabot proposes the commits of new releases of the actions, which the workflows pin by commit.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

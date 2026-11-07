@@ -112,10 +112,11 @@ if [ "$universal" = 1 ]; then
   rustup target add aarch64-apple-darwin x86_64-apple-darwin
   target=(--target universal-apple-darwin)
 fi
-npm --prefix ui install
+# The lock files only: a package that is not in them stops the build.
+npm --prefix ui ci
 # The Tauri CLI reads crates/app/tauri.conf.json, which builds the UI first. With the APPLE_ variables set,
 # it signs the app with the hardened runtime, notarizes it, and staples the ticket to it.
-(cd crates/app && ../../ui/node_modules/.bin/tauri build --bundles app,dmg ${target[@]+"${target[@]}"} ${config[@]+"${config[@]}"})
+(cd crates/app && ../../ui/node_modules/.bin/tauri build --bundles app,dmg ${target[@]+"${target[@]}"} ${config[@]+"${config[@]}"} -- --locked)
 
 dir=target/release/bundle
 [ "$universal" = 1 ] && dir=target/universal-apple-darwin/release/bundle

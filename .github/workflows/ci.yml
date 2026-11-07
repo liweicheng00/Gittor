@@ -1,6 +1,10 @@
 # Tests each push to main and each pull request: the Rust tests, clippy, the types of the UI, the unit
 # tests of the UI, and all UI scenarios in Chromium. Four machines run the scenarios in parallel, each
-# one part (GITTOR_E2E_SHARD); ui/e2e/durations.txt makes the parts about equal in time.
+# one part (GITTOR_E2E_SHARD); ui/e2e/durations.txt makes the parts about equal in time. The audit job
+# checks the dependencies for known vulnerabilities.
+#
+# Each action is pinned to the commit of a release: a tag can move, a commit cannot. Dependabot
+# (.github/dependabot.yml) proposes new commits.
 name: CI
 
 on:
@@ -16,18 +20,18 @@ jobs:
   test:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Install WebKitGTK for the Tauri app
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: ui/package-lock.json
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           components: clippy
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - name: Git user for the tests
         run: |
           git config --global user.name "CI"
@@ -36,14 +40,28 @@ jobs:
       - run: npm --prefix ui ci
       # tauri::generate_context!() needs ui/dist.
       - run: npm --prefix ui run build
-      - run: cargo test -q
+      - run: cargo test -q --locked
       - name: The types of the UI are current
         run: git diff --exit-code ui/src/bindings
-      - run: cargo clippy -q --all-targets
+      - run: cargo clippy -q --all-targets --locked
       - run: npx tsc --noEmit -p .
         working-directory: ui
       - run: npm test
         working-directory: ui
+
+  # Known vulnerabilities in the npm packages and the crates. Warnings (an unmaintained crate, for
+  # example) do not fail the job.
+  audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: npm --prefix ui audit --audit-level=high
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - run: cargo install --locked cargo-audit@0.22.2
+      - run: cargo audit
 
   e2e:
     name: e2e (${{ matrix.shard }}/4)
@@ -55,14 +73,14 @@ jobs:
     env:
       GITTOR_E2E_SHARD: ${{ matrix.shard }}/4
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: ui/package-lock.json
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - name: Git user for the scenarios
         run: |
           git config --global user.name "CI"
@@ -88,7 +106,7 @@ jobs:
           fc-cache -f
           fc-match system-ui
       - run: npm --prefix ui run build
-      - run: cargo build -q -p gittor-devserver
+      - run: cargo build -q --locked -p gittor-devserver
       - name: Run all scenarios
         run: |
           GITTOR_CONFIG_DIR="$RUNNER_TEMP/config" target/debug/gittor-devserver ui/dist 5174 &
@@ -106,7 +124,7 @@ jobs:
           exit "$status"
       - name: Keep the logs and the screenshots
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: e2e-${{ matrix.shard }}
           path: |
