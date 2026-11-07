@@ -9,6 +9,8 @@ const ELEMENT_CENTER = 7.5;
 const ROW_CENTER = 11;
 const LINE_THICKNESS = 1.5;
 const CIRCLE_RADIUS = 3.5;
+/** The ring of the node of HEAD, which has an "H" in it. */
+const HEAD_RADIUS = 6.5;
 const ARROW_ANGLE_COS2 = 0.7;
 const ARROW_LENGTH = 0.3;
 
@@ -150,8 +152,9 @@ function paintFold(g: CanvasRenderingContext2D, m: FoldMark, foreground: string)
   g.lineWidth = LINE_THICKNESS;
 }
 
-/** Paints the elements of one row with its top at y = 0. */
-export function paintRow(g: CanvasRenderingContext2D, elements: El[], foreground: string, selected: boolean, folds: FoldMark[] = []) {
+/** Paints the elements of one row with its top at y = 0. `head`: the node is the commit that is checked
+ * out, drawn as a ring with an "H". */
+export function paintRow(g: CanvasRenderingContext2D, elements: El[], foreground: string, selected: boolean, folds: FoldMark[] = [], head = false) {
   g.lineWidth = LINE_THICKNESS;
   g.lineCap = "round";
   for (const e of elements) {
@@ -174,12 +177,40 @@ export function paintRow(g: CanvasRenderingContext2D, elements: El[], foreground
   for (const m of folds) paintFold(g, m, foreground);
   for (const e of elements) {
     if (e.k !== "n") continue;
+    const color = graphColor(e.c, foreground);
+    const cx = ELEMENT_WIDTH * e.p + ELEMENT_CENTER;
+    if (head) {
+      paintHead(g, cx, color, selected);
+      continue;
+    }
     const r = selected ? CIRCLE_RADIUS + 1 : CIRCLE_RADIUS;
-    g.fillStyle = graphColor(e.c, foreground);
+    g.fillStyle = color;
     g.beginPath();
-    g.arc(ELEMENT_WIDTH * e.p + ELEMENT_CENTER, ROW_CENTER, r, 0, Math.PI * 2);
+    g.arc(cx, ROW_CENTER, r, 0, Math.PI * 2);
     g.fill();
   }
+}
+
+/** The node of HEAD: a ring with an "H". The inside is cleared, so the row background shows and the
+ * edges stop at the ring. */
+function paintHead(g: CanvasRenderingContext2D, cx: number, color: string, selected: boolean) {
+  const r = selected ? HEAD_RADIUS + 0.5 : HEAD_RADIUS;
+  g.save();
+  g.globalCompositeOperation = "destination-out";
+  g.beginPath();
+  g.arc(cx, ROW_CENTER, r + LINE_THICKNESS / 2, 0, Math.PI * 2);
+  g.fill();
+  g.restore();
+  g.strokeStyle = color;
+  g.lineWidth = LINE_THICKNESS;
+  g.beginPath();
+  g.arc(cx, ROW_CENTER, r, 0, Math.PI * 2);
+  g.stroke();
+  g.fillStyle = color;
+  g.font = `700 ${selected ? 9 : 8.5}px system-ui, sans-serif`;
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.fillText("H", cx, ROW_CENTER + 0.5);
 }
 
 export function maxPosition(elements: El[]): number {

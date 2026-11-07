@@ -1,4 +1,5 @@
-// UI scenario for the "H" label of the commit that is checked out, on a branch and on a detached HEAD.
+// UI scenario for the node of the commit that is checked out: a ring with an "H" in the graph, on a branch
+// and on a detached HEAD.
 // Start the dev server first (see README). Build a fresh repository with make-demo-repo.sh, then:
 // node e2e/head-label.mjs <repo> <screenshot-dir>. Set CHROMIUM to a Chromium binary when Playwright has
 // no downloaded browser.
@@ -22,29 +23,39 @@ const within = async (what, fn, ms = 6000) => {
   }
   check(what, false);
 };
-// The labels of the row of HEAD, in order.
-const headLabels = () => page.$$eval(".log-row.head .subject .ref", (els) => els.map((e) => e.textContent));
+// The ring of HEAD in the canvas of its row: the line of the ring has paint, and the inside above the
+// "H" is clear, so no edge goes through it. Null when not exactly one row has the ring.
+const ring = () =>
+  page.evaluate(() => {
+    const c = document.querySelector(".log-row.head canvas[data-head]");
+    if (!c || document.querySelectorAll("canvas[data-head]").length !== 1) return null;
+    const scale = c.width / c.clientWidth;
+    const cx = Number(c.dataset.head) * 15 + 7.5;
+    const alpha = (x, y) => c.getContext("2d").getImageData(Math.round(x * scale), Math.round(y * scale), 1, 1).data[3];
+    return { line: alpha(cx + 6.5, 11), inside: alpha(cx, 6) };
+  });
 
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
 
-// On a branch: "H" comes first, then the branch.
-await within("the row of HEAD has the H label first", async () => {
-  const l = await headLabels();
-  return l[0] === "H" && l.includes("main");
+// On a branch: one ring, on the row of main.
+await within("the node of HEAD is a ring with a clear inside", async () => {
+  const r = await ring();
+  return !!r && r.line > 0 && r.inside === 0;
 });
-check("only one row has the H label", (await page.$$(".ref-h")).length === 1);
+check("the row of the ring has main", ((await page.textContent(".log-row.head .subject")) ?? "").includes("main"));
 await shot("hl1-branch");
 
-// A detached HEAD: "H" in place of the long HEAD label.
+// A detached HEAD: the ring moves to the commit, which also has the HEAD label.
 const parent = git("rev-parse", "HEAD~1");
 git("checkout", "-q", "--detach", parent);
 await page.keyboard.press("F5");
-await within("the H label moves to the detached commit", async () => {
+await within("the ring moves to the detached commit", async () => {
   const oid = await page.$eval(".log-row.head .hash", (e) => e.textContent).catch(() => "");
-  const l = await headLabels();
-  return parent.startsWith(oid ?? "-") && l[0] === "H" && !l.includes("HEAD");
+  const r = await ring();
+  return parent.startsWith(oid || "-") && !!r && r.line > 0;
 });
+check("the detached commit has the HEAD label", (await page.$$(".log-row.head .ref-head")).length === 1);
 await shot("hl2-detached");
 
 git("checkout", "-q", "main");

@@ -235,7 +235,12 @@ export class LogView {
     const g = canvas.getContext("2d")!;
     g.scale(dpr, dpr);
     const folds = foldMarks(r.row, r.elements);
-    paintRow(g, r.elements, fg, selected, folds);
+    paintRow(g, r.elements, fg, selected, folds, r.isHead);
+    // The node of HEAD has an "H" in a ring. The lane is for the UI tests.
+    if (r.isHead) {
+      const node = r.elements.find((e) => e.k === "n");
+      if (node) canvas.dataset.head = String(node.p);
+    }
     const arrows = r.elements.filter((e) => e.j !== undefined);
     if (arrows.length || folds.length) {
       canvas.addEventListener("mousedown", (e) => {
@@ -266,13 +271,7 @@ export class LogView {
       }
     }
     const subject = h("span", { class: "subject", title: r.subject });
-    // The commit that is checked out has an "H" next to the graph, on a branch and on a detached HEAD.
-    const detached = r.refs.some((ref) => ref.kind === "head");
-    if (r.isHead) {
-      subject.append(h("span", { class: "ref ref-h", title: detached ? "HEAD (detached): the commit that is checked out" : "HEAD: the commit that is checked out" }, "H"));
-    }
     for (const ref of r.refs) {
-      if (ref.kind === "head" && r.isHead) continue;
       subject.append(h("span", { class: `ref ref-${ref.kind}`, title: `${ref.name}\nClick to copy the name. Double-click to show only ${ref.name} in the log`, "data-ref": ref.name }, ref.name));
     }
     subject.append(h("span", { class: "subject-text" }, r.subject));
