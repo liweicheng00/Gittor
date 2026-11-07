@@ -16,7 +16,6 @@ tauri-plugin-process = "2"
 # Without the default "zip" feature: the zip crate is only for updates on Windows, and macOS updates use
 # tar.gz.
 tauri-plugin-updater = { version = "2", default-features = false, features = ["rustls-tls", "system-proxy"] }
-serde = "1"
 serde_json = "1"
 
 [features]

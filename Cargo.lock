@@ -1140,7 +1140,6 @@ name = "gittor"
 version = "0.1.0"
 dependencies = [
  "gittor-service",
- "serde",
  "serde_json",
  "tauri",
  "tauri-build",
