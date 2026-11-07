@@ -40,6 +40,12 @@ const DEFAULTS: &[(&str, &str)] = &[
 
 const AGENTS_JSON: &str = include_str!("agent-mode/agents.json");
 
+/// The sha256 of the old versions of the default files, one in each line.
+const OLD_DEFAULTS: &str = include_str!("agent-mode/shipped.txt");
+
+/// The file in a workflow folder that keeps the sha256 of each default file that Gittor wrote.
+const SHIPPED: &str = ".gittor-shipped.json";
+
 /// The id of the workflow that Gittor makes when there is none.
 const FIRST: &str = "main";
 
@@ -188,12 +194,7 @@ impl Service {
         }
         let mut ready = self.mode_ready.lock().unwrap();
         if ready.insert(id.to_string()) {
-            for (rel, text) in DEFAULTS {
-                let p = dir.join(rel);
-                if !p.exists() {
-                    write_file(&p, text)?;
-                }
-            }
+            update_defaults(&dir)?;
             for (rel, text) in DOCS {
                 write_file(&dir.join(rel), text)?;
             }
@@ -389,8 +390,42 @@ fn read_meta(dir: &Path) -> WorkflowMeta {
 fn make_workflow(dir: &Path, name: &str, projects: &[String]) -> Result<()> {
     let meta = WorkflowMeta { name: name.to_string(), projects: projects.to_vec(), knowledge: Vec::new() };
     write_file(&dir.join("workflow.json"), &(serde_json::to_string_pretty(&meta).map_err(err)? + "\n"))?;
+    update_defaults(dir)
+}
+
+fn sha256(text: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    Sha256::digest(text).iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// Writes the default files of a workflow. A missing file gets the default. A file that has the content
+/// that Gittor wrote, or an old default, gets the new default. A file that the user or an agent changed
+/// stays as it is. `.gittor-shipped.json` keeps the sha256 of each file that Gittor wrote.
+fn update_defaults(dir: &Path) -> Result<()> {
+    let manifest_path = dir.join(SHIPPED);
+    let mut shipped: std::collections::BTreeMap<String, String> =
+        std::fs::read(&manifest_path).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default();
+    let old: std::collections::HashSet<&str> = OLD_DEFAULTS.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')).collect();
+    let before = shipped.clone();
     for (rel, text) in DEFAULTS {
-        write_file(&dir.join(rel), text)?;
+        let p = dir.join(rel);
+        let new_hash = sha256(text.as_bytes());
+        let replace = match std::fs::read(&p) {
+            Err(_) => true,
+            Ok(cur) => {
+                let h = sha256(&cur);
+                h != new_hash && (shipped.get(*rel) == Some(&h) || old.contains(h.as_str()))
+            }
+        };
+        if replace {
+            write_file(&p, text)?;
+        }
+        if replace || std::fs::read(&p).map(|c| sha256(&c) == new_hash).unwrap_or(false) {
+            shipped.insert(rel.to_string(), new_hash);
+        }
+    }
+    if shipped != before {
+        write_file(&manifest_path, &(serde_json::to_string_pretty(&shipped).map_err(err)? + "\n"))?;
     }
     Ok(())
 }
@@ -448,6 +483,30 @@ mod tests {
         assert!(files.layout.contains("canvas"));
         assert!(Path::new(&files.dir).join("AGENTS.md").exists());
         assert!(s.mode_files(WorkflowArgs { workflow: "../x".into() }).is_err());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn updates_the_default_files_that_nobody_changed() {
+        let dir = std::env::temp_dir().join(format!("gittor-shipped-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        make_workflow(&dir, "W", &[]).unwrap();
+        let read = |rel: &str| std::fs::read_to_string(dir.join(rel)).unwrap();
+        let default = |rel: &str| DEFAULTS.iter().find(|(r, _)| *r == rel).unwrap().1;
+        // An older Gittor wrote this text: the manifest knows its hash, so it gets the new default.
+        let manifest = dir.join(SHIPPED);
+        let mut shipped: std::collections::BTreeMap<String, String> = serde_json::from_slice(&std::fs::read(&manifest).unwrap()).unwrap();
+        std::fs::write(dir.join("style.css"), "/* old default */").unwrap();
+        shipped.insert("style.css".into(), sha256(b"/* old default */"));
+        std::fs::write(&manifest, serde_json::to_string(&shipped).unwrap()).unwrap();
+        // The user changed this file: it stays.
+        std::fs::write(dir.join("layout.json"), "{\"type\": \"row\", \"children\": []}").unwrap();
+        // A file that is not there comes back.
+        std::fs::remove_file(dir.join("mods/work/main.js")).unwrap();
+        update_defaults(&dir).unwrap();
+        assert_eq!(read("style.css"), default("style.css"));
+        assert_eq!(read("layout.json"), "{\"type\": \"row\", \"children\": []}");
+        assert_eq!(read("mods/work/main.js"), default("mods/work/main.js"));
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

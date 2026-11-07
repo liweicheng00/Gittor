@@ -25,6 +25,8 @@ as yours.
 | `gittor.d.ts` | The API that a mod gets. Read it before you write a mod. |
 
 `AGENTS.md` and `gittor.d.ts` are written again at each start. Do not edit them.
+A new version of Gittor updates the default files (`layout.json`, `style.css`, the default mods) that
+nobody changed; `.gittor-shipped.json` keeps what Gittor wrote. A file that you or the user changed stays.
 
 The folders of the other workflows are next to this one (`../<id>/`), and `../agents.json` lists the
 agent programs of all workflows.

@@ -121,7 +121,10 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   (name, projects, knowledge), `layout.json`, `style.css`, `mods/<name>/main.js`; `agents.json` is in the
   root. Each workflow has its own agent (`Service.agents` by id) and its own canvas views. A card with
   `workflow` links to another workflow; `workflow_open_projects` opens the projects without a change of
-  the active Git tab. The defaults and the guide for agents are in `crates/service/src/agent-mode/`. A broken file keeps the last
+  the active Git tab. The defaults and the guide for agents are in `crates/service/src/agent-mode/`.
+  At start Gittor updates each default file that nobody changed (`update_defaults`: the hash of what it
+  wrote is in `.gittor-shipped.json` of the workflow, older hashes in `agent-mode/shipped.txt`). When you
+  change a default file, add the sha256 of its old content to `shipped.txt`. A broken file keeps the last
   good version and writes `<name>.error`. Hide the Git side with `opacity`, not `visibility`: Monaco sets
   `visibility: visible` on its own elements. Mod classes start with `x-`, because Gittor uses short class
   names. `agent.rs` is an ACP client (JSON-RPC on stdio); its messages come as `Event::Agent`. The Tauri
