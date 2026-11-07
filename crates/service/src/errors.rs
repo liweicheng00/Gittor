@@ -12,6 +12,8 @@ pub enum ErrorKind {
     Auth,
     /// The remote refused a push: it has commits that the branch does not have.
     Rejected,
+    /// An update with only a fast-forward stopped: the branch has commits of its own.
+    NotFastForward,
     /// A merge, rebase, cherry-pick, revert or stash stopped at conflicts.
     Conflict,
     /// Another git process holds a lock file of the repository.
@@ -29,6 +31,7 @@ const PATTERNS: &[(ErrorKind, &[&str])] = &[
         &["authentication failed", "could not read username", "could not read password", "permission denied (publickey", "access denied", "terminal prompts disabled", "the requested url returned error: 401", "the requested url returned error: 403"],
     ),
     (ErrorKind::Rejected, &["[rejected]", "non-fast-forward", "fetch first", "stale info", "was rejected"]),
+    (ErrorKind::NotFastForward, &["cannot fast-forward"]),
     (ErrorKind::Locked, &[".lock': file exists", "index.lock", "another git process seems to be running"]),
     (
         ErrorKind::Network,
@@ -57,6 +60,10 @@ mod tests {
         assert_eq!(classify("fatal: Authentication failed for 'https://x/'"), ErrorKind::Auth);
         assert_eq!(classify("git@host: Permission denied (publickey)."), ErrorKind::Auth);
         assert_eq!(classify(" ! [rejected]        main -> main (fetch first)"), ErrorKind::Rejected);
+        assert_eq!(
+            classify("main cannot fast-forward to origin/main: it has commits of its own. Update with Merge or Rebase"),
+            ErrorKind::NotFastForward
+        );
         assert_eq!(classify("fatal: Unable to create '/r/.git/index.lock': File exists."), ErrorKind::Locked);
         assert_eq!(classify("fatal: unable to access 'https://x/': Could not resolve host: x"), ErrorKind::Network);
         assert_eq!(classify("The merge stopped at conflicts in 2 file(s)"), ErrorKind::Conflict);

@@ -57,16 +57,17 @@ await page.fill(".dialog-field:has-text('Message') input", "Merge the CLI");
 await page.click(".dialog-buttons button:has-text('Merge')");
 await within("a merge commit with the message", async () => git("log", "-1", "--format=%s") === "Merge the CLI" && git("log", "-1", "--format=%p").split(" ").length === 2);
 
-// Update with Only a fast-forward: main has commits of its own, so nothing changes.
+// Update: main has commits of its own, so the fast-forward stops, and the dialog asks for Merge or Rebase.
+// Cancel leaves main as it was.
 await page.waitForTimeout(2000);
 const before = git("rev-parse", "HEAD");
 await page.click(".tb-button:has-text('Update')");
-await page.waitForSelector(".dialog:has-text('Update main')");
-await page.check(".dialog input[value='merge']");
-await page.selectOption(".dialog .update-ff", "ffOnly");
+await page.waitForSelector(".dialog:has-text('Update main') .update-why");
+check("the dialog says why", ((await page.textContent(".dialog .update-why")) ?? "").includes("cannot fast-forward"));
+check("the dialog has no fast-forward choice", (await page.$(".dialog select")) === null);
 await shot("mo2-update-dialog");
-await page.click(".dialog-buttons button:has-text('Update')");
-await within("Update says that it cannot fast-forward", async () => (await toasts()).includes("cannot fast-forward"));
+await page.keyboard.press("Escape");
+await page.waitForSelector(".dialog", { state: "detached" });
 check("main stays", git("rev-parse", "HEAD") === before);
 console.log("errors:", JSON.stringify(errors));
 await browser.close();

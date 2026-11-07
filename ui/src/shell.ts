@@ -40,7 +40,7 @@ export const openBtn = h("button", { class: "tb-button", title: `Open a reposito
 export const refreshBtn = h("button", { class: "tb-button", title: `Reload commits and branches (${mod}R)`, disabled: true }, icon("refresh"), "Refresh");
 /** The menu part of the Update button: Fetch of all remotes or of one remote. */
 export const fetchBtn = h("button", { class: "tb-button tb-split-menu", title: "Fetch all remotes, or one remote", "aria-label": "Fetch", disabled: true }, icon("chevron-down", "icon-caret"));
-export const updateBtn = h("button", { class: "tb-button", title: `Update the current branch: fetch, then merge or rebase (${mod}T)`, disabled: true }, icon("update"), "Update");
+export const updateBtn = h("button", { class: "tb-button", title: `Update the current branch: fetch, then fast-forward. A branch with commits of its own asks for Merge or Rebase (${mod}T)`, disabled: true }, icon("update"), "Update");
 export const pushBtn = h("button", { class: "tb-button", title: `Push the current branch (${mod}⇧K)`, disabled: true }, icon("push"), "Push");
 export const remoteBtn = h("button", { class: "tb-button tb-icon tb-remote", title: "Open the current branch on the web page of its remote", "aria-label": "Remote", disabled: true }, icon("remote"));
 export const localHistoryBtn = h("button", { class: "tb-button", title: "Local History: the recent versions of changed files", disabled: true }, icon("history"), "Local History");

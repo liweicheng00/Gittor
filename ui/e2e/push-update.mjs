@@ -16,6 +16,14 @@ const shot = async (name) => { await page.waitForTimeout(700); await page.screen
 const check = (what, ok) => { console.log(ok ? "ok  " : "FAIL", what); if (!ok) errors.push("check: " + what); };
 const toastText = async () => (await page.textContent(".toasts").catch(() => "")).replace(/\s+/g, " ");
 const clearToasts = () => page.evaluate(() => document.querySelectorAll(".toast").forEach((t) => t.remove()));
+const within = async (what, fn, ms = 8000) => {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    if (await fn()) return check(what, true);
+    await page.waitForTimeout(150);
+  }
+  check(what, false);
+};
 const switchTo = async (name) => {
   await page.click(".tb-branch-button");
   await page.click(`.switcher .menu-item:has(.menu-label:text-is('${name}'))`);
@@ -50,16 +58,13 @@ await page.waitForTimeout(1500);
 check("new branch is on the remote and tracked", git(repo, "config", "branch.topic/push-me.merge") === "refs/heads/topic/push-me");
 await clearToasts();
 
-// 3. Update main (one commit behind) with rebase; the local changes stay.
+// 3. Update main (one commit behind): a fast-forward, with no dialog. The local changes stay.
 await switchTo("main");
 await page.click(".tb-button:has-text('Update')");
-await page.waitForSelector(".dialog-radios");
-await page.check("input[value=rebase]");
-await shot("p3-update-dialog");
-await page.click(".dialog-buttons button:has-text('Update')");
-await page.waitForTimeout(2000);
+await within("Update fast-forwards main without a dialog", async () => git(repo, "rev-parse", "main") === git(repo, "rev-parse", "origin/main"));
+check("no Update dialog", (await page.$(".dialog-radios")) === null);
+await shot("p3-update-ff");
 console.log("update:", await toastText());
-check("main equals origin/main", git(repo, "rev-parse", "main") === git(repo, "rev-parse", "origin/main"));
 check("local changes kept", git(repo, "status", "--porcelain").includes("main.rs"));
 await clearToasts();
 
@@ -85,6 +90,11 @@ console.log("rejected:", await toastText());
 check("push rejected with an Update action", (await toastText()).includes("rejected") && !!(await page.$(".toast-action:has-text('Update')")));
 await shot("p5-rejected");
 await page.click(".toast-action:has-text('Update')");
+// The branch and the remote branch both have new commits: the dialog says why, and asks.
+await page.waitForSelector(".dialog .update-why");
+check("the dialog says that a fast-forward is not possible", ((await page.textContent(".dialog .update-why")) ?? "").includes("cannot fast-forward"));
+check("no error toast before the dialog", !(await toastText()).includes("cannot fast-forward"));
+await shot("p6-update-dialog");
 await page.check("input[value=merge]");
 await page.click(".dialog-buttons button:has-text('Update')");
 await page.waitForSelector(".push-commits", { timeout: 15000 });

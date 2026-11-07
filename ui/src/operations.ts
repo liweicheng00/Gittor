@@ -1,7 +1,7 @@
 // Write operations: runOp, Undo, and the branch, tag, merge, rebase, reset and rewrite flows.
 
 import { allowRewrite } from "./protected";
-import { api, type BranchInfo, errorHint, inTauri, type Op, type OpOutcome, pickFolder, type PlanEntry, type Row, type Worktree } from "./api";
+import { api, type BranchInfo, type ErrorKind, errorHint, inTauri, type Op, type OpOutcome, pickFolder, type PlanEntry, type Row, type Worktree } from "./api";
 import { showBranchSwitcher } from "./branch-switcher";
 import { mergeFile, offerContinue, resolveConflicts } from "./conflicts";
 import { showMenu } from "./context-menu";
@@ -14,7 +14,8 @@ import { banner, branchBtn, sidebar, statusActivity, task } from "./shell";
 import { app } from "./state";
 
 /** Runs a write operation, reloads the log, and reports the result. */
-export async function runOp(op: Op, label: string, errorAction?: { label: string; run: () => void }): Promise<OpOutcome | undefined> {
+/** Runs a write. `quietKind`: a failure of this kind shows no error, because the caller handles it. */
+export async function runOp(op: Op, label: string, errorAction?: { label: string; run: () => void }, quietKind?: ErrorKind): Promise<OpOutcome | undefined> {
   const outcome = await task(label, () => api.runOp(op));
   // The watcher reports the changes of this operation; the view reloads below anyway.
   app.watchQuietUntil = Date.now() + 1500;
@@ -32,6 +33,8 @@ export async function runOp(op: Op, label: string, errorAction?: { label: string
     }
     statusActivity.textContent = r.message;
     if (op.op === "resolveSide" || op.op === "resolveText" || op.op === "markResolved") void offerContinue();
+  } else if (quietKind && outcome.errorKind === quietKind) {
+    statusActivity.textContent = r.message;
   } else {
     const hint = errorHint(outcome.errorKind);
     // An operation that stopped halfway can still have Undo steps for the part that it did.

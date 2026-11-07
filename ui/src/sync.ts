@@ -47,7 +47,11 @@ export async function pushBranch(branch?: string, upTo?: string) {
   await runOp({ op: "push", branch: branchName, ...choice, ...(upTo ? { rev: upTo } : {}) }, `Pushing ${branchName}`, retry);
 }
 
-/** Returns true when the update finished without a conflict. */
+/**
+ * Updates the current branch from its tracked branch. A fast-forward comes first and needs no question.
+ * When the branch has commits of its own, the Update dialog asks for Merge or Rebase. Returns true when
+ * the update finished without a conflict.
+ */
 export async function updateBranch(): Promise<boolean> {
   const branch = currentBranch();
   if (!branch) {
@@ -59,13 +63,14 @@ export async function updateBranch(): Promise<boolean> {
     toast(`${branch} has no tracked branch. Push it with a tracked branch first.`, "error");
     return false;
   }
-  const choice = await updateDialog(branch, upstream, settings.updateMode, settings.updateFf);
-  if (!choice) return false;
-  const { mode, ff } = choice;
+  const ff = await runOp({ op: "update", mode: "merge", options: { ffOnly: true, noFf: false } }, `Updating ${branch}`, undefined, "notFastForward");
+  if (!ff) return false;
+  if (ff.result.ok || ff.errorKind !== "notFastForward") return ff.result.ok;
+  const mode = await updateDialog(branch, upstream, settings.updateMode);
+  if (!mode) return false;
   settings.updateMode = mode;
-  if (mode === "merge") settings.updateFf = ff;
   save();
-  const out = await runOp({ op: "update", mode, options: { ffOnly: ff === "ffOnly", noFf: ff === "noFf" } }, `Updating ${branch}`);
+  const out = await runOp({ op: "update", mode }, `Updating ${branch}`);
   return !!out?.result.ok;
 }
 

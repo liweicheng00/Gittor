@@ -146,7 +146,7 @@ sidebar.onContextMenu = (b, e) => {
     { separator: true },
     { label: "Push…", disabled: b.kind !== "local", action: () => void pushBranch(b.name) },
     {
-      label: isCurrent ? "Update…" : "Update (Fast-Forward)",
+      label: isCurrent ? "Update" : "Update (Fast-Forward)",
       disabled: b.kind !== "local" || !b.upstream,
       action: () => (isCurrent ? void updateBranch() : void runOp({ op: "fastForward", branches: [b.name] }, `Updating ${b.name}`)),
     },
@@ -306,7 +306,7 @@ fetchBtn.addEventListener("click", async () => {
   const remotes = await api.remotes().catch(() => []);
   // The menu opens under the whole Update button.
   menuBelow(fetchBtn.parentElement ?? fetchBtn, [
-    { label: "Update Current Branch…", shortcut: keymap.shortcut("update"), action: () => void updateBranch() },
+    { label: "Update Current Branch", shortcut: keymap.shortcut("update"), action: () => void updateBranch() },
     { separator: true },
     { label: "Fetch All Remotes", shortcut: keymap.shortcut("fetch"), disabled: !remotes.length, action: () => void fetchAll() },
     ...(remotes.length > 1 ? [{ separator: true } as MenuItem, ...remotes.map((r) => ({ label: `Fetch ${r.name}`, action: () => void fetchRemote(r.name) }) as MenuItem)] : []),
