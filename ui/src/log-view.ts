@@ -266,7 +266,13 @@ export class LogView {
       }
     }
     const subject = h("span", { class: "subject", title: r.subject });
+    // The commit that is checked out has an "H" next to the graph, on a branch and on a detached HEAD.
+    const detached = r.refs.some((ref) => ref.kind === "head");
+    if (r.isHead) {
+      subject.append(h("span", { class: "ref ref-h", title: detached ? "HEAD (detached): the commit that is checked out" : "HEAD: the commit that is checked out" }, "H"));
+    }
     for (const ref of r.refs) {
+      if (ref.kind === "head" && r.isHead) continue;
       subject.append(h("span", { class: `ref ref-${ref.kind}`, title: `${ref.name}\nClick to copy the name. Double-click to show only ${ref.name} in the log`, "data-ref": ref.name }, ref.name));
     }
     subject.append(h("span", { class: "subject-text" }, r.subject));

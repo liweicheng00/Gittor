@@ -201,6 +201,7 @@ html.titlebar-tabs .tab { border-top: 2px solid transparent; }
 .ref-remote { color: var(--remote); border-color: var(--remote); }
 .ref-tag { color: var(--tag); border-color: var(--tag); }
 .ref-head, .ref-other { color: var(--head); border-color: var(--head); }
+.ref-h { padding: 0 3px; min-width: 9px; text-align: center; font-weight: 700; color: var(--bg); background: var(--head); border-color: var(--head); }
 
 /* changes */
 .changes-panel, .details-panel { display: flex; flex-direction: column; min-height: 0; }
