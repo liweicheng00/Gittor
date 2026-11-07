@@ -4,6 +4,8 @@ Gittor is a light desktop git client. It draws the commit graph with the rules o
 IntelliJ workflow for changelists, local history and conflicts, and runs without a JVM: a Rust
 backend that calls the git CLI, and a TypeScript front end in a Tauri 2 window.
 
+**Download for macOS** (Apple Silicon and Intel): <https://liweicheng00.github.io/Gittor/>
+
 - **The IntelliJ log**: the same graph layout, IntelliSort, branch colors, long-edge arrows and
   collapsible linear branches. Large repositories scroll without a commit limit.
 - **Safe history edits**: squash, drop, reword, reorder and fixups run in memory. A conflict stops
