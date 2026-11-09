@@ -279,6 +279,9 @@ html.titlebar-tabs .tab { border-top: 2px solid transparent; }
 .md-body ul, .md-body ol { padding-left: 2em; }
 .md-body li.task-item { list-style: none; margin-left: -1.4em; }
 .md-body li.task-item input { margin: 0 6px 0 0; vertical-align: -1px; }
+.md-mermaid { width: fit-content; max-width: 100%; overflow: auto; padding: 6px; }
+.md-mermaid-img { display: block; max-width: 100%; height: auto; }
+.md-mermaid-note { display: block; width: fit-content; margin-bottom: 6px; }
 .md-image-note { display: inline-block; padding: 2px 8px; font-size: 12px; color: var(--muted); border: 1px dashed var(--border); border-radius: 4px; }
 /* The blocks that a diff changed: a bar at the left and a light background. */
 .md-body > .md-added, .md-body > .md-removed, .md-body > .md-changed { position: relative; border-radius: 3px; box-shadow: -10px 0 0 -6px var(--mark); background: color-mix(in srgb, var(--mark) 12%, transparent); }

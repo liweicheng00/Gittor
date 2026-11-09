@@ -1,6 +1,6 @@
 //! The read commands.
 
-use crate::{err, history, watch, BlameArgs, BlobArgs, CompareArgs, CompareRefsArgs, MergedBranchesArgs, MergedIntoArgs, UrlArgs, TagArgs, RemoteArgs, ReviewArgs, ReviewEdit, CompareResult, FilePair, FilePairArgs, IndexArgs, ImageArgs, OidArgs, PathArgs, PushInfoArgs, Result, RevSpec, Service};
+use crate::{err, history, watch, BlameArgs, BlobArgs, CompareArgs, CompareRefsArgs, MergedBranchesArgs, MergedIntoArgs, UrlArgs, TagArgs, RemoteArgs, ReviewArgs, ReviewEdit, CompareResult, FilePair, FilePairArgs, IndexArgs, ImageArgs, MermaidArgs, MermaidSvg, OidArgs, PathArgs, PushInfoArgs, Result, RevSpec, Service};
 use gittor_git::changelist::{ChangeListOp, LocalChanges};
 use gittor_git::history::{Blame, HistoryEntry};
 use gittor_git::merge::MergeSides;
@@ -279,6 +279,14 @@ impl Service {
         self.with_repo(|repo| {
             let (l, r) = (Self::rev(repo, &args.left)?, Self::rev(repo, &args.right)?);
             Ok(CompareResult { changes: repo.list_changes(&l, &r).map_err(err)? })
+        })
+    }
+
+    /// A Mermaid diagram of the Markdown preview as SVG. It needs no repository.
+    pub fn mermaid_svg(&self, args: MermaidArgs) -> Result<MermaidSvg> {
+        Ok(match crate::mermaid::svg(&args.source, args.dark, args.bg.as_deref()) {
+            Ok(svg) => MermaidSvg { svg: Some(svg), error: None },
+            Err(e) => MermaidSvg { svg: None, error: Some(e) },
         })
     }
 

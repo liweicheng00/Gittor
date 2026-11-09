@@ -5,6 +5,7 @@
 // and many of their fields have defaults.
 import type { Action } from "./bindings/Action";
 import type { BackendSettings } from "./bindings/BackendSettings";
+import type { MermaidSvg } from "./bindings/MermaidSvg";
 import type { Event as BackendEvent } from "./bindings/Event";
 import type { ErrorKind } from "./bindings/ErrorKind";
 import type { Blame } from "./bindings/Blame";
@@ -68,6 +69,7 @@ export type {
   LocalChanges,
   MergeSides,
   MergedBranches,
+  MermaidSvg,
   WorktreeBlockers,
   GlobalIgnore,
   RepoInfo,
@@ -365,6 +367,8 @@ export const api = {
     call<{ left: FileContent; right: FileContent }>("file_pair", { left, right, path, oldPath }),
   /** An image of the repository as a data: URL, for the Markdown preview; null when it is not there. */
   imageData: (rev: RevSpec, path: string) => call<string | null>("image_data", { rev, path }),
+  /** A Mermaid diagram of the Markdown preview as SVG, or the reason that it has none. */
+  mermaidSvg: (source: string, dark: boolean, bg: string) => call<MermaidSvg>("mermaid_svg", { source, dark, bg }),
 };
 
 /** Calls `handler` for each event of the backend: in the app a window event, in a browser a server-sent

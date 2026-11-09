@@ -91,6 +91,9 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   absolute paths). Each top-level block has `data-src="start-end"`; `markdown-model.ts` (unit tests)
   marks the blocks that Monaco's line changes touch, and places removed blocks in one column. Code
   blocks get the colors of `monaco.editor.colorizeElement`. The note layer and Annotate need the source.
+  A ```` ```mermaid ```` block becomes an `<img>` of the SVG that `crates/service/src/mermaid.rs` makes
+  with mmdflux (flowchart, class, sequence, state; others keep their code with a note). The theme
+  colors come from the app; `setMonacoTheme` draws open previews again.
 - Notes on local changes: `crates/git/src/local_notes.rs` (`gittor/local-notes.json` of the worktree).
   The notes of a file keep the git hash of its content; when the file changes, they go away.
   `showLocalDiff` in `commit-flow.ts` gives them to the same note layer.

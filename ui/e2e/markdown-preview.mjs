@@ -32,9 +32,21 @@ fn main() { println!("hi"); }
 <img src="x" onerror="window.__hacked = 1"><script>window.__hacked = 2</script>
 
 See [usage](#usage) or [the site](https://example.com).
+
+\`\`\`mermaid
+graph LR
+  A[Write] --> B[Ship]
+\`\`\`
+
+\`\`\`mermaid
+gantt
+  title A plan
+  section Work
+  Task :a1, 2024-01-01, 3d
+\`\`\`
 `;
 // A removed paragraph, a changed list, and a new paragraph at the end.
-const after = before.replace("Old paragraph that goes away.\n\n", "").replace("- [ ] Configure", "- [ ] Configure it well") + "\nA new paragraph.\n";
+const after = before.replace("Old paragraph that goes away.\n\n", "").replace("- [ ] Configure", "- [ ] Configure it well").replace("B[Ship]", "B[Ship it]") + "\nA new paragraph.\n";
 
 mkdirSync(`${repo}/docs`, { recursive: true });
 writeFileSync(`${repo}/docs/guide.md`, before);
@@ -83,8 +95,17 @@ check("a network image is blocked", ((await page.textContent(`${preview} .md-col
 check("no image loads from the network", (await count(`${preview} img[src^="http"]`)) === 0);
 check("scripts and event attributes are removed", (await count(`${preview} script, ${preview} [onerror]`)) === 0 && (await page.evaluate(() => window.__hacked)) === undefined);
 await within("the code block has the colors of Monaco", async () => (await count(`${preview} .md-col:last-child pre code[data-lang="rust"] span[class^="mtk"]`)) > 0);
+// Mermaid: the backend draws a flowchart as SVG; a gantt chart keeps its code with a note.
+await within("a Mermaid flowchart shows as an SVG image", async () => (await count(`${preview} .md-col:last-child .md-mermaid img[src^="data:image/svg+xml"]`)) === 1);
+check("the diagram has the new label", decodeURIComponent((await page.getAttribute(`${preview} .md-col:last-child .md-mermaid img`, "src")) ?? "").includes("Ship it"));
+check("the changed diagram is marked as changed", (await count(`${preview} .md-col:last-child .md-mermaid.md-changed`)) === 1);
+await within("a gantt chart keeps its code with a note", async () =>
+  ((await page.textContent(`${preview} .md-col:last-child`)) ?? "").includes("This Mermaid diagram is not shown") && (await count(`${preview} .md-col:last-child .md-mermaid pre`)) === 1);
 check("the task list has two check boxes, one checked", (await count(`${preview} .md-col:last-child li.task-item input[disabled]`)) === 2 && (await count(`${preview} .md-col:last-child li.task-item input:checked`)) === 1);
 await shot("md1-side-by-side");
+await page.evaluate(() => document.querySelector(".diff .md-col:last-child .md-mermaid")?.scrollIntoView({ block: "start" }));
+await shot("md3-mermaid");
+await page.evaluate(() => (document.querySelector(".diff .md-preview").scrollTop = 0));
 
 // An anchor link scrolls to its heading in the preview.
 await page.click(`${preview} .md-col:last-child a[href="#usage"]`);

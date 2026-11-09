@@ -11,6 +11,7 @@ pub mod events;
 mod dispatch;
 pub mod editor;
 pub mod history;
+mod mermaid;
 pub mod terminal;
 mod ops;
 mod queries;

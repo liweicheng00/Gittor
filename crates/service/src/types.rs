@@ -233,6 +233,25 @@ pub struct CompareResult {
 }
 
 #[derive(Deserialize)]
+pub struct MermaidArgs {
+    pub source: String,
+    #[serde(default)]
+    pub dark: bool,
+    /// The background of the preview, as `#rrggbb`.
+    #[serde(default)]
+    pub bg: Option<String>,
+}
+
+/// A Mermaid diagram as SVG, or why it has none: a diagram type that is not supported, or an error.
+#[derive(Serialize)]
+#[derive(ts_rs::TS)]
+#[ts(export)]
+pub struct MermaidSvg {
+    pub svg: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Deserialize)]
 pub struct ImageArgs {
     pub rev: RevSpec,
     pub path: String,

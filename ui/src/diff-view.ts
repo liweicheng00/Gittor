@@ -4,7 +4,7 @@ import { revertChange } from "./revert-change";
 import * as monaco from "./monaco";
 import "monaco-editor/esm/vs/basic-languages/monaco.contribution";
 import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
-import { api, type Blame, type Change, type FileContent, type RevSpec } from "./api";
+import { api, type Blame, type Change, type FileContent, type MermaidSvg, type RevSpec } from "./api";
 import { statusName } from "./changes-panel";
 import { copyText, h, icon } from "./dom";
 import { markBlocks, removedAnchors } from "./markdown-model";
@@ -16,6 +16,23 @@ import { save, settings } from "./settings";
 
 export function setMonacoTheme(dark: boolean) {
   monaco.editor.setTheme(dark ? "vs-dark" : "vs");
+  // The Mermaid diagrams of a preview have the colors of the theme.
+  for (const v of views) v.refreshPreview();
+}
+
+/** Mermaid diagrams as SVG, by theme and source, so a preview that draws again does not ask again. */
+const mermaidCache = new Map<string, Promise<MermaidSvg>>();
+function mermaidSvg(source: string): Promise<MermaidSvg> {
+  const dark = document.documentElement.dataset.theme === "dark";
+  const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+  const key = `${dark}\0${bg}\0${source}`;
+  let svg = mermaidCache.get(key);
+  if (!svg) {
+    if (mermaidCache.size > 100) mermaidCache.delete(mermaidCache.keys().next().value!);
+    svg = api.mermaidSvg(source, dark, bg);
+    mermaidCache.set(key, svg);
+  }
+  return svg;
 }
 
 /** The editor font of the diff and merge views, from the settings. */
@@ -680,6 +697,7 @@ export class DiffView {
     const ctx = {
       dir: this.path.includes("/") ? this.path.slice(0, this.path.lastIndexOf("/")) : "",
       loadImage: source ? (p: string) => api.imageData(source.rev, p) : null,
+      mermaid: mermaidSvg,
       openUrl: (url: string) => void api.openUrl(url),
     };
     const m = this.markdown;
@@ -701,6 +719,11 @@ export class DiffView {
     this.previewHost.replaceChildren(h("div", { class: `md-cols md-cols-${cols.length}` }, ...cols));
     this.previewHost.scrollTop = top;
     this.markPreview();
+  }
+
+  /** Draws the preview again, for example in the colors of a new theme. */
+  refreshPreview() {
+    if (!this.previewHost.hidden) this.renderPreview(true);
   }
 
   /** Marks the blocks that the diff changed: green added, red removed, yellow changed. */

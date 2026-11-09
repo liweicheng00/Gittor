@@ -1,9 +1,11 @@
 // Renders Markdown for the preview of the diff panel: markdown-it makes the HTML, DOMPurify removes what
-// could run code or load from the network, and Monaco colors the code blocks. Each top-level block keeps
-// its source lines in data-src ("start-end", 1-based), so a diff can mark the blocks that it changed.
+// could run code or load from the network, and Monaco colors the code blocks. A Mermaid block becomes
+// the SVG of the backend (mmdflux) in an <img>. Each top-level block keeps its source lines in data-src
+// ("start-end", 1-based), so a diff can mark the blocks that it changed.
 
 import MarkdownIt from "markdown-it";
 import DOMPurify from "dompurify";
+import type { MermaidSvg } from "./api";
 import * as monaco from "./monaco";
 import { h } from "./dom";
 import { resolvePath, slug, type Block } from "./markdown-model";
@@ -14,6 +16,8 @@ export interface PreviewContext {
   dir: string;
   /** An image of the repository as a data URL, or null. */
   loadImage: ((path: string) => Promise<string | null>) | null;
+  /** The SVG of a Mermaid diagram, or why there is none. Null: Mermaid blocks stay code. */
+  mermaid: ((source: string) => Promise<MermaidSvg>) | null;
   openUrl: (url: string) => void;
 }
 
@@ -121,6 +125,7 @@ export function renderMarkdown(text: string, ctx: PreviewContext): HTMLElement {
       .then((url) => (url ? (img.src = url) : img.replaceWith(imageNote(`Image ${path} is not found`, path))))
       .catch(() => img.replaceWith(imageNote(`Image ${path} is not found`, path)));
   }
+  for (const code of root.querySelectorAll<HTMLElement>("pre > code.language-mermaid")) showMermaid(code.parentElement!, code.textContent ?? "", ctx);
   for (const code of root.querySelectorAll<HTMLElement>("pre > code")) {
     const info = /(?:^|\s)language-(\S+)/.exec(code.className)?.[1] ?? "";
     const lang = languageOf(info);
@@ -140,6 +145,41 @@ export function renderMarkdown(text: string, ctx: PreviewContext): HTMLElement {
     }
   });
   return root;
+}
+
+/**
+ * Puts the diagram of a Mermaid block in place of its code, when the backend can draw it. A diagram type
+ * that it cannot draw, or a syntax error, keeps the code with a short note. The block keeps its source
+ * lines, so the marks of a diff still find it.
+ */
+function showMermaid(pre: HTMLElement, source: string, ctx: PreviewContext) {
+  if (!ctx.mermaid) return;
+  // The block is a wrapper from the start, so the marks of a diff and the moves of one column keep it
+  // when the diagram comes.
+  const box = h("div", { class: "md-mermaid" });
+  const src = pre.getAttribute("data-src");
+  if (src) {
+    box.setAttribute("data-src", src);
+    pre.removeAttribute("data-src");
+  }
+  pre.replaceWith(box);
+  box.append(pre);
+  ctx
+    .mermaid(source)
+    .then((r) => {
+      if (r.svg) {
+        const img = h("img", { class: "md-mermaid-img", alt: "Mermaid diagram", title: "Mermaid diagram", src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(r.svg)}` });
+        // The natural size of the diagram; a narrow column makes it smaller, never larger.
+        const box = /<svg[^>]*\bviewBox="[\d.-]+[ ,]+[\d.-]+[ ,]+([\d.]+)[ ,]+([\d.]+)"/.exec(r.svg);
+        const width = Number(/<svg[^>]*\swidth="([\d.]+)(?:px)?"/.exec(r.svg)?.[1] ?? box?.[1] ?? 0);
+        if (width > 0) img.style.width = `${Math.round(width)}px`;
+        pre.replaceWith(img);
+      } else {
+        const first = (r.error ?? "").split("\n")[0].slice(0, 160);
+        box.prepend(h("div", { class: "md-image-note md-mermaid-note", title: r.error ?? "" }, `This Mermaid diagram is not shown: ${first}`));
+      }
+    })
+    .catch(() => {});
 }
 
 /** The top-level blocks of a rendered document with their source lines. */
