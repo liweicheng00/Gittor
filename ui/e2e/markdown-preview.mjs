@@ -75,6 +75,10 @@ const preview = ".diff .md-preview";
 
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
+// The dark theme: the colored code of the preview must not change the theme of the editors.
+await page.click(".tb-button[title='Theme']");
+await page.waitForTimeout(400);
+await page.click(".menu-item:has-text('Dark')");
 await page.click(".lp-tab:text-is('Changes')");
 await page.click(".cl-file:has(.path:text-is('guide.md'))");
 // The repository selects its head commit when it has loaded. That must not take the diff panel from
@@ -150,6 +154,12 @@ await within("the toggle shows the preview again", async () => page.isVisible(pr
 // Another file has no toggle.
 await page.click(".cl-file:has(.path:text-is('main.rs'))");
 await within("a file that is not Markdown has no toggle and no preview", async () => !(await page.isVisible(".diff-preview-toggle")) && !(await page.isVisible(preview)));
+// After the preview colored its code, every editor still has the dark theme.
+await within("the editors keep the dark theme after the preview", async () =>
+  page.evaluate(() => {
+    const eds = [...document.querySelectorAll(".diff .monaco-editor")];
+    return eds.some((e) => e.classList.contains("vs-dark")) && !eds.some((e) => e.classList.contains("vs"));
+  }));
 
 console.log("errors:", JSON.stringify(errors));
 await browser.close();

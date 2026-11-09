@@ -90,7 +90,7 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   image of the repository loads with `api.imageData` (a `data:` URL; the backend refuses `..` and
   absolute paths). Each top-level block has `data-src="start-end"`; `markdown-model.ts` (unit tests)
   marks the blocks that Monaco's line changes touch, and places removed blocks in one column. Code
-  blocks get the colors of `monaco.editor.colorizeElement`. The note layer and Annotate need the source.
+  blocks get the colors of `monaco.editor.colorize`. The note layer and Annotate need the source.
   A ```` ```mermaid ```` block becomes an `<img>` of the SVG that `crates/service/src/mermaid.rs` makes
   with mmdflux (flowchart, class, sequence, state; others keep their code with a note). The theme
   colors come from the app; `setMonacoTheme` draws open previews again.
@@ -227,6 +227,8 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
   `receive.denyCurrentBranch ignore` on it.
 - Do not draw a whole bar or list again when nothing changed. A new element under the mouse loses
   the click (this broke the tabs scenario).
+- Never call `monaco.editor.colorizeElement`: it sets the theme of all Monaco editors (to the light
+  "vs" without a theme). Use `monaco.editor.colorize`, which only returns HTML.
 - A Monaco menu item with a condition shows only after the diff loaded. A menu that opened before
   has no item: open it again (`clickMenuItem` in `compare-revert.mjs`).
 - The Settings dialog closes before the backend saves `settings.json`. Wait for the saved value

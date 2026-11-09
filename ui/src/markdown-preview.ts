@@ -131,7 +131,12 @@ export function renderMarkdown(text: string, ctx: PreviewContext): HTMLElement {
     const lang = languageOf(info);
     if (!lang) continue;
     code.setAttribute("data-lang", lang);
-    void monaco.editor.colorizeElement(code, {});
+    // colorize, not colorizeElement: colorizeElement sets the theme of all Monaco editors, to "vs" when
+    // it gets no theme. colorize only gives the HTML of the tokens, with the text escaped.
+    void monaco.editor.colorize(code.textContent ?? "", lang, {}).then(
+      (html) => (code.innerHTML = html),
+      () => {},
+    );
   }
   root.addEventListener("click", (e) => {
     const a = (e.target as HTMLElement).closest("a");
