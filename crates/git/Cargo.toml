@@ -1,6 +1,6 @@
 [package]
 name = "gittor-git"
-version = "0.1.1"
+version = "0.1.2"
 edition.workspace = true
 license.workspace = true
 description = "Reads repository data through the git CLI for Gittor"
