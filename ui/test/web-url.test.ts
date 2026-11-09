@@ -23,3 +23,12 @@ test("branch and commit pages per host", () => {
   assert.equal(commitUrl("https://gitlab.com/o/r", "abc"), "https://gitlab.com/o/r/-/commit/abc");
   assert.equal(commitUrl("https://bitbucket.org/o/r", "abc"), "https://bitbucket.org/o/r/commits/abc");
 });
+
+test("the host of Azure DevOps needs the whole name", () => {
+  const azure = "https://dev.azure.com/org/p/_git/r?version=GBmain";
+  assert.equal(branchUrl("https://dev.azure.com/org/p/_git/r", "main"), azure);
+  assert.equal(branchUrl("https://org.visualstudio.com/p/_git/r", "main"), "https://org.visualstudio.com/p/_git/r?version=GBmain");
+  // A name that only ends with the letters of the host is not Azure DevOps: it gets the GitHub paths.
+  assert.equal(branchUrl("https://evildev.azure.com/o/r", "main"), "https://evildev.azure.com/o/r/tree/main");
+  assert.equal(branchUrl("https://notvisualstudio.com/o/r", "main"), "https://notvisualstudio.com/o/r/tree/main");
+});

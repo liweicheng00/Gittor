@@ -36,11 +36,16 @@ export function webUrl(remote: string): string | null {
 
 type Host = "github" | "gitlab" | "bitbucket" | "azure";
 
+/** True when `host` is `domain`, or a name under it. `evildev.azure.com` is neither. */
+const atDomain = (host: string, domain: string) => host === domain || host.endsWith(`.${domain}`);
+
 function hostKind(web: string): Host {
   const host = new URL(web).hostname;
+  // A self-hosted GitLab or Bitbucket has any name, so these two match a part of the name.
   if (host.includes("gitlab")) return "gitlab";
   if (host.includes("bitbucket")) return "bitbucket";
-  if (host.endsWith("dev.azure.com") || host.endsWith("visualstudio.com")) return "azure";
+  // Azure DevOps has two names: dev.azure.com and the older <org>.visualstudio.com.
+  if (atDomain(host, "dev.azure.com") || atDomain(host, "visualstudio.com")) return "azure";
   // GitHub, Gitea, Forgejo, Gogs and most others use the GitHub paths.
   return "github";
 }
