@@ -36,6 +36,8 @@ export interface Settings {
   /** The Submodules section of the Changes tab shows its header only. */
   submodulesCollapsed: boolean;
   sideBySide: boolean;
+  /** A Markdown file shows rendered in the diff panel, not as source. */
+  markdownPreview: boolean;
   ignoreWhitespace: boolean;
   collapseUnchanged: boolean;
   sidebarWidth: number;
@@ -124,6 +126,7 @@ const DEFAULTS: Settings = {
   localChangesAsTree: true,
   submodulesCollapsed: false,
   sideBySide: true,
+  markdownPreview: true,
   ignoreWhitespace: false,
   collapseUnchanged: false,
   sidebarWidth: 280,

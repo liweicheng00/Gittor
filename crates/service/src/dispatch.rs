@@ -97,6 +97,7 @@ impl Service {
             "merged_branches" => serde_json::to_string(&self.merged_branches(parse(body)?)?),
             "compare_refs" => serde_json::to_string(&self.compare_refs(parse(body)?)?),
             "file_pair" => serde_json::to_string(&self.file_pair(parse(body)?)?),
+            "image_data" => serde_json::to_string(&self.image_data(parse(body)?)?),
             _ => return Err(format!("unknown command {cmd}")),
         };
         out.map_err(err)

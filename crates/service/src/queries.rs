@@ -1,6 +1,6 @@
 //! The read commands.
 
-use crate::{err, history, watch, BlameArgs, BlobArgs, CompareArgs, CompareRefsArgs, MergedBranchesArgs, MergedIntoArgs, UrlArgs, TagArgs, RemoteArgs, ReviewArgs, ReviewEdit, CompareResult, FilePair, FilePairArgs, IndexArgs, OidArgs, PathArgs, PushInfoArgs, Result, RevSpec, Service};
+use crate::{err, history, watch, BlameArgs, BlobArgs, CompareArgs, CompareRefsArgs, MergedBranchesArgs, MergedIntoArgs, UrlArgs, TagArgs, RemoteArgs, ReviewArgs, ReviewEdit, CompareResult, FilePair, FilePairArgs, IndexArgs, ImageArgs, OidArgs, PathArgs, PushInfoArgs, Result, RevSpec, Service};
 use gittor_git::changelist::{ChangeListOp, LocalChanges};
 use gittor_git::history::{Blame, HistoryEntry};
 use gittor_git::merge::MergeSides;
@@ -280,6 +280,11 @@ impl Service {
             let (l, r) = (Self::rev(repo, &args.left)?, Self::rev(repo, &args.right)?);
             Ok(CompareResult { changes: repo.list_changes(&l, &r).map_err(err)? })
         })
+    }
+
+    /// An image of the repository as a `data:` URL, for the Markdown preview. Null when it is not there.
+    pub fn image_data(&self, args: ImageArgs) -> Result<Option<String>> {
+        self.with_repo(|repo| repo.image_data(&Self::rev(repo, &args.rev)?, &args.path).map_err(err))
     }
 
     pub fn file_pair(&self, args: FilePairArgs) -> Result<FilePair> {

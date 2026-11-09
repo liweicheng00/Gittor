@@ -4,9 +4,11 @@ import { revertChange } from "./revert-change";
 import * as monaco from "./monaco";
 import "monaco-editor/esm/vs/basic-languages/monaco.contribution";
 import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
-import type { Blame, Change, FileContent, RevSpec } from "./api";
+import { api, type Blame, type Change, type FileContent, type RevSpec } from "./api";
 import { statusName } from "./changes-panel";
 import { copyText, h, icon } from "./dom";
+import { markBlocks, removedAnchors } from "./markdown-model";
+import { blocksOf, renderMarkdown } from "./markdown-preview";
 import { NoteLayer, type NoteHandlers, type NoteItem } from "./note-layer";
 import { save, settings } from "./settings";
 
@@ -40,6 +42,15 @@ export class DiffView {
   /** Created on first use: most files are shown in the diff editor. */
   private singleEditor: monaco.editor.IStandaloneCodeEditor | null = null;
   private singleHost: HTMLElement;
+  /** The rendered Markdown in place of the editors, and its toggle. */
+  private previewHost: HTMLElement;
+  private previewBtn: HTMLButtonElement;
+  /** The texts of a Markdown file on show; null for other files. */
+  private markdown: { left: string; right: string; kind: "diff" | "added" | "deleted" } | null = null;
+  /** The editor that shows the file when the preview is off. */
+  private editorMode: "diff" | "single" = "diff";
+  /** In one column: the blocks of the old text, which a diff puts between the new blocks. */
+  private oldBlocks: { el: HTMLElement; block: [number, number] }[] = [];
   private path = "";
   /** The file and revision that Annotate shows: the right side, or the left side of a deleted file. */
   private source: { path: string; rev: RevSpec } | null = null;
@@ -108,6 +119,12 @@ export class DiffView {
     this.historyBtn = btn(icon("history"), "Show the history of this file", () => this.source && this.onHistory(this.source.path));
     const editBtn = btn(icon("edit"), "Open in the editor (F4)", () => this.openInEditor(), "openInEditor");
     editBtn.classList.add("diff-open-editor");
+    this.previewBtn = h("button", { class: "tb-button diff-preview-toggle", hidden: true }, "Preview");
+    this.previewBtn.addEventListener("click", () => {
+      settings.markdownPreview = !settings.markdownPreview;
+      save();
+      this.renderPreview(true);
+    });
     const toolbar = h(
       "div",
       { class: "diff-toolbar" },
@@ -122,6 +139,7 @@ export class DiffView {
       this.stats,
       h("span", { class: "spacer" }),
       this.sides,
+      this.previewBtn,
       annotate,
       toggle("Side by side", "sideBySide", "Show the two versions side by side, or in one column"),
       toggle("Ignore whitespace", "ignoreWhitespace", "Ignore leading and trailing whitespace changes"),
@@ -131,7 +149,8 @@ export class DiffView {
     this.notice = h("div", { class: "diff-notice" });
     this.host = h("div", { class: "diff-host" });
     this.singleHost = h("div", { class: "diff-host", hidden: true });
-    this.el = h("section", { class: "diff" }, toolbar, h("div", { class: "diff-area" }, this.notice, this.host, this.singleHost));
+    this.previewHost = h("div", { class: "diff-host md-preview", hidden: true, tabIndex: 0 });
+    this.el = h("section", { class: "diff" }, toolbar, h("div", { class: "diff-area" }, this.notice, this.host, this.singleHost, this.previewHost));
     this.editor = monaco.editor.createDiffEditor(this.host, {
       readOnly: true,
       originalEditable: false,
@@ -151,6 +170,7 @@ export class DiffView {
       this.renderListHunks();
       this.renderNotes();
       this.renderRevert();
+      this.markPreview();
     });
     this.trackCursor(this.editor.getModifiedEditor());
     this.editor.getModifiedEditor().onMouseDown((ev) => {
@@ -287,9 +307,12 @@ export class DiffView {
     });
     // The revert buttons move with the layout.
     if (this.revertKey) this.renderRevert();
+    // Side by side also chooses one or two columns of the preview.
+    if (this.previewHost && !this.previewHost.hidden) this.renderPreview(true);
   }
 
   goToDiff(target: "next" | "previous") {
+    if (!this.previewHost.hidden) return this.previewGo(target);
     this.editor.goToDiff(target);
   }
 
@@ -562,7 +585,11 @@ export class DiffView {
     this.blameEditor = editor;
   }
 
+  /** The names of the two sides, for the toolbar and the labels of the preview columns. */
+  private sideNames: [string, string] = ["", ""];
+
   setSides(left: string, right: string) {
+    this.sideNames = [left, right];
     this.sides.textContent = `${left}  ⟷  ${right}`;
   }
 
@@ -579,6 +606,8 @@ export class DiffView {
     this.notice.textContent = text;
     this.notice.hidden = false;
     this.setModels("", "", undefined);
+    this.markdown = null;
+    this.renderPreview();
   }
 
   show(change: Change, left: FileContent, right: FileContent) {
@@ -592,7 +621,7 @@ export class DiffView {
     this.noteLayer.clear();
     queueMicrotask(() => void this.annotate());
     // The same file again (for example after it changed on disk): keep the scroll position.
-    const same = change.path === this.path && this.notice.hidden && this.singleHost.hidden;
+    const same = change.path === this.path && this.notice.hidden && this.editorMode === "diff";
     this.keepView = same ? this.editor.getModifiedEditor().saveViewState() : null;
     const ed = this.editor.getModifiedEditor();
     this.keepScroll = same ? { top: ed.getScrollTop(), left: ed.getScrollLeft() } : null;
@@ -613,15 +642,116 @@ export class DiffView {
     if (tooBig(left) || tooBig(right)) return this.showNotice("The file is larger than 5 MB. The diff is not shown.");
     this.notice.hidden = true;
     const lang = languageFor(change.path);
-    if (left.missing !== right.missing) {
-      this.showSingle(right.missing ? left.text ?? "" : right.text ?? "", lang, right.missing ? "deleted" : "added");
+    const kind = left.missing === right.missing ? "diff" : right.missing ? "deleted" : "added";
+    this.markdown = lang === "markdown" ? { left: left.text ?? "", right: right.text ?? "", kind } : null;
+    if (kind !== "diff") this.showSingle(kind === "deleted" ? left.text ?? "" : right.text ?? "", lang, kind);
+    else this.setModels(left.text ?? "", right.text ?? "", lang);
+    this.renderPreview(same);
+  }
+
+  /**
+   * Shows the rendered Markdown in place of the editors when the file is Markdown and the preview is on;
+   * else the editor of the file. `keep` keeps the scroll position, for the same file.
+   */
+  private renderPreview(keep = false) {
+    const on = !!this.markdown && settings.markdownPreview;
+    this.previewBtn.hidden = !this.markdown;
+    this.previewBtn.classList.toggle("on", on);
+    this.previewBtn.title = on ? "Show the Markdown source" : "Show the rendered Markdown";
+    // Annotate needs the lines of the source.
+    this.annotateBox.disabled = on;
+    if (!on || !this.markdown) {
+      const was = !this.previewHost.hidden;
+      this.previewHost.hidden = true;
+      this.previewHost.replaceChildren();
+      this.oldBlocks = [];
+      if (this.notice.hidden) {
+        this.host.hidden = this.editorMode !== "diff";
+        this.singleHost.hidden = this.editorMode !== "single";
+        if (was && this.annotateBox.checked) void this.annotate();
+      }
       return;
     }
-    this.setModels(left.text ?? "", right.text ?? "", lang);
+    const top = keep ? this.previewHost.scrollTop : 0;
+    this.host.hidden = true;
+    this.singleHost.hidden = true;
+    this.previewHost.hidden = false;
+    const source = this.source;
+    const ctx = {
+      dir: this.path.includes("/") ? this.path.slice(0, this.path.lastIndexOf("/")) : "",
+      loadImage: source ? (p: string) => api.imageData(source.rev, p) : null,
+      openUrl: (url: string) => void api.openUrl(url),
+    };
+    const m = this.markdown;
+    const column = (text: string, label: string) => {
+      const doc = renderMarkdown(text, ctx);
+      return { doc, el: h("div", { class: "md-col" }, h("div", { class: "md-col-label" }, label), doc) };
+    };
+    this.oldBlocks = [];
+    let cols: HTMLElement[];
+    if (m.kind !== "diff") {
+      cols = [column(m.kind === "deleted" ? m.left : m.right, m.kind === "deleted" ? "Deleted file" : "New file").el];
+    } else if (settings.sideBySide) {
+      cols = [column(m.left, this.sideNames[0] || "Before").el, column(m.right, this.sideNames[1] || "After").el];
+    } else {
+      // One column: the old blocks that a change removed show between the new blocks.
+      this.oldBlocks = blocksOf(renderMarkdown(m.left, ctx));
+      cols = [column(m.right, this.sideNames[1] || "After").el];
+    }
+    this.previewHost.replaceChildren(h("div", { class: `md-cols md-cols-${cols.length}` }, ...cols));
+    this.previewHost.scrollTop = top;
+    this.markPreview();
+  }
+
+  /** Marks the blocks that the diff changed: green added, red removed, yellow changed. */
+  private markPreview() {
+    if (this.previewHost.hidden || this.markdown?.kind !== "diff") return;
+    const changes = this.editor.getLineChanges() ?? [];
+    const docs = [...this.previewHost.querySelectorAll<HTMLElement>(".md-col > .md-body")];
+    const mark = (blocks: { el: HTMLElement; block: [number, number] }[], side: "original" | "modified") => {
+      const marks = markBlocks(blocks.map((b) => b.block), changes, side);
+      blocks.forEach((b, i) => {
+        b.el.classList.remove("md-added", "md-removed", "md-changed");
+        const m = marks[i];
+        if (m) b.el.classList.add(`md-${m}`);
+      });
+    };
+    if (docs.length === 2) {
+      mark(blocksOf(docs[0]), "original");
+      mark(blocksOf(docs[1]), "modified");
+      return;
+    }
+    const doc = docs[0];
+    for (const b of this.oldBlocks) b.el.remove();
+    const blocks = blocksOf(doc);
+    mark(blocks, "modified");
+    const anchors = removedAnchors(this.oldBlocks.map((b) => b.block), changes);
+    this.oldBlocks.forEach((b, i) => {
+      const at = anchors[i];
+      if (at === null) return;
+      b.el.classList.remove("md-added", "md-changed");
+      b.el.classList.add("md-removed");
+      // Before the new block that holds the line, so the old text comes first, as in a diff.
+      const before = blocks.find((x) => x.block[1] >= at)?.el;
+      if (before) doc.insertBefore(b.el, before);
+      else doc.append(b.el);
+    });
+  }
+
+  /** Scrolls the preview to the next or the previous marked block (F7, Shift+F7). */
+  private previewGo(target: "next" | "previous") {
+    const box = this.previewHost.getBoundingClientRect();
+    const tops = [...this.previewHost.querySelectorAll<HTMLElement>(".md-added, .md-removed, .md-changed")]
+      .map((el) => el.getBoundingClientRect().top - box.top + this.previewHost.scrollTop)
+      .sort((a, b) => a - b);
+    const now = this.previewHost.scrollTop + 24;
+    const to = target === "next" ? tops.find((t) => t > now + 4) : [...tops].reverse().find((t) => t < now - 4);
+    if (to !== undefined) this.previewHost.scrollTop = Math.max(0, to - 24);
   }
 
   /** An added or deleted file: its whole content in one editor, marked as added or removed. */
   private showSingle(text: string, lang: string | undefined, kind: "added" | "deleted") {
+    this.editorMode = "single";
     this.host.hidden = true;
     this.singleHost.hidden = false;
     const old = this.single.getModel();
@@ -645,6 +775,8 @@ export class DiffView {
     this.notice.textContent = text;
     this.notice.hidden = false;
     this.setModels("", "", undefined);
+    this.markdown = null;
+    this.renderPreview();
   }
 
   /** The file and the texts that the diff shows, to skip a show of the same diff. */
@@ -665,6 +797,7 @@ export class DiffView {
       this.keepView = null;
       return;
     }
+    this.editorMode = "diff";
     this.host.hidden = false;
     this.singleHost.hidden = true;
     this.editor.setModel({ original: monaco.editor.createModel(a, lang), modified: monaco.editor.createModel(b, lang) });

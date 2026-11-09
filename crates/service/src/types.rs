@@ -233,6 +233,12 @@ pub struct CompareResult {
 }
 
 #[derive(Deserialize)]
+pub struct ImageArgs {
+    pub rev: RevSpec,
+    pub path: String,
+}
+
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FilePairArgs {
     pub left: RevSpec,

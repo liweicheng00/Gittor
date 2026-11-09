@@ -395,6 +395,84 @@ impl Repo {
         let text = if binary || size > MAX_TEXT_SIZE { None } else { Some(String::from_utf8_lossy(&bytes).into_owned()) };
         Ok(FileContent { text, binary, size, missing: false, note })
     }
+
+    /// An image of the repository as a `data:` URL, for the Markdown preview. None when the file is not
+    /// there, is not an image type that the preview shows, or is larger than 5 MB. The path is relative
+    /// to the root; an absolute path or a `..` part is refused, so no file outside the repository is read.
+    pub fn image_data(&self, rev: &Rev, path: &str) -> Result<Option<String>> {
+        let p = std::path::Path::new(path);
+        if path.is_empty() || p.is_absolute() || p.components().any(|c| !matches!(c, std::path::Component::Normal(_))) {
+            return Err(GitError(format!("{path} is not a path inside the repository")));
+        }
+        let ext = path.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
+        let Some(mime) = image_mime(&ext) else { return Ok(None) };
+        let mut bytes = match rev {
+            Rev::WorkTree => match std::fs::read(self.root.join(p)) {
+                Ok(b) => b,
+                Err(_) => return Ok(None),
+            },
+            Rev::EmptyTree => return Ok(None),
+            Rev::Commit(oid) => match self.git(&["show", &format!("{oid}:{path}")]) {
+                Ok(b) => b,
+                Err(_) => return Ok(None),
+            },
+        };
+        if let Some((oid, _)) = submodule::lfs_pointer(&bytes) {
+            match self.lfs_object(&oid) {
+                Some(real) => bytes = real,
+                None => return Ok(None),
+            }
+        }
+        if bytes.len() > MAX_TEXT_SIZE {
+            return Ok(None);
+        }
+        Ok(Some(format!("data:{mime};base64,{}", base64(&bytes))))
+    }
+}
+
+/// The media type of an image file extension that the Markdown preview shows.
+fn image_mime(ext: &str) -> Option<&'static str> {
+    Some(match ext {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "avif" => "image/avif",
+        "bmp" => "image/bmp",
+        "ico" => "image/x-icon",
+        // An SVG in an <img> runs no scripts and loads nothing.
+        "svg" => "image/svg+xml",
+        _ => return None,
+    })
+}
+
+/// Standard base64 with padding.
+fn base64(bytes: &[u8]) -> String {
+    const A: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let n = (chunk[0] as u32) << 16 | (*chunk.get(1).unwrap_or(&0) as u32) << 8 | *chunk.get(2).unwrap_or(&0) as u32;
+        out.push(A[(n >> 18) as usize & 63] as char);
+        out.push(A[(n >> 12) as usize & 63] as char);
+        out.push(if chunk.len() > 1 { A[(n >> 6) as usize & 63] as char } else { '=' });
+        out.push(if chunk.len() > 2 { A[n as usize & 63] as char } else { '=' });
+    }
+    out
+}
+
+#[cfg(test)]
+mod image_tests {
+    use super::base64;
+
+    #[test]
+    fn base64_matches_the_standard() {
+        assert_eq!(base64(b""), "");
+        assert_eq!(base64(b"f"), "Zg==");
+        assert_eq!(base64(b"fo"), "Zm8=");
+        assert_eq!(base64(b"foo"), "Zm9v");
+        assert_eq!(base64(b"foobar"), "Zm9vYmFy");
+        assert_eq!(base64(&[0xff, 0xfe, 0x00]), "//4A");
+    }
 }
 
 #[derive(Clone, Debug, Serialize)]

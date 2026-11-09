@@ -84,6 +84,13 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   on; without handlers it is off, so the History window does not get it. Line 0 is a note on the whole
   file; its field is under the list of notes. `note-format.ts` makes the text for the clipboard.
   A resolved note (`resolved`) shows as an icon only (`.note-chip`); a click opens it. Copy All skips it.
+- Markdown preview in `DiffView` (`renderPreview`, the toggle `.diff-preview-toggle`, the setting
+  `markdownPreview`, on by default). `markdown-preview.ts` renders with markdown-it and DOMPurify: no
+  styles, forms, frames or media, and no network images (the CSP allows only `'self'` and `data:`). An
+  image of the repository loads with `api.imageData` (a `data:` URL; the backend refuses `..` and
+  absolute paths). Each top-level block has `data-src="start-end"`; `markdown-model.ts` (unit tests)
+  marks the blocks that Monaco's line changes touch, and places removed blocks in one column. Code
+  blocks get the colors of `monaco.editor.colorizeElement`. The note layer and Annotate need the source.
 - Notes on local changes: `crates/git/src/local_notes.rs` (`gittor/local-notes.json` of the worktree).
   The notes of a file keep the git hash of its content; when the file changes, they go away.
   `showLocalDiff` in `commit-flow.ts` gives them to the same note layer.

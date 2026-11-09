@@ -363,6 +363,8 @@ export const api = {
   compare: (left: RevSpec, right: RevSpec) => call<{ changes: Change[] }>("compare", { left, right }),
   filePair: (left: RevSpec, right: RevSpec, path: string, oldPath: string | null) =>
     call<{ left: FileContent; right: FileContent }>("file_pair", { left, right, path, oldPath }),
+  /** An image of the repository as a data: URL, for the Markdown preview; null when it is not there. */
+  imageData: (rev: RevSpec, path: string) => call<string | null>("image_data", { rev, path }),
 };
 
 /** Calls `handler` for each event of the backend: in the app a window event, in a browser a server-sent
