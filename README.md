@@ -167,7 +167,8 @@ parts of the repository protect it:
 
 - Each action of the workflows is pinned to the commit of a release. Dependabot proposes new commits.
 - The release workflow uses no cache. npm and cargo use the lock files only (`npm ci`, `--locked`).
-- The `audit` job of CI checks the npm packages and the crates for known vulnerabilities.
+- The Security workflow checks the npm packages and the crates for known vulnerabilities, and scans the
+  code with CodeQL. It runs at each release tag and once a week.
 - The release has a provenance record from GitHub. Check a file with
   `gh attestation verify <file> --repo liweicheng00/Gittor`.
 

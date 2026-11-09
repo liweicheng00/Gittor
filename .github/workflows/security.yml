@@ -1,0 +1,66 @@
+# Checks the security of the code before a release: CodeQL finds vulnerable patterns, and the deps job
+# finds known advisories in the npm packages and the crates. A tag v<version> starts the checks, and a
+# weekly run finds a new advisory against code that did not change. Run it by hand (workflow_dispatch)
+# before scripts/release.sh, so a finding comes before the tag, not after it.
+#
+# The CodeQL jobs replace the default setup of code scanning. Each language needs no build
+# (build-mode: none), so these jobs install nothing. The results go to the Security tab; CodeQL does
+# not fail the job. The deps job does fail, because an advisory means "do not ship this".
+#
+# Each action is pinned to the commit of a release: a tag can move, a commit cannot. Dependabot
+# (.github/dependabot.yml) proposes new commits.
+name: Security
+
+on:
+  push:
+    tags: ["v*"]
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        # javascript-typescript covers the UI and the e2e scenarios. The aliases javascript and
+        # typescript name the same analysis, so the list does not need them.
+        language: [actions, javascript-typescript, rust]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: github/codeql-action/init@f3bbb05694c2f74569081c28664c0866d64dec21 # v4.39.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+      - uses: github/codeql-action/analyze@f3bbb05694c2f74569081c28664c0866d64dec21 # v4.39.3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  # Known vulnerabilities in the npm packages and the crates, and crates that no code uses. An
+  # advisory that .cargo/audit.toml does not ignore fails the job, also a warning.
+  deps:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - run: npm --prefix ui audit --audit-level=high
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - run: cargo install --locked cargo-audit@0.22.2
+      - run: cargo audit --deny warnings
+      # Crates in a Cargo.toml that no code uses.
+      - run: cargo install --locked cargo-machete@0.9.2
+      - run: cargo machete

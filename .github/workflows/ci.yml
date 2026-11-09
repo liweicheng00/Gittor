@@ -1,7 +1,8 @@
 # Tests each push to main and each pull request: the Rust tests, clippy, the types of the UI, the unit
 # tests of the UI, and all UI scenarios in Chromium. Four machines run the scenarios in parallel, each
-# one part (GITTOR_E2E_SHARD); ui/e2e/durations.txt makes the parts about equal in time. The audit job
-# checks the dependencies for known vulnerabilities.
+# one part (GITTOR_E2E_SHARD); ui/e2e/durations.txt makes the parts about equal in time.
+#
+# The security checks run before a release, not here: see .github/workflows/security.yml.
 #
 # Each action is pinned to the commit of a release: a tag can move, a commit cannot. Dependabot
 # (.github/dependabot.yml) proposes new commits.
@@ -11,6 +12,9 @@ on:
   push:
     branches: [main]
   pull_request:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -49,23 +53,6 @@ jobs:
       - run: npm test
         working-directory: ui
 
-  # Known vulnerabilities in the npm packages and the crates, and crates that no code uses. An
-  # advisory that .cargo/audit.toml does not ignore fails the job, also a warning.
-  audit:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 22
-      - run: npm --prefix ui audit --audit-level=high
-      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
-      - run: cargo install --locked cargo-audit@0.22.2
-      - run: cargo audit --deny warnings
-      # Crates in a Cargo.toml that no code uses.
-      - run: cargo install --locked cargo-machete@0.9.2
-      - run: cargo machete
-
   e2e:
     name: e2e (${{ matrix.shard }}/4)
     runs-on: ubuntu-24.04
@@ -90,6 +77,13 @@ jobs:
           git config --global user.email "ci@example.com"
           git config --global init.defaultBranch main
       - run: npm --prefix ui ci
+      # The browser of Playwright is about 170 MB. The cache keeps the download out of each run; the
+      # key is the lock file, because the version of Playwright comes from there. The install step
+      # still runs: it puts the system libraries of the browser in place, which the cache does not hold.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
       - run: npx playwright install --with-deps chromium
         working-directory: ui
       # The scenarios measure text, for example the left tabs. Inter is the font of the machines that

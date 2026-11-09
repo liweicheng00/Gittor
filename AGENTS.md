@@ -115,9 +115,13 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   `main.ts`, only in the app); a first start with empty storage takes them from there and loads again.
 - CI: `.github/workflows/ci.yml` runs the tests, clippy, the types, the unit tests and all UI
   scenarios on each push to main, the scenarios in 4 parts on 4 machines. Failed scenarios run once
-  more alone. The `audit` job runs `npm audit`, `cargo audit --deny warnings` (ignored advisories with
-  their reasons in `.cargo/audit.toml`) and `cargo machete` (crates that no code uses). Remove a
-  dependency when its last use goes.
+  more alone.
+- Security checks: `.github/workflows/security.yml`, not CI. A tag `v<version>` and a weekly run start
+  them; `workflow_dispatch` runs them by hand before `scripts/release.sh`. The `codeql` job scans
+  `actions`, `javascript-typescript` and `rust` with no build (`build-mode: none`), and writes to the
+  Security tab; it does not fail. The `deps` job runs `npm audit`, `cargo audit --deny warnings`
+  (ignored advisories with their reasons in `.cargo/audit.toml`) and `cargo machete` (crates that no
+  code uses), and it does fail. Remove a dependency when its last use goes.
 - Recent repositories: `settings.recent` and `settings.recentProjects` (the main repository of each path).
   `recent-groups.ts` puts them in groups by project and keeps 12 projects with 8 worktrees each, so many
   worktrees do not push other projects out. `recent.ts` gives the rows of the Open menu and the welcome
