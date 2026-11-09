@@ -83,9 +83,12 @@ async function showCommitFile(oid: string, path: string) {
   if (!(await jumpToOid(oid, true))) app.pendingPath = null;
 }
 
-export function showSelection(rows: Row[]) {
+export function showSelection(rows: Row[], auto = false) {
   // The log can report a selection after its repository closed: there is nothing to show then.
   if (!app.view) return;
+  // The app selects the head commit when a repository has loaded. The user can open a local change
+  // while it loads: that change keeps the diff panel, and no commit is selected.
+  if (auto && app.diffSource === "local") return log.dropSelection();
   app.selected = rows;
   stashPanel.clearSelection();
   app.diffSource = "log";

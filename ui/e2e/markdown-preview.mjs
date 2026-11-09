@@ -77,6 +77,9 @@ await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=
 await page.waitForSelector(".log-row", { timeout: 30000 });
 await page.click(".lp-tab:text-is('Changes')");
 await page.click(".cl-file:has(.path:text-is('guide.md'))");
+// The repository selects its head commit when it has loaded. That must not take the diff panel from
+// the local change that the user opened in the meantime.
+await within("the diff shows the local change", async () => ((await page.textContent(".diff-title")) ?? "").includes("M docs/guide.md"));
 
 // Preview by default, side by side: the old text at the left, the new text at the right.
 await within("a Markdown file shows its preview", async () => (await page.isVisible(preview)) && (await count(`${preview} .md-cols-2 .md-body`)) === 2);
@@ -86,8 +89,10 @@ await within("the diff marks the blocks", async () =>
   (await count(`${preview} .md-col:last-child .md-added`)) >= 1 &&
   (await count(`${preview} .md-col:first-child .md-removed`)) >= 1 &&
   (await count(`${preview} .md-col:last-child .md-changed`)) >= 1);
-check("the new paragraph is marked as added", ((await page.textContent(`${preview} .md-col:last-child .md-added`)) ?? "").includes("A new paragraph"));
-check("the old paragraph is marked as removed", ((await page.textContent(`${preview} .md-col:first-child .md-removed`)) ?? "").includes("Old paragraph"));
+// A missing mark must fail the check, not stop the scenario with a timeout: the other checks tell more.
+const text = (sel) => page.textContent(sel, { timeout: 2000 }).catch(() => "");
+check("the new paragraph is marked as added", ((await text(`${preview} .md-col:last-child .md-added`)) ?? "").includes("A new paragraph"));
+check("the old paragraph is marked as removed", ((await text(`${preview} .md-col:first-child .md-removed`)) ?? "").includes("Old paragraph"));
 
 // The content: images, scripts, code, task lists.
 await within("an image of the repository loads as data", async () => (await count(`${preview} .md-col:last-child img[src^="data:image/png"]`)) === 1);

@@ -77,13 +77,8 @@ jobs:
           git config --global user.email "ci@example.com"
           git config --global init.defaultBranch main
       - run: npm --prefix ui ci
-      # The browser of Playwright is about 170 MB. The cache keeps the download out of each run; the
-      # key is the lock file, because the version of Playwright comes from there. The install step
-      # still runs: it puts the system libraries of the browser in place, which the cache does not hold.
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('ui/package-lock.json') }}
+      # This step needs 19 s: 13 s for apt and 5 s for the download. A cache of the browser holds the
+      # download only, so it saves about 3 s of a job of 180 s. AGENTS.md says why Gittor has none.
       - run: npx playwright install --with-deps chromium
         working-directory: ui
       # The scenarios measure text, for example the left tabs. Inter is the font of the machines that

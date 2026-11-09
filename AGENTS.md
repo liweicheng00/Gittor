@@ -122,6 +122,11 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   Security tab; it does not fail. The `deps` job runs `npm audit`, `cargo audit --deny warnings`
   (ignored advisories with their reasons in `.cargo/audit.toml`) and `cargo machete` (crates that no
   code uses), and it does fail. Remove a dependency when its last use goes.
+  The workflow replaced the default setup of code scanning. GitHub turned the default setup off by
+  itself, because the repository now holds a CodeQL workflow; no command was needed. Both setups find
+  the same rules: 26 for rust, 87 for javascript-typescript, 17 for actions.
+  A cache for the browser of Playwright is not worth it: `playwright install --with-deps` needs 19 s,
+  of which the download is 5 s and `apt` is 13 s, which a cache cannot hold.
 - Recent repositories: `settings.recent` and `settings.recentProjects` (the main repository of each path).
   `recent-groups.ts` puts them in groups by project and keeps 12 projects with 8 worktrees each, so many
   worktrees do not push other projects out. `recent.ts` gives the rows of the Open menu and the welcome
@@ -135,6 +140,10 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
 - Windows (Compare, History, Review, Show Repository): `windows.ts`. A window calls
   `registerWindow(close, kind, show)`, and listens with `onRepoChange`. `watch.ts` calls
   `notifyRepoChange("files" | "repo")`.
+- The first selection: `loadRepo` in `repo.ts` selects the head commit when the repository has loaded
+  (`jumpToOid(target, true, true)`). The user can choose a commit or open a local change while it loads.
+  The log marks that selection as `auto`, and `showSelection` drops it when the diff shows a local change
+  (`app.diffSource === "local"`), so the choice of the user stays.
 - Back and Forward: `nav.ts`. Call `visit({ key, label, open, window })` when a file shows.
 - Settings: `ui/src/settings.ts` (web view storage) for UI options; `crates/service/src/config.rs`
   (`settings.json`) for what the backend needs before the window opens (git program, editor,

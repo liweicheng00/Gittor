@@ -227,6 +227,8 @@ async function loadRepo(r: ViewResult, state: TabState | null) {
   app.lastUndo = null;
   sidebar.setRemoteTags(null, null);
   commitPanel.clear();
+  // The new repository starts at the log; a local change of the last repository does not count.
+  app.diffSource = "log";
   showWorkspace(true);
   await applyView(r, false);
   // The watcher counters now are the base: the events after this reload what changed.
@@ -234,8 +236,8 @@ async function loadRepo(r: ViewResult, state: TabState | null) {
   await loadRefs();
   commitPanel.setTemplate(await api.commitTemplate().catch(() => null));
   const target = state?.selected ?? r.headOid;
-  // The user can choose a commit while the repository loads; that choice stays.
-  if (target && !log.hasSelection()) await jumpToOid(target, true, true);
+  // The user can choose a commit or a local change while the repository loads; that choice stays.
+  if (target && !chosen()) await jumpToOid(target, true, true);
 }
 
 /**
@@ -402,11 +404,16 @@ export async function loadRemoteTags(remote?: string) {
   }
 }
 
+/** True when the user chose what the diff shows: a commit in the log, or a local change. */
+function chosen(): boolean {
+  return log.hasSelection() || app.diffSource === "local";
+}
+
 /** Shows a commit in the log, and selects it when `select` is set. With `unlessChosen`, it does nothing
- * when the user chose a commit while the log looked for this one. */
+ * when the user chose a commit or a local change while the log looked for this one. */
 export async function jumpToOid(oid: string, select: boolean, unlessChosen = false): Promise<boolean> {
   const f = await api.find(oid);
-  if (unlessChosen && log.hasSelection()) return false;
+  if (unlessChosen && chosen()) return false;
   if (f.row === null) {
     if (f.oid) statusActivity.textContent = `Commit ${f.oid.slice(0, 8)} is hidden by the current filter.`;
     return false;
@@ -417,7 +424,7 @@ export async function jumpToOid(oid: string, select: boolean, unlessChosen = fal
     log.reset(f.rowCount, app.view.recommendedWidth, true);
     updateStatus();
   }
-  log.jumpTo(f.row, select);
+  log.jumpTo(f.row, select, unlessChosen);
   return true;
 }
 

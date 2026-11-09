@@ -33,7 +33,8 @@ export class LogView {
   /** Selected rows in click order. */
   selection: number[] = [];
   private anchor = -1;
-  onSelectionChange: (rows: Row[]) => void = () => {};
+  /** `auto` marks a selection that the app made, not the user. */
+  onSelectionChange: (rows: Row[], auto: boolean) => void = () => {};
   /** A double click on a ref label of a row: the log shows only that ref, or all refs again. */
   onRefDoubleClick: (name: string, r: Row) => void | Promise<void> = () => {};
   /** A click on a ref label: it copies the name. The click also selects the row. */
@@ -344,21 +345,29 @@ export class LogView {
     this.render();
   }
 
-  select(rows: number[], anchor = rows[0] ?? -1) {
+  select(rows: number[], anchor = rows[0] ?? -1, auto = false) {
     this.selection = rows;
     this.anchor = anchor;
-    this.changed();
+    this.changed(auto);
   }
 
-  /** Scrolls to a row; with `select`, the row becomes the selection. */
-  jumpTo(row: number, select: boolean) {
+  /** Takes the selection away, for example when the app selected a row that the user did not want. */
+  dropSelection() {
+    this.selection = [];
+    this.anchor = -1;
+    this.render();
+  }
+
+  /** Scrolls to a row; with `select`, the row becomes the selection. `auto` marks a selection of the
+   * app, not of the user. */
+  jumpTo(row: number, select: boolean, auto = false) {
     if (row < 0 || row >= this.rowCount) return;
     const y = row * ROW_HEIGHT;
     const view = this.scroller.clientHeight;
     if (y < this.scroller.scrollTop || y + ROW_HEIGHT > this.scroller.scrollTop + view) {
       this.scroller.scrollTop = Math.max(0, y - view / 3);
     }
-    if (select) this.select([row]);
+    if (select) this.select([row], row, auto);
     this.focus();
   }
 
@@ -423,13 +432,13 @@ export class LogView {
     return rows.filter((r): r is Row => r !== null);
   }
 
-  private changed() {
+  private changed(auto = false) {
     this.render();
     // Wait a moment so fast keyboard navigation does not start a compare for every row.
     clearTimeout(this.selectionTimer);
     this.selectionTimer = window.setTimeout(async () => {
       const rows = await Promise.all([...this.selection].sort((a, b) => a - b).map((i) => this.rowAsync(i)));
-      this.onSelectionChange(rows.filter((r): r is Row => r !== null));
+      this.onSelectionChange(rows.filter((r): r is Row => r !== null), auto);
     }, 60);
   }
 }
