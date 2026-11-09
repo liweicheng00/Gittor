@@ -92,7 +92,8 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   `target/tauri.build.conf.json`, and `main.rs` registers the updater plugin only then. A local
   build stays as before. In a browser, `window.__GITTOR_FAKE_UPDATE__` gives a fake update to the
   `updates` scenario. Releases: `scripts/release.sh [patch|minor|major|<version>]` and
-  `.github/workflows/release.yml`.
+  `.github/workflows/release.yml`. The owner checked on a Mac that 0.1.0 updated itself to 0.1.1
+  and started again.
 - Versions: `scripts/version.mjs` (tested in `ui/test/version.test.ts`). A build at a release tag
   without changes has the release version. Any other build is a test build, for example
   `0.2.1-dev.5+a1b2c3d4`; Settings › General marks it "Test build". `build-dmg.sh` writes the version
@@ -236,5 +237,3 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
 
 - The mouse buttons Back and Forward are not tested in the macOS app (WKWebView).
 - The owner postponed: patches (create and apply).
-- The updater is not tested on a Mac yet: the first release with it must show that an update replaces
-  the app and that the app starts again.
