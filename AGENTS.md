@@ -260,5 +260,6 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
 
 ## Open points
 
-- The mouse buttons Back and Forward are not tested in the macOS app (WKWebView).
+- The mouse buttons Back and Forward are not tested in the macOS app (WKWebView). The owner leaves this
+  until a user reports a problem. Then the fix can catch the buttons in `main.rs` with a native event monitor.
 - The owner does not want patches (create and apply). Do not propose them.
