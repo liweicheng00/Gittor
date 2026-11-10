@@ -72,6 +72,18 @@ await page.keyboard.press("Control+Backquote");
 await within("Mod+` shows the first repository", async () => !(await page.textContent(".tab.on")).includes("-second"));
 await page.keyboard.press("Control+Shift+Backquote");
 await within("Mod+Shift+` shows the second repository again", async () => (await page.textContent(".tab.on")).includes("-second"));
+// Alt+<n> shows the project tab at place n; Alt+9 shows the last one.
+await page.keyboard.press("Alt+1");
+await within("Alt+1 shows the first repository", async () => !(await page.textContent(".tab.on")).includes("-second"));
+await page.keyboard.press("Alt+2");
+await within("Alt+2 shows the second repository", async () => (await page.textContent(".tab.on")).includes("-second"));
+await page.keyboard.press("Alt+1");
+await within("Alt+1 shows the first repository again", async () => !(await page.textContent(".tab.on")).includes("-second"));
+await page.keyboard.press("Alt+9");
+await within("Alt+9 shows the last repository", async () => (await page.textContent(".tab.on")).includes("-second"));
+await page.keyboard.press("Alt+3");
+await page.waitForTimeout(500);
+check("Alt+3 without a third tab does nothing", (await page.textContent(".tab.on")).includes("-second"));
 
 // A reload opens the same tabs, with the second one active.
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/`);

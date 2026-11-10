@@ -27,6 +27,17 @@ const nextTab = (d: number) => {
   const i = settings.tabs.indexOf(settings.activeTab ?? "");
   void switchTab(settings.tabs[(i + d + settings.tabs.length) % settings.tabs.length]);
 };
+/** The project tab at a place of the tab bar, from 1. The key for 9 goes to the last tab, as in a browser. */
+const goToProject = (n: number) => {
+  const root = n === 9 ? settings.tabs.at(-1) : settings.tabs[n - 1];
+  if (root && root !== settings.activeTab) void switchTab(root);
+};
+const projectKeys = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({
+  id: `project${n}`,
+  label: n === 9 ? "Last Project Tab" : `Project Tab ${n}`,
+  defaults: [`Alt+${n}`],
+  run: () => goToProject(n),
+}));
 for (const a of [
   { id: "open", label: "Open Repository", defaults: ["Mod+O"], run: () => void askForRepo() },
   { id: "refresh", label: "Refresh", defaults: ["Mod+R", "F5"], run: () => void refresh() },
@@ -70,6 +81,7 @@ for (const a of [
   { id: "closeProject", label: "Close the Project Tab", defaults: ["Mod+W"], run: () => void closeActiveTab() },
   { id: "switchProject", label: "Switch Project", defaults: ["Mod+`"], run: () => switchProject(1) },
   { id: "switchProjectBack", label: "Switch Project (back)", defaults: ["Mod+Shift+`"], run: () => switchProject(-1) },
+  ...projectKeys,
   { id: "openInEditor", label: "Open in Editor", defaults: ["F4"], run: (t: HTMLElement) => app.view && openInEditorHere(t) },
   { id: "openProjectInEditor", label: "Open the Repository in the Editor", defaults: ["Shift+F4"], run: () => app.view && openProjectInEditor() },
   { id: "openInTerminal", label: "Open in Terminal", defaults: ["Alt+F12"], run: () => app.view && openInTerminal() },
