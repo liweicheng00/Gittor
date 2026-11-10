@@ -275,6 +275,16 @@ commitPanel.onAmendToggle = () => api.headMessage().catch(() => "");
 commitPanel.onCommit = (files, message, amend, list, push, signOff) => void commitFiles(files, message, amend, list, push, signOff);
 
 // A double click on a local change opens the compare window: the current branch and the working tree,
-// with this file first. The window lists all local changes, so the user can go through them there.
+// with this file first. The window lists the files of the changelist of this file only, ".ignore" too.
 // A double click on a file with conflicts opens the merge window.
-commitPanel.onActivate = (f) => (f.change.status === "U" ? void mergeFile(f.change.path) : compareBranches(currentBranch() ?? "HEAD", WORKTREE, f.change.path));
+commitPanel.onActivate = (f) => {
+  if (f.change.status === "U") return void mergeFile(f.change.path);
+  const name = f.list === null ? "Unversioned Files" : (commitPanel.lists.find((l) => l.id === f.list)?.name ?? f.list);
+  // The files come from the backend at each load: a change from outside can reach the window first.
+  const paths = async () => {
+    const local = await api.localChanges();
+    const list = f.list === null ? local.unversioned : (local.lists.find((l) => l.id === f.list)?.changes.map((c) => c.path) ?? []);
+    return new Set(list);
+  };
+  compareBranches(currentBranch() ?? "HEAD", WORKTREE, f.change.path, { name, paths });
+};

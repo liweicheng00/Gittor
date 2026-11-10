@@ -61,6 +61,29 @@ console.log("tree:", await tree());
 check("Docs holds README.md and sub.rs", /Docs ?2 files.*README\.md.*sub\.rs/.test(await tree()));
 await shot("cl2-two-changelists");
 
+// The compare window lists the files of the changelist of the file only.
+const compareFiles = () => page.$$eval(".compare-files .compare-file", (els) => els.map((e) => e.textContent ?? ""));
+const compareOf = async (file) => {
+  await page.dblclick(`.commit-panel .cl-file:has-text('${file}')`);
+  await page.waitForSelector(".history-window[aria-label='Compare Branches']");
+  await within(`the compare window shows ${file}`, async () => ((await page.textContent(".compare-file.selected").catch(() => "")) ?? "").includes(file));
+};
+await compareOf("README.md");
+await within("the compare window of Docs lists README.md and sub.rs only", async () => {
+  const f = await compareFiles();
+  return f.length === 2 && f.some((t) => t.includes("README.md")) && f.some((t) => t.includes("sub.rs"));
+});
+check("the compare window names the changelist", ((await page.textContent(".compare-files-title")) ?? "").includes("2 files in Docs"));
+await shot("cl2b-compare-docs");
+await page.keyboard.press("Escape");
+await compareOf("arith.rs");
+await within("the compare window of Changes has no file of Docs", async () => {
+  const f = await compareFiles();
+  return f.length > 0 && !f.some((t) => t.includes("README.md") || t.includes("sub.rs"));
+});
+check("the compare window names Changes", ((await page.textContent(".compare-files-title")) ?? "").includes("in Changes"));
+await page.keyboard.press("Escape");
+
 // Commit only the Docs changelist.
 await page.click(".cl-header:has-text('Docs')", { button: "right" });
 await shot("cl3-changelist-menu");
@@ -160,6 +183,14 @@ await within("the unversioned file shows in .ignore", async () =>
   })));
 check("git did not add the file", git("ls-files", "scratch.txt") === "" && git("status", "--porcelain", "scratch.txt") === "?? scratch.txt");
 await shot("cl8-ignore-unversioned");
+// The compare window of a file in .ignore lists the files of .ignore only.
+// .ignore holds parser.rs and scratch.txt now.
+await compareOf("scratch.txt");
+const ignored = (await compareFiles()).map((t) => t.replace(/[A-Z?]$/, "")).sort();
+check("the compare window of .ignore lists its files only", JSON.stringify(ignored) === JSON.stringify(["parser.rs", "scratch.txt"]));
+check("the compare window names .ignore", ((await page.textContent(".compare-files-title")) ?? "").includes("2 files in .ignore"));
+await shot("cl8b-compare-ignore");
+await page.keyboard.press("Escape");
 
 console.log("errors:", JSON.stringify(errors));
 await browser.close();

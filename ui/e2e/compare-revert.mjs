@@ -18,6 +18,8 @@ const longLines = Array.from({ length: 300 }, (_, i) => `line ${i + 1}`);
 writeFileSync(`${repo}/long.txt`, longLines.join("\n") + "\n");
 execFileSync("git", ["-C", repo, "add", "long.txt"]);
 execFileSync("git", ["-C", repo, "-c", "commit.gpgsign=false", "commit", "-q", "-m", "Long file"]);
+// The compare window lists the changelist of parser.rs only. git add puts NOTES.txt in it.
+execFileSync("git", ["-C", repo, "add", "NOTES.txt"]);
 const longAtHead = read("long.txt");
 writeFileSync(`${repo}/long.txt`, longAtHead.replace("line 5\n", "LINE 5\n").replace("line 280\n", "LINE 280\n"));
 

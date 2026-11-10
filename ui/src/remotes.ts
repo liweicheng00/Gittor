@@ -2,7 +2,7 @@
 
 import { resetZoom, zoomBy } from "./zoom";
 import { api, type BranchInfo, type Op, type RemoteInfo } from "./api";
-import { openCompare, WORKTREE } from "./compare-view";
+import { type CompareCallbacks, openCompare, WORKTREE } from "./compare-view";
 import { menuBelow, type MenuItem, showMenu } from "./context-menu";
 import { confirmDialog, formDialog } from "./dialogs";
 import { keymap } from "./keyboard";
@@ -72,8 +72,9 @@ export async function manageRemotes() {
   });
 }
 
-/** Opens Compare Branches. The right side can be the working tree. `path` is the file to show first. */
-export function compareBranches(leftRef: string, rightRef: string, path?: string) {
+/** Opens Compare Branches. The right side can be the working tree. `path` is the file to show first.
+ * `scope` limits the files of the working tree to one changelist. */
+export function compareBranches(leftRef: string, rightRef: string, path?: string, scope?: CompareCallbacks["scope"]) {
   const names = [
     ...app.refs.filter((b) => b.kind === "local").map((b) => b.name),
     ...app.refs.filter((b) => b.kind === "remote").map((b) => b.name),
@@ -98,6 +99,7 @@ export function compareBranches(leftRef: string, rightRef: string, path?: string
     writeFile: async (p, text, expected) => !!(await runOp({ op: "writeFile", path: p, text, expected }, `Reverting a change of ${p}`))?.result.ok,
     openInEditor: (p) => void openInEditor(p),
     copyText: (t) => void copyText(t),
+    scope,
   }, path);
 }
 

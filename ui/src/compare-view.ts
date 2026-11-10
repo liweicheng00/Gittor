@@ -30,6 +30,9 @@ export interface CompareCallbacks {
   writeFile: (path: string, text: string, expected: string) => Promise<boolean>;
   openInEditor: (path: string) => void;
   copyText: (text: string) => void;
+  /** One changelist of the local changes. With the working tree on the right, the window lists only the
+   * files of this changelist. `paths` reads them again at each load. */
+  scope?: { name: string; paths: () => Promise<Set<string>> };
 }
 
 /** Opens the window. `path` is the file to show first; without it, the first file. */
@@ -42,6 +45,12 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
   let revs: { l: RevSpec; r: RevSpec } | null = null;
   let selected = -1;
   let request = 0;
+  /** The files of the comparison, without the files of other changelists. */
+  const inScope = async (list: Change[]) => {
+    if (!cb.scope || right !== WORKTREE) return list;
+    const paths = await cb.scope.paths();
+    return list.filter((c) => paths.has(c.path));
+  };
 
   const option = (name: string, value = name) => h("option", { value }, name);
   const leftSel = h("select", { class: "dialog-input compare-select", title: "The left side" }, ...cb.refs.map((r) => option(r)));
@@ -206,7 +215,7 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
   };
 
   const renderFiles = () => {
-    summary.textContent = `${files.length} file${files.length === 1 ? "" : "s"}`;
+    summary.textContent = `${files.length} file${files.length === 1 ? "" : "s"}${cb.scope && right === WORKTREE ? ` in ${cb.scope.name}` : ""}`;
     treeBtn.replaceChildren(icon(settings.compareAsTree ? "list" : "tree"));
     treeBtn.title = settings.compareAsTree ? "Show as a flat list" : "Group by folder";
     if (!settings.compareAsTree) {
@@ -244,7 +253,7 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
     if (!revs) return;
     const at = selected;
     try {
-      files = await cb.changes(revs.l, revs.r);
+      files = await inScope(await cb.changes(revs.l, revs.r));
       files.sort(order);
     } catch (e) {
       return d.message(String(e));
@@ -304,7 +313,7 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
           { label: "Copy Path", action: () => cb.copyText(c.path) },
         ]);
       };
-      files = await cb.changes(l, r);
+      files = await inScope(await cb.changes(l, r));
       files.sort(order);
       if (req !== request) return;
       d.setSides(fromBase ? `common ancestor ${cmp.base?.slice(0, 8) ?? "(none)"}` : left, rightName);
