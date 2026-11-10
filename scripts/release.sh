@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Makes a release: sets the next version in all files, commits, tags and pushes. The tag starts the
+# Makes a release: sets the next version in all files, commits, tags and pushes. The release notes
+# (docs/releases/v<version>.md, see scripts/release-notes.mjs) must exist; the release commit adds them. The tag starts the
 # release workflow on GitHub, which builds, signs and publishes the app and its update.
 # Usage: scripts/release.sh [patch|minor|major|<version>] [--no-push]
 #   patch       the default: 0.2.0 -> 0.2.1. A version that has no release yet is released as it is.
@@ -21,7 +22,10 @@ done
 current=$(node scripts/version.mjs current)
 version=$(node scripts/version.mjs next "$what")
 echo "Release $version (the version before: $current)."
-if [ -n "$(git status --porcelain)" ]; then
+notes="docs/releases/v$version.md"
+node scripts/release-notes.mjs check "$notes"
+# Only the release notes can have changes: the release commit adds them.
+if [ -n "$(git status --porcelain -- . ":(exclude)$notes")" ]; then
   echo "The working tree has changes. Commit or stash them first." >&2
   exit 1
 fi
@@ -61,7 +65,7 @@ done
 # Cargo writes the new versions of the crates into Cargo.lock.
 cargo update --workspace --quiet
 
-git add crates/app/tauri.conf.json crates/*/Cargo.toml Cargo.lock ui/package.json ui/package-lock.json
+git add crates/app/tauri.conf.json crates/*/Cargo.toml Cargo.lock ui/package.json ui/package-lock.json "$notes"
 # The first release of a version that is in the files already changes no file.
 git diff --cached --quiet || git commit -q -m "Release v$version"
 git tag -a "v$version" -m "Gittor $version"

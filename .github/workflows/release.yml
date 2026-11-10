@@ -56,6 +56,8 @@ jobs:
             echo "::error::The tag $GITHUB_REF_NAME is not the version v$version of tauri.conf.json. Use scripts/release.sh."
             exit 1
           fi
+          # The release notes, before the long build.
+          node scripts/release-notes.mjs check "docs/releases/$GITHUB_REF_NAME.md"
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -96,11 +98,11 @@ jobs:
             target/universal-apple-darwin/release/bundle/macos/Gittor.app.tar.gz
 
       - name: Write the release notes
+        # The notes come from docs/releases/<tag>.md, not from the commit messages. Without the file, the
+        # release stops here.
         run: |
-          previous=$(git describe --tags --abbrev=0 "$GITHUB_REF_NAME^" 2>/dev/null || true)
-          range=${previous:+$previous..}$GITHUB_REF_NAME
-          git log --no-merges --format='- %s' "$range" | grep -v '^- Release v' > notes.md || true
-          [ -s notes.md ] || echo "- Gittor ${GITHUB_REF_NAME#v}" > notes.md
+          node scripts/release-notes.mjs github "docs/releases/$GITHUB_REF_NAME.md" > notes.md
+          node scripts/release-notes.mjs update "docs/releases/$GITHUB_REF_NAME.md" > update-notes.md
           cat notes.md
 
       - name: Publish the release
@@ -116,6 +118,6 @@ jobs:
           # releases/latest/download/Gittor.dmg. The copy has the same digest, so the attestation covers it.
           cp "$dmg" Gittor.dmg
           url="https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME/Gittor.app.tar.gz"
-          scripts/latest-json.sh "$version" "$url" Gittor.app.tar.gz.sig notes.md > latest.json
+          scripts/latest-json.sh "$version" "$url" Gittor.app.tar.gz.sig update-notes.md > latest.json
           gh release create "$GITHUB_REF_NAME" --title "Gittor $version" --notes-file notes.md \
             "$dmg" Gittor.dmg Gittor.app.tar.gz Gittor.app.tar.gz.sig latest.json
