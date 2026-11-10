@@ -2,7 +2,7 @@
 
 import { api, type ReviewDetail, type ReviewSummary } from "./api";
 import { openProjectInEditor } from "./editor-flow";
-import type { PickerItem, PickerSection } from "./branch-picker";
+import { branchSections, type PickerSection } from "./branch-picker";
 import { showMenu } from "./context-menu";
 import { confirmDialog, finishReviewDialog, formDialog } from "./dialogs";
 import { runOp } from "./operations";
@@ -14,19 +14,6 @@ import { app } from "./state";
 
 const locals = () => app.refs.filter((b) => b.kind === "local").map((b) => b.name);
 const remotes = () => app.refs.filter((b) => b.kind === "remote" && !b.name.endsWith("/HEAD")).map((b) => b.name);
-
-/** The groups of a branch picker, as in the branch switcher: Recent, Local and Remote. */
-const branchSections = (skip?: string): PickerSection[] => {
-  const cur = app.repoState?.branch;
-  const author = new Map(app.refs.map((b) => [b.name, b.author]));
-  const item = (n: string): PickerItem => ({ value: n, current: n === cur, detail: author.get(n) });
-  const local = locals().filter((n) => n !== skip);
-  return [
-    ["Recent", app.recent.map((r) => r.name).filter((n) => local.includes(n)).map(item)],
-    ["Local", local.map(item)],
-    ["Remote", remotes().filter((n) => n !== skip).map(item)],
-  ];
-};
 
 const BASES = ["main", "master", "develop"];
 const baseName = (n: string) => n.slice(n.indexOf("/") + 1);

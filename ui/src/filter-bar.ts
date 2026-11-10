@@ -1,6 +1,7 @@
 // Filter bar above the log: text or hash, author, path, date and branches.
 
 import type { LogFilter } from "./api";
+import { branchSections, showBranchPicker, type PickerSection } from "./branch-picker";
 import { menuBelow } from "./context-menu";
 import { h, icon } from "./dom";
 
@@ -33,7 +34,6 @@ export class FilterBar {
   private authors: HTMLDataListElement;
   private value: LogFilter = emptyFilter();
   private timer = 0;
-  branchNames: string[] = [];
   onChange: (f: LogFilter) => void = () => {};
   /** Called on Enter in the text box; returns true when the text was a commit that the log jumped to. */
   onJump: (query: string) => Promise<boolean> = async () => false;
@@ -89,18 +89,34 @@ export class FilterBar {
     }, 500);
   }
 
+  /** The shared branch picker, with the options All Branches and No Merges above the branches. A click
+   * checks or clears a branch, and the picker stays open. */
   private branchMenu() {
-    const items = [
-      { label: "All branches", checked: this.value.branches.length === 0, action: () => this.update({ branches: [] }) },
-      { label: "No Merges", checked: !!this.value.noMerges, action: () => this.update({ noMerges: !this.value.noMerges }) },
-      { separator: true as const },
-      ...this.branchNames.slice(0, 60).map((name) => ({
-        label: name,
-        checked: this.value.branches.includes(name),
-        action: () => this.toggleBranch(name),
-      })),
+    const ALL = "\0all";
+    const NO_MERGES = "\0no-merges";
+    const sections = (): PickerSection[] => [
+      [
+        "",
+        [
+          { value: ALL, label: "All branches", current: this.value.branches.length === 0 },
+          { value: NO_MERGES, label: "No Merges", current: !!this.value.noMerges },
+        ],
+      ],
+      ...branchSections().map(([title, items]): PickerSection => [
+        title,
+        items.map((i) => ({ ...i, current: this.value.branches.includes(i.value) })),
+      ]),
     ];
-    menuBelow(this.branchBtn, items);
+    showBranchPicker(
+      this.branchBtn,
+      sections,
+      (v) => {
+        if (v === ALL) this.update({ branches: [] });
+        else if (v === NO_MERGES) this.update({ noMerges: !this.value.noMerges });
+        else this.toggleBranch(v);
+      },
+      { multiple: true },
+    );
   }
 
   /** Shows only this branch in the log. When the log shows only it already, it shows all branches again.
