@@ -1,8 +1,10 @@
 // A popup that picks a branch from groups (for example Recent, Local and Remote), with a search field.
 // It looks like the branch switcher of the toolbar. It works over a dialog too: it handles its keys
-// before the dialog does.
+// before the dialog does. A picker with `multiple` stays open: each click checks or clears a row, as in
+// the branch filter of the log.
 
 import { h, icon } from "./dom";
+import { app } from "./state";
 
 export interface PickerItem {
   value: string;
@@ -14,12 +16,39 @@ export interface PickerItem {
   detail?: string;
 }
 
+/** A group of rows. A group with an empty title has no header, for example the options above the branches. */
 export type PickerSection = [title: string, items: PickerItem[]];
+
+export interface PickerOptions {
+  /** The picker stays open after a click, and shows the new state of the rows. */
+  multiple?: boolean;
+}
+
+/** The groups of a branch picker, as in the branch switcher: Recent, Local and Remote. `skip` leaves out
+ * one branch, for example the branch of a review in the list of its bases. */
+export function branchSections(skip?: string): PickerSection[] {
+  const cur = app.repoState?.branch;
+  const author = new Map(app.refs.map((b) => [b.name, b.author]));
+  const item = (n: string): PickerItem => ({ value: n, current: n === cur, detail: author.get(n) });
+  const local = app.refs.filter((b) => b.kind === "local" && b.name !== skip).map((b) => b.name);
+  const remote = app.refs.filter((b) => b.kind === "remote" && !b.name.endsWith("/HEAD") && b.name !== skip).map((b) => b.name);
+  return [
+    ["Recent", app.recent.map((r) => r.name).filter((n) => local.includes(n)).map(item)],
+    ["Local", local.map(item)],
+    ["Remote", remote.map(item)],
+  ];
+}
 
 let open: (() => void) | null = null;
 
-/** Shows the picker under `anchor`. `onPick` gets the value of the chosen row. */
-export function showBranchPicker(anchor: HTMLElement, sections: PickerSection[], onPick: (value: string) => void) {
+/** Shows the picker under `anchor`. `onPick` gets the value of the chosen row. With `multiple`, give the
+ * sections as a function: the picker reads them again after each click. */
+export function showBranchPicker(
+  anchor: HTMLElement,
+  sections: PickerSection[] | (() => PickerSection[]),
+  onPick: (value: string) => void,
+  options: PickerOptions = {},
+) {
   open?.();
   const search = h("input", { class: "switcher-search", placeholder: "Search branches", spellcheck: false });
   const list = h("div", { class: "switcher-list" });
@@ -31,8 +60,11 @@ export function showBranchPicker(anchor: HTMLElement, sections: PickerSection[],
     open = null;
   };
   const pick = (value: string) => {
-    close();
+    if (!options.multiple) close();
     onPick(value);
+    if (!options.multiple) return;
+    render();
+    search.focus();
   };
   const outside = (e: MouseEvent) => !pop.contains(e.target as Node) && !anchor.contains(e.target as Node) && close();
   // The capture phase of the window comes before the key handlers of a dialog or a window.
@@ -52,15 +84,21 @@ export function showBranchPicker(anchor: HTMLElement, sections: PickerSection[],
     const q = search.value.trim().toLowerCase();
     const match = (i: PickerItem) => !q || (i.label ?? i.value).toLowerCase().includes(q);
     const frag = document.createDocumentFragment();
-    for (const [title, items] of sections) {
-      const shown = items.filter(match);
+    let branches = 0;
+    for (const [title, items] of typeof sections === "function" ? sections() : sections) {
+      // The rows of a group without a title (options) always show.
+      const shown = title ? items.filter(match) : items;
       if (!shown.length) continue;
-      frag.append(h("div", { class: "menu-header" }, title));
+      if (title) {
+        frag.append(h("div", { class: "menu-header" }, title));
+        branches += shown.length;
+      }
       for (const item of shown.slice(0, 80)) {
         const el = h(
           "button",
           { class: "menu-item" + (item.current ? " current" : ""), title: item.value },
-          h("span", { class: "menu-check" }, item.current ? icon("current") : ""),
+          // A picker with `multiple` checks its rows, as a menu does.
+          h("span", { class: "menu-check" }, item.current ? (options.multiple ? "✓" : icon("current")) : ""),
           h("span", { class: "menu-label" }, item.label ?? item.value),
           h("span", { class: "menu-detail branch-author" }, item.detail ?? ""),
         );
@@ -68,7 +106,7 @@ export function showBranchPicker(anchor: HTMLElement, sections: PickerSection[],
         frag.append(el);
       }
     }
-    if (!frag.childNodes.length) frag.append(h("div", { class: "muted" }, "No branches match."));
+    if (!branches) frag.append(h("div", { class: "muted" }, "No branches match."));
     list.replaceChildren(frag);
   };
   search.addEventListener("input", render);

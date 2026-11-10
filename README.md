@@ -135,12 +135,17 @@ works, for example Homebrew git or the git of the Command Line Tools. Settings â
 
 ```sh
 git pull                    # on main, without changes
+node scripts/version.mjs next          # the next version, for example 0.2.1
+$EDITOR docs/releases/v0.2.1.md        # the release notes
 scripts/release.sh          # the next patch version: 0.2.0 -> 0.2.1
 scripts/release.sh minor    # 0.2.1 -> 0.3.0; also "major", or a version such as 1.0.0
 ```
 
 The script finds the next version, sets it in all files, commits, tags it (for example `v0.2.1`) and
-pushes. A version that has no release yet (now 0.1.0) is released as it is. The tag starts the
+pushes. It stops when the release notes are missing or break a rule; `scripts/release-notes.mjs`
+gives the format and the rules, and `.claude/skills/release/SKILL.md` tells how to write them. The
+release page and the update notification show the notes, not the commit messages.
+A version that has no release yet (now 0.1.0) is released as it is. The tag starts the
 `Release` workflow on GitHub (`.github/workflows/release.yml`). It builds the universal app with
 `scripts/build-dmg.sh --universal --updater`, signs and notarizes it, and publishes a release with the
 `.dmg`, `Gittor.app.tar.gz`, its `.sig` and `latest.json`. The apps that run find the update at their

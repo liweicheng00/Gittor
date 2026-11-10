@@ -300,7 +300,6 @@ export async function loadRefs() {
     if (app.view) void refreshTabInfo(app.view.root);
     log.myEmail = (await api.userEmail().catch(() => "")).toLowerCase();
     banner.update(app.repoState);
-    filterBar.branchNames = app.refs.filter((b) => b.kind !== "tag").map((b) => b.name);
     updateStatus();
   } catch (e) {
     // The local changes still load.

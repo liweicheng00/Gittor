@@ -62,8 +62,33 @@ await page.click(".filter-button:has-text('Branch')");
 await page.click(".menu-item:has-text('No Merges')");
 await within("No Merges hides the merge commits", async () => (await count()) === all - Number(merges) && !(await subjects()).some((s) => s.startsWith("Merge")));
 check("the branch button says so", ((await page.textContent(".filter-button.active")) ?? "").includes("no merges"));
+check("the branch picker stays open after a click", (await page.$(".branch-picker")) !== null);
+await page.keyboard.press("Escape");
+check("Escape closes the branch picker", (await page.$(".branch-picker")) === null);
 await page.click(".filter-button .filter-x");
 await within("the ✕ shows the merges again", async () => (await count()) === all);
+
+// The branch filter uses the shared branch picker: groups, a search field, and more than one branch.
+const branchLabel = async () => (await page.textContent(".filter-bar .filter-label")) ?? "";
+const pickerRow = (name) => `.branch-picker .menu-item:has(.menu-label:text-is('${name}'))`;
+await page.click(".filter-button:has-text('Branch')");
+await page.waitForSelector(".branch-picker");
+const headers = await page.$$eval(".branch-picker .menu-header", (els) => els.map((e) => e.textContent));
+check("the picker has the groups of the branch switcher", headers.includes("Local") && headers.includes("Remote"));
+await page.click(pickerRow("feature/cli"));
+await within("a click shows one branch", async () => (await branchLabel()) === "Branch: feature/cli" && (await count()) < all);
+check("the picker marks the branch", (await page.$(`${pickerRow("feature/cli")}.current`)) !== null);
+await page.fill(".branch-picker .switcher-search", "readme");
+check("the search hides the other branches", (await page.$(pickerRow("feature/cli"))) === null && (await page.$(pickerRow("fix/readme"))) !== null);
+check("the options stay during a search", (await page.$(pickerRow("All branches"))) !== null);
+await page.click(pickerRow("fix/readme"));
+await within("a second click adds a branch", async () => (await branchLabel()) === "Branch: 2 selected");
+await page.click(pickerRow("fix/readme"));
+await within("a click on a checked branch removes it", async () => (await branchLabel()) === "Branch: feature/cli");
+await shot("filter-branch-picker");
+await page.click(pickerRow("All branches"));
+await within("All branches shows all commits again", async () => (await branchLabel()) === "Branch: All" && (await count()) === all);
+await page.keyboard.press("Escape");
 
 // The highlighters.
 await viewOption("My Commits");
