@@ -33,15 +33,37 @@ const shot = async (page, name) => { await page.waitForTimeout(400); await page.
 const toastWith = (page, text) => page.$(`.toast:has-text("${text}")`);
 
 // A build with updates: the check runs a few seconds after the start.
-const page = await open({ version: "9.9.9", notes: "Better reviews." });
+// The fake download has 4 steps of 600 ms, and the first download fails at half.
+const page = await open({ version: "9.9.9", notes: "Better reviews.", stepMs: 600, failures: 1 });
 await within(page, "the notification offers the new version", async () => (await toastWith(page, "Gittor 9.9.9 is available.")) !== null, 15000);
 check("the notification has the release notes", ((await page.textContent(".toast:has-text('9.9.9')")) ?? "").includes("Better reviews."));
 await shot(page, "up1-available");
+// The card of the offer shows the download: the text with the percent, and a bar.
+const card = await toastWith(page, "Gittor 9.9.9 is available.");
 await page.click(".toast:has-text('9.9.9 is available') .toast-action:has-text('Update')");
-await within(page, "the update is ready", async () => (await toastWith(page, "Gittor 9.9.9 is ready")) !== null);
+const bar = () =>
+  card.evaluate((el) => {
+    const p = el.querySelector(".toast-progress");
+    return p && !p.hidden ? Number(p.getAttribute("aria-valuenow") ?? -1) : null;
+  });
+const cardText = async () => (await card.textContent()) ?? "";
+await within(page, "the card shows the download with its progress", async () => {
+  const v = await bar();
+  return v !== null && v > 0 && v < 100 && /Downloading Gittor 9\.9\.9… \d+%/.test(await cardText());
+});
+check("the card has no button while it downloads", (await card.$(".toast-action")) === null);
+await shot(page, "up1b-progress");
+// The download fails: the same card says so, and offers Try Again.
+await within(page, "the same card shows the error", async () => (await cardText()).includes("The update failed: The connection was lost"));
+check("the error card has Try Again and no bar", (await card.$(".toast-action:has-text('Try Again')")) !== null && (await bar()) === null);
+await shot(page, "up1c-failed");
+await (await card.$(".toast-action:has-text('Try Again')")).click();
+// The second download works: the same card says that the update is ready, with Restart.
+await within(page, "the same card says that the update is ready", async () => (await cardText()).includes("Gittor 9.9.9 is ready"), 8000);
+check("only one card for the update", (await page.$$(".toast:has-text('9.9.9')")).length === 1);
 check("the status bar says that the update is ready", ((await page.textContent(".sb-activity")) ?? "").includes("Gittor 9.9.9 is ready"));
 await shot(page, "up2-ready");
-await page.click(".toast:has-text('is ready') .toast-action:has-text('Restart')");
+await (await card.$(".toast-action:has-text('Restart')")).click();
 check("Restart starts the app again", await page.evaluate(() => window.__GITTOR_FAKE_UPDATE__.restarted === true));
 
 // Settings › General: the version, Check Now, and the switch for the automatic check.

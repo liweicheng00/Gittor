@@ -1,9 +1,10 @@
 // Updates of the app: a check at the start and every few hours, a notification for a new version,
-// the download with its progress in the status bar, and a restart when the user wants it. Only the main
-// window checks. A build without the public key of the updater (a local build) does not check.
+// the download with its progress on the card of the offer, and a restart when the user wants it.
+// Only the main window checks. A build without the public key of the updater (a local build) does
+// not check.
 
 import { appVersion, checkForUpdate, restartApp, updatesEnabled, type UpdateInfo } from "./api";
-import { toast } from "./notify";
+import { toast, type ToastHandle } from "./notify";
 import { settings, soloWindow } from "./settings";
 import { statusActivity } from "./shell";
 
@@ -51,28 +52,51 @@ function offer(update: UpdateInfo) {
   offered.add(update.version);
   const lines = update.notes.split("\n").filter((l) => l.trim());
   const notes = lines.slice(0, NOTE_LINES).join("\n") + (lines.length > NOTE_LINES ? "\n…" : "");
-  toast(`Gittor ${update.version} is available.${notes ? `\n${notes}` : ""}`, "info", { label: "Update", run: () => void install(update) }, STAY_MS);
+  const card = toast(`Gittor ${update.version} is available.${notes ? `\n${notes}` : ""}`, "info", undefined, STAY_MS);
+  card.setAction({ label: "Update", keep: true, run: () => void install(update, card) });
 }
 
-async function install(update: UpdateInfo) {
+/**
+ * Downloads and installs the update. The card of the offer shows the progress, then Restart, or the
+ * error with Try Again. When the user closed the card, a new card shows the result.
+ */
+async function install(update: UpdateInfo, card: ToastHandle) {
   if (state !== "idle") return;
   state = "downloading";
   statusActivity.className = "sb-activity busy";
+  card.setKind("info");
+  card.setAction(null);
+  card.setText(`Downloading Gittor ${update.version}…`);
+  card.setProgress("busy");
   try {
     await update.install((done, total) => {
-      statusActivity.textContent = total ? `Downloading Gittor ${update.version}… ${Math.round((done / total) * 100)}%` : `Downloading Gittor ${update.version}…`;
+      const pct = total ? Math.round((done / total) * 100) : null;
+      const text = `Downloading Gittor ${update.version}…${pct === null ? "" : ` ${pct}%`}`;
+      card.setText(text);
+      card.setProgress(total ? done / total : "busy");
+      statusActivity.textContent = text;
     });
   } catch (e) {
     state = "idle";
     statusActivity.className = "sb-activity error";
     statusActivity.textContent = "";
-    toast(`The update failed: ${String(e).replace(/^Error: /, "")}`, "error");
+    const failed = `The update failed: ${String(e).replace(/^Error: /, "")}`;
+    const target = card.open ? card : toast(failed, "error");
+    target.setKind("error");
+    target.setText(failed);
+    target.setProgress(null);
+    target.setAction({ label: "Try Again", keep: true, run: () => void install(update, target) });
     return;
   }
   state = "ready";
   statusActivity.className = "sb-activity";
   statusActivity.textContent = `Gittor ${update.version} is ready`;
-  toast(`Gittor ${update.version} is ready. Restart Gittor to use it.`, "success", { label: "Restart", run: () => void restartApp() }, STAY_MS);
+  const ready = `Gittor ${update.version} is ready. Restart Gittor to use it.`;
+  const target = card.open ? card : toast(ready, "success", undefined, STAY_MS);
+  target.setKind("success");
+  target.setText(ready);
+  target.setProgress(null);
+  target.setAction({ label: "Restart", run: () => void restartApp() });
 }
 
 async function start() {

@@ -427,6 +427,10 @@ interface FakeUpdate {
   notes?: string;
   /** The window sets it when the app restarts. */
   restarted?: boolean;
+  /** The time of each step of the fake download of four steps; 50 ms when not set. */
+  stepMs?: number;
+  /** The number of downloads that fail at half, before one works. */
+  failures?: number;
 }
 
 const fakeUpdate = (): FakeUpdate | undefined => (window as unknown as { __GITTOR_FAKE_UPDATE__?: FakeUpdate }).__GITTOR_FAKE_UPDATE__;
@@ -456,7 +460,11 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
       install: async (progress) => {
         for (let done = 0; done <= 100; done += 25) {
           progress(done, 100);
-          await new Promise((r) => setTimeout(r, 50));
+          await new Promise((r) => setTimeout(r, fake.stepMs ?? 50));
+          if (done === 50 && (fake.failures ?? 0) > 0) {
+            fake.failures!--;
+            throw new Error("The connection was lost");
+          }
         }
       },
     };
