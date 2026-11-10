@@ -24,7 +24,6 @@ const port = process.env.VIDEO_PORT ?? "5191";
 const base = `http://127.0.0.1:${port}`;
 const repo = join(work, "rustcalc");
 const git = (dir, ...args) => execFileSync("git", ["-C", dir, "-c", "commit.gpgsign=false", ...args], { encoding: "utf8" }).trim();
-const gitTry = (dir, ...args) => { try { git(dir, ...args); } catch { /* a conflict is expected */ } };
 
 // The page is 1600x900. build.sh scales the video to 1920x1080, so the text is larger than at 1920x1080.
 // A larger device scale does not help: the video keeps the CSS pixels.
@@ -68,6 +67,10 @@ const overlayScript = () => {
       background: #1b1c1f; color: #ddd; border: 1px solid #4da3ff; border-radius: 8px; padding: 10px 14px;
       font: 12px/1.45 ui-monospace, monospace; white-space: pre-wrap; box-shadow: 0 10px 40px rgba(0,0,0,.6);
       animation: vid-open .25s ease-out; }
+    .vid-keys { position: fixed; z-index: 2147483000; left: 50%; top: 38%; transform: translateX(-50%);
+      padding: 14px 26px; border-radius: 14px; background: rgba(20, 22, 27, 0.92); color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.18); font: 600 34px/1 system-ui; letter-spacing: .02em;
+      box-shadow: 0 12px 40px rgba(0,0,0,.5); animation: vid-open .18s ease-out; pointer-events: none; }
     .vid-clipboard b { display: block; font: 600 11px system-ui; color: #4da3ff; margin-bottom: 6px;
       text-transform: uppercase; letter-spacing: .06em; }`;
   const arrow = `<svg viewBox="0 0 22 22" width="22" height="22"><path d="M3 2 L3 18 L7.5 14 L10.5 20.5 L13.5 19.2 L10.6 12.8 L16.5 12.8 Z" fill="#fff" stroke="#000" stroke-width="1.3" stroke-linejoin="round"/></svg>`;
@@ -116,6 +119,15 @@ const overlayScript = () => {
     return null;
   };
   addEventListener("mousemove", (e) => { window.__vidMouse = { x: e.clientX, y: e.clientY }; }, true);
+  // The video does not show the keyboard: a badge shows the keys that the director presses.
+  window.__vidKeys = (text) => {
+    document.querySelectorAll(".vid-keys").forEach((e) => e.remove());
+    const box = document.createElement("div");
+    box.className = "vid-keys";
+    box.textContent = text;
+    document.body.append(box);
+    setTimeout(() => box.remove(), 1300);
+  };
   window.__vidClipboard = (text) => {
     const box = document.createElement("div");
     box.className = "vid-clipboard";
@@ -171,6 +183,12 @@ class Director {
     await this.wait(450);
     await this.click(`.menu-item:has-text("${label}")`);
   }
+  /** Presses keys and shows them in a badge, for example keys("Alt+2"). */
+  async keys(combo, label = combo) {
+    await this.page.evaluate((t) => window.__vidKeys(t), label);
+    await this.wait(250);
+    await this.page.keyboard.press(combo);
+  }
   async type(text, delay = 55) {
     await this.page.keyboard.type(text, { delay });
   }
@@ -204,6 +222,7 @@ const scenes = [
     name: "open",
     settings: () => ({
       recent: [join(work, "rustcalc-wt/parser-fix"), repo, join(work, "rustcalc-wt/cli-flags"), join(work, "website"), join(work, "rustcalc-wt/release-0.3"), join(work, "infra")],
+      tabs: [repo, join(work, "website"), join(work, "infra")],
     }),
     async run(d) {
       await d.wait(500);
@@ -214,7 +233,36 @@ const scenes = [
         await d.wait(380);
       }
       await d.click(`.menu .menu-item[title='${join(work, "rustcalc-wt/cli-flags")}']`, { after: 0 });
-      await d.page.waitForSelector(".tab:has-text('cli-flags')", { timeout: 15000 }).catch(() => {});
+      await d.page.waitForSelector(".tab:has-text('cli-flags')", { timeout: 15000 });
+      await d.wait(1500);
+      // Alt+1 to Alt+9 show the project tab at that place.
+      for (const n of [1, 2, 3, 4]) {
+        await d.keys(`Alt+${n}`);
+        await d.wait(1050);
+      }
+      await d.click(".tab:has-text('website')", { after: 1200 });
+    },
+  },
+  {
+    name: "worktrees",
+    async run(d) {
+      await d.wait(700);
+      await d.click(".group-action[title='Add a worktree']", { after: 300 });
+      await d.page.waitForSelector(".dialog-field:has-text('Branch') input");
+      await d.click(".dialog-field:has-text('Branch') input", { after: 150 });
+      await d.type("hotfix/overflow");
+      await d.click(".dialog-field:has-text('Folder') input", { after: 150 });
+      await d.page.fill(".dialog-field:has-text('Folder') input", "");
+      await d.type(join(work, "rustcalc-wt/hotfix"), 22);
+      await d.wait(400);
+      await d.click(".dialog-buttons button:has-text('Create')", { after: 0 });
+      const item = ".sidebar .worktree:has(.branch-name:text-is('hotfix'))";
+      await d.page.waitForSelector(item, { timeout: 15000 });
+      await d.wait(1300);
+      await d.click(item, { double: true, after: 0 });
+      await d.page.waitForSelector(".tab.worktree:has-text('hotfix')", { timeout: 15000 });
+      await d.wait(1200);
+      await d.move(".tab.worktree:has-text('hotfix')", { ms: 600 });
       await d.wait(1800);
     },
   },
@@ -244,6 +292,77 @@ const scenes = [
     },
   },
   {
+    name: "submodules",
+    // A smaller diff panel gives the Submodules section under the commit message more room.
+    settings: () => ({ diffRatio: 0.26 }),
+    prep() {
+      // A library with two commits. rustcalc records the second one, but its checkout is at the first.
+      const lib = join(work, "rustlib");
+      rmSync(lib, { recursive: true, force: true });
+      mkdirSync(lib, { recursive: true });
+      git(lib, "init", "-q", "-b", "main");
+      for (const [msg, text] of [["Add the parser of numbers", "pub fn number() {}\n"], ["Parse negative numbers", "pub fn number() {}\npub fn negative() {}\n"]]) {
+        writeFileSync(join(lib, "lib.rs"), text);
+        git(lib, "add", ".");
+        git(lib, "-c", "user.name=Grace Hopper", "-c", "user.email=grace@example.com", "commit", "-q", "-m", msg);
+      }
+      git(repo, "stash", "-q", "-u");
+      git(repo, "-c", "protocol.file.allow=always", "submodule", "add", "-q", lib, "vendor/rustlib");
+      git(repo, "commit", "-q", "-m", "Add the rustlib submodule");
+      git(join(repo, "vendor/rustlib"), "checkout", "-q", "HEAD~1");
+    },
+    async run(d) {
+      await d.wait(700);
+      await d.click(".lp-tab:has-text('Changes')", { after: 900 });
+      await d.click(".cl-file:has-text('rustlib')", { after: 1800 });
+      await d.click(".sm-row", { after: 1600 });
+      await d.move(".sm-detail .sm-behind", { ms: 500 });
+      await d.wait(1200);
+      await d.click(".sm-detail .sm-update", { after: 0 });
+      await d.page.waitForFunction(() => !document.querySelector(".sm-row")?.textContent?.includes("≠"), null, { timeout: 15000 });
+      await d.wait(2200);
+    },
+  },
+  {
+    name: "markdown",
+    // A larger diff panel shows more of the preview.
+    settings: () => ({ diffRatio: 0.62 }),
+    prep() {
+      const before = [
+        "# rustcalc", "", "A small calculator in Rust.", "", "## Build", "",
+        "- [x] Install Rust", "- [ ] Build with cargo", "",
+        "```rust", "fn main() {", "    println!(\"{}\", add(2, 3));", "}", "```", "",
+        "## How it works", "", "```mermaid", "graph LR", "  A[Input] --> B[Tokenizer]", "  B --> C[Parser]", "```", "",
+      ].join("\n");
+      const after = before
+        .replace("A small calculator in Rust.", "A small calculator in Rust.\n\nIt knows + - * / and parentheses.")
+        .replace("- [ ] Build with cargo", "- [x] Build with `cargo build --release`")
+        .replace("  B --> C[Parser]", "  B --> C[Parser]\n  C --> D[Evaluate]");
+      git(repo, "stash", "-q", "-u");
+      mkdirSync(join(repo, "docs"), { recursive: true });
+      writeFileSync(join(repo, "docs/GUIDE.md"), before);
+      git(repo, "add", "docs");
+      git(repo, "commit", "-q", "-m", "Add the guide");
+      writeFileSync(join(repo, "docs/GUIDE.md"), after);
+    },
+    async run(d) {
+      await d.wait(700);
+      await d.click(".lp-tab:has-text('Changes')", { after: 800 });
+      await d.click(".cl-file:has-text('GUIDE.md')", { after: 0 });
+      await d.page.waitForSelector(".diff-preview-toggle:not([hidden])", { timeout: 15000 });
+      await d.wait(2600);
+      // Scroll the preview down to the diagram.
+      await d.move(".diff", { dy: 60, ms: 600 });
+      for (let i = 0; i < 6; i++) {
+        await d.page.mouse.wheel(0, 70);
+        await d.wait(120);
+      }
+      await d.wait(2200);
+      await d.click(".diff-preview-toggle", { after: 2200 });
+      await d.click(".diff-preview-toggle", { after: 1800 });
+    },
+  },
+  {
     name: "history",
     prep() {
       git(repo, "stash", "-q", "-u");
@@ -263,46 +382,6 @@ const scenes = [
       await d.wait(300);
       await d.click(".dialog-buttons button:has-text('Squash')", { after: 1800 });
       await d.click(".toast-action:has-text('Undo')", { after: 2200 });
-    },
-  },
-  {
-    name: "conflicts",
-    prep() {
-      const lines = ["fn calc() {", "    let a = 1;", "    let b = 2;", "    let c = 3;", "    let d = 4;", "    let e = 5;", "}", ""];
-      const edit = (changes) => lines.map((l, i) => changes[i] ?? l).join("\n");
-      git(repo, "stash", "-q", "-u");
-      writeFileSync(join(repo, "calc.rs"), lines.join("\n"));
-      git(repo, "add", "calc.rs");
-      git(repo, "commit", "-q", "-m", "Add calc");
-      git(repo, "checkout", "-q", "-b", "calc-side");
-      writeFileSync(join(repo, "calc.rs"), edit({ 1: "    let a = 100; // theirs", 5: "    let e = 50; // theirs" }));
-      git(repo, "commit", "-q", "-am", "Tune calc on the side");
-      git(repo, "checkout", "-q", "main");
-      writeFileSync(join(repo, "calc.rs"), edit({ 1: "    let a = 10; // yours", 3: "    let c = 30; // yours" }));
-      git(repo, "commit", "-q", "-am", "Tune calc on main");
-    },
-    async run(d) {
-      await d.wait(900);
-      await d.click(".sidebar .branch[data-ref='refs/heads/calc-side'] >> nth=-1", { button: "right", after: 200 });
-      await d.menu("Merge into main");
-      await d.page.waitForSelector(".dialog:has-text('Merge calc-side')");
-      await d.wait(600);
-      await d.click(".dialog-buttons button:has-text('Merge')", { after: 0 });
-      await d.page.waitForSelector(".conflict-row", { timeout: 15000 });
-      await d.wait(1500);
-      await d.click(".conflict-row:has-text('calc.rs')", { double: true, after: 0 });
-      await d.page.waitForSelector(".merge-window .monaco-editor");
-      await d.wait(2200);
-      await d.click(".m-actions-conflict .m-action:text-is('Accept Both')", { after: 1300 });
-      // The toast about the conflicts covers the Apply button.
-      if (await d.page.isVisible(".toast button[title='Close']")) await d.click(".toast button[title='Close']", { after: 300 });
-      await d.click(".merge-footer button:has-text('Apply')", { after: 0 });
-      await d.page.waitForSelector(".dialog:has-text('All Conflicts Are Resolved')", { timeout: 15000 });
-      await d.wait(900);
-      await d.click(".dialog-buttons button:has-text('Continue')", { after: 0 });
-      await d.page.waitForFunction(() => document.querySelector(".op-banner")?.hidden, null, { timeout: 15000 });
-      await d.page.waitForSelector(`.log-row:has(.subject-text:has-text("Merge branch 'calc-side'"))`, { timeout: 15000 });
-      await d.click(`.log-row:has(.subject-text:has-text("Merge branch 'calc-side'"))`, { after: 1800 });
     },
   },
   {

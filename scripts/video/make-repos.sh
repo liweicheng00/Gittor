@@ -10,7 +10,7 @@ root=$(cd "$here/../.." && pwd)
 mkdir -p "$work"
 work=$(cd "$work" && pwd)
 repo=$work/rustcalc
-rm -rf "$work/rustcalc-wt" "$work/website" "$work/infra"
+rm -rf "$work/rustcalc-wt" "$work/website" "$work/infra" "$work/rustlib"
 "$root/ui/e2e/make-demo-repo.sh" "$repo" > /dev/null
 
 cd "$repo"

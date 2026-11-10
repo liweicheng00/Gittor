@@ -21,13 +21,17 @@ mkdirSync(tmp, { recursive: true });
 mkdirSync(out, { recursive: true });
 const meta = JSON.parse(readFileSync(join(rec, "scenes.json"), "utf8"));
 
-/** The scenes in order, with their captions. */
+/** The scenes in order, with their captions, and the height of a caption that is not at CAPTION_Y. */
 const scenes = [
   ["log", "The log, with the commit graph of IntelliJ"],
-  ["open", "Recent repositories, worktrees under their project"],
+  ["open", "Project tabs: open from Recent, switch with Alt+1…9"],
+  ["worktrees", "Worktrees: add one, open it in its own tab"],
   ["changes", "Changelists: check the changes you want, then commit"],
+  // The diff panel of this scene is small, and the Submodules section is at the height of CAPTION_Y.
+  ["submodules", "Submodules: see the missing commits, then Update", 1000],
+  // The preview fills the lower half of this scene, so the caption is over the log.
+  ["markdown", "Markdown preview: see what changed, diagrams too", 280],
   ["history", "Squash and reword in memory, then one click on Undo"],
-  ["conflicts", "Conflicts: only the real conflict is left"],
   ["review", "A local review: notes on lines, then Copy All"],
   ["tools", "Shortcut hints, IDE, Terminal, tabs to new windows"],
 ];
@@ -69,7 +73,10 @@ await render(`<div class="card"><img src="data:image/png;base64,${icon}"><div cl
 await render(`<div class="card"><img src="data:image/png;base64,${icon}"><div class="name">Gittor</div>
   <div class="tag">The IntelliJ log, changelists and conflicts, without a JVM</div>
   <div class="small">github.com/liweicheng00/gittor</div></div>`, join(tmp, "end.png"));
-for (const [i, [name, text]] of scenes.entries()) await render(`<div class="cap"><b>${i + 1}</b>${text}</div>`, join(tmp, `cap-${name}.png`), true);
+for (const [i, [name, text, y]] of scenes.entries()) {
+  const at = y ? ` style="top: ${y}px"` : "";
+  await render(`<div class="cap"${at}><b>${i + 1}</b>${text}</div>`, join(tmp, `cap-${name}.png`), true);
+}
 await browser.close();
 
 // One clip for each part, all with the same size, rate and format.
@@ -113,7 +120,7 @@ ff(...inputs, "-filter_complex", chain.replace(/;$/, ""), "-map", "[vout]", ...e
 const gifParts = [
   ["log", 0.4, 6.5],
   ["history", 0.6, 11.5],
-  ["conflicts", 4.2, 13.6],
+  ["markdown", 2.5, 11.5],
   ["review", 6.4, 15.2],
 ];
 const parts = [];
