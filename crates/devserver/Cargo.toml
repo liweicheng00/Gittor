@@ -1,6 +1,6 @@
 [package]
 name = "gittor-devserver"
-version = "0.1.3"
+version = "0.1.4"
 edition.workspace = true
 license.workspace = true
 description = "Serves the Gittor UI and commands over HTTP for browser development and tests"
