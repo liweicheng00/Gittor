@@ -134,6 +134,30 @@ interactive history edits, Settings, remotes, open a repository.
 *Prototype at 400 px with injected CSS: the Changes tab, the Log tab (author, date and hash off),
 and the diff page in inline mode. At 320 px, the diff toolbar is still cut after "1 change".*
 
+### Wireframes of Idea A
+
+![Wireframes at 400 px](narrow-layout/wireframes.png)
+
+*Wireframes at 400 px (frames 1 to 6) and at 760 px (frame 7). The source is
+[`narrow-layout/wireframes.html`](narrow-layout/wireframes.html).*
+
+1. **Changes tab** (the default view). The top bar holds Update, Push with its count, the
+   repository, the branch switcher and the menu ⋯. The commit box stays at the bottom; the list
+   scrolls above it. A file with review notes shows their count.
+2. **Diff page** (a click on a file). The page bar holds Back, the file name, previous/next change
+   and previous/next file. The diff is inline. A note card goes under its line. The bottom bar gives
+   the position in the list and the actions of the file.
+3. **Menu ⋯**. It holds all rare actions: Refresh, Fetch, Stash, Reviews, Local History, Compare
+   Branches, Open in Editor/Terminal/on the Web, View and Settings.
+4. **Log tab**. The text filter stays; the other filters go behind one button with a count. Only the
+   graph and the subject show.
+5. **Commit page** (a click on a commit). Commit Details and the changed files on one page. A click
+   on a file opens the same diff page as in frame 2.
+6. **Branches tab**. Worktrees come first, because an agent often works in its own worktree. The
+   buttons of a row show on hover only.
+7. **From 640 to 948 px**. Two columns: the left pane stays, and the log has the diff under it. The
+   right column of today goes into the commit page.
+
 ### Idea B: two rows, no tabs for the main task
 
 The Changes list at the top, the diff at the bottom (the current horizontal split of `diffRatio`).
