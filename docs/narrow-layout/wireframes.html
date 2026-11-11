@@ -1,0 +1,277 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Narrow Wireframes</title>
+<style>
+:root { --ink:#333; --mute:#888; --line:#bbb; --soft:#eee; --hi:#dfe8f7; --acc:#3a6fd8; --note:#fff6cc; --add:#e3f3e1; --del:#f8e0e0; }
+* { box-sizing: border-box; }
+body { margin:0; padding:24px; background:#fafafa; font: 12px/1.35 system-ui, sans-serif; color:var(--ink); }
+.row { display:flex; gap:22px; align-items:flex-start; }
+.col { width:400px; }
+.cap { font-weight:600; font-size:13px; margin:0 0 6px; }
+.cap small { font-weight:400; color:var(--mute); }
+.frame { width:400px; height:640px; border:2px solid var(--ink); border-radius:6px; background:#fff; display:flex; flex-direction:column; overflow:hidden; position:relative; }
+.top { display:flex; align-items:center; gap:6px; height:30px; padding:0 8px; border-bottom:1px solid var(--line); }
+.top .b { border:1px solid var(--line); border-radius:4px; padding:1px 6px; }
+.top .sp { flex:1; }
+.tabs { display:flex; gap:2px; padding:4px 6px; border-bottom:1px solid var(--line); }
+.tabs span { padding:3px 9px; border-radius:4px; }
+.tabs .on { background:var(--hi); font-weight:600; }
+.pagebar { display:flex; align-items:center; gap:6px; height:30px; padding:0 8px; border-bottom:1px solid var(--line); background:var(--soft); }
+.pagebar b { flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.body { flex:1; overflow:hidden; padding:6px 8px; }
+.status { height:20px; border-top:1px solid var(--line); padding:2px 8px; color:var(--mute); font-size:11px; }
+.grp { color:var(--mute); margin:6px 0 2px; }
+.f { display:flex; align-items:center; gap:6px; padding:2px 0; }
+.f.sel { background:var(--hi); margin:0 -8px; padding:2px 8px; }
+.f .m { margin-left:auto; color:var(--acc); font-weight:600; }
+.box { width:11px; height:11px; border:1.5px solid var(--ink); border-radius:2px; display:inline-block; }
+.box.x { background:var(--ink); }
+.msg { border:1px solid var(--line); border-radius:4px; height:70px; padding:5px; color:var(--mute); margin-top:6px; }
+.btns { display:flex; gap:6px; margin-top:6px; align-items:center; }
+.btn { border:1px solid var(--line); border-radius:4px; padding:4px 8px; }
+.btn.pri { background:var(--acc); color:#fff; border-color:var(--acc); }
+.input { border:1px solid var(--line); border-radius:4px; padding:4px 6px; color:var(--mute); display:flex; gap:6px; }
+.input i { margin-left:auto; font-style:normal; }
+.lr { display:flex; align-items:center; gap:6px; height:22px; }
+.lr .g { width:34px; height:22px; position:relative; flex:none; }
+.lr .g::before { content:""; position:absolute; left:8px; top:0; bottom:0; border-left:2px solid #999; }
+.lr .g::after { content:""; position:absolute; left:4px; top:7px; width:8px; height:8px; border-radius:50%; background:#777; }
+.lr .g.br::before { left:8px; } .lr .g.br { background: linear-gradient(#0000,#0000); }
+.lr .g.side::after { left:18px; }
+.tag { border:1px solid var(--line); border-radius:3px; padding:0 4px; font-size:10px; color:var(--mute); }
+.lr.sel { background:var(--hi); margin:0 -8px; padding:0 8px; }
+.code { font: 11px/16px ui-monospace, monospace; }
+.code div { white-space:pre; padding-left:4px; }
+.code .d { background:var(--del); } .code .a { background:var(--add); }
+.code .n { color:var(--mute); display:inline-block; width:22px; }
+.card { background:var(--note); border:1px solid #e0c96a; border-radius:4px; padding:5px 6px; margin:3px 0 3px 26px; max-width:calc(100% - 30px); font: 11px/1.3 system-ui, sans-serif; white-space:normal; }
+.kv { display:grid; grid-template-columns:52px 1fr; gap:2px 6px; margin:4px 0; }
+.kv span:nth-child(odd) { color:var(--mute); }
+.menu { position:absolute; right:6px; top:28px; width:190px; background:#fff; border:1.5px solid var(--ink); border-radius:5px; box-shadow:0 3px 10px #0003; padding:4px 0; }
+.menu div { padding:3px 10px; }
+.menu hr { border:0; border-top:1px solid var(--line); margin:3px 0; }
+.dim { position:absolute; inset:0; background:#0001; }
+.call { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:#e2553a; color:#fff; font-size:10px; font-weight:700; flex:none; }
+.legend { margin-top:8px; font-size:11.5px; color:#444; }
+.legend p { margin:3px 0; display:flex; gap:6px; align-items:flex-start; }
+.arrow { align-self:center; font-size:22px; color:var(--mute); margin:0 -12px; }
+h1 { font-size:16px; margin:0 0 4px; } .sub { color:var(--mute); margin:0 0 16px; }
+.section { margin-bottom:30px; }
+.wide { width:760px; }
+.wide .frame { width:760px; height:420px; }
+.cols { display:grid; grid-template-columns: 230px 1fr; flex:1; overflow:hidden; }
+.cols > div { border-right:1px solid var(--line); padding:6px 8px; overflow:hidden; }
+</style></head><body>
+<h1>Gittor as a side panel: wireframes at 400 px</h1>
+<p class="sub">One column. Three tabs. The diff and the commit details open as pages over the tab. The numbers show the parts that the panel must keep.</p>
+
+<div class="section"><div class="row">
+
+<!-- 1 Changes -->
+<div class="col">
+<p class="cap">1 · Changes tab <small>default view</small></p>
+<div class="frame">
+  <div class="top"><span class="call">1</span><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">⋯</span></div>
+  <div class="tabs"><span class="on">Changes 5</span><span>Log</span><span>Branches</span></div>
+  <div class="body">
+    <div class="f" style="color:var(--mute)">⟳ ↶ ＋ &nbsp;&nbsp;&nbsp;<span style="margin-left:auto">☰ ⇕</span></div>
+    <div class="grp">▾ <span class="box x"></span> Changes · 4</div>
+    <div class="f sel"><span class="box x"></span> arith.rs <span class="m">M</span></div>
+    <div class="f"><span class="box x"></span> main.rs <span class="tag">2 notes</span><span class="m">M</span></div>
+    <div class="f"><span class="box x"></span> README.md <span class="m">M</span></div>
+    <div class="f"><span class="box x"></span> sub.rs <span class="m" style="color:green">A</span></div>
+    <div class="grp">▸ <span class="box"></span> Unversioned · 1</div>
+    <div class="grp">▸ .ignore · 0</div>
+    <div style="height:190px"></div>
+    <div class="f"><span class="call">2</span><span style="color:var(--mute)">Commit message</span></div>
+    <div class="msg">Fix overflow in add</div>
+    <div class="btns"><span class="box"></span> Amend <span style="margin-left:auto"></span><span class="btn pri">Commit</span><span class="btn">Commit and Push</span></div>
+  </div>
+  <div class="status">4 files checked · 14 commits</div>
+</div>
+<div class="legend">
+  <p><span class="call">1</span>Top bar: Update, Push (with the count), branch switcher, menu ⋯. Nothing else.</p>
+  <p><span class="call">2</span>The commit box stays at the bottom of the tab. The list scrolls above it.</p>
+</div>
+</div>
+
+<div class="arrow">→</div>
+
+<!-- 2 Diff page -->
+<div class="col">
+<p class="cap">2 · Diff page <small>a click on a file</small></p>
+<div class="frame">
+  <div class="top"><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">⋯</span></div>
+  <div class="pagebar"><span class="call">3</span>←<b>arith.rs</b><span>↑ ↓</span><span>⇤ ⇥</span><span>⋯</span></div>
+  <div class="body code">
+    <div><span class="n">1</span>pub fn add(a: i32, b: i32)</div>
+    <div><span class="n">2</span>    -&gt; i32 {</div>
+    <div class="d"><span class="n">3</span>    a.wrapping_add(b)</div>
+    <div class="a"><span class="n">3</span>    a.saturating_add(b)</div>
+    <div class="card"><span class="call" style="display:inline-flex">4</span> <b>Note</b> · Why saturate here? Overflow should be an error. &nbsp;<u>Resolve</u></div>
+    <div><span class="n">4</span>}</div>
+    <div><span class="n">5</span></div>
+    <div><span class="n">6</span>pub fn sub(a: i32, b: i32)</div>
+    <div><span class="n">7</span>    -&gt; i32 {</div>
+    <div class="d"><span class="n">8</span>    a - b</div>
+    <div class="a"><span class="n">8</span>    a.wrapping_sub(b)</div>
+    <div><span class="n">9</span>}</div>
+  </div>
+  <div class="pagebar" style="border-top:1px solid var(--line);border-bottom:0"><span style="color:var(--mute)">2 / 4 files</span><span class="sp" style="flex:1"></span><span class="btn">✓ Include</span><span class="btn">Roll back</span></div>
+  <div class="status">+2 −2 · 2 changes</div>
+</div>
+<div class="legend">
+  <p><span class="call">3</span>Back (also Escape and the mouse button Back), file name, previous/next change, previous/next file. Annotate and options go to ⋯.</p>
+  <p><span class="call">4</span>Inline diff only. A note card goes under its line, not at the right.</p>
+</div>
+</div>
+
+<!-- 3 Menu -->
+<div class="col">
+<p class="cap">3 · Menu ⋯ <small>rare actions</small></p>
+<div class="frame">
+  <div class="top"><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b" style="background:var(--hi)">⋯</span></div>
+  <div class="tabs"><span class="on">Changes 5</span><span>Log</span><span>Branches</span></div>
+  <div class="body" style="color:#ccc">
+    <div class="f"><span class="box"></span> arith.rs</div><div class="f"><span class="box"></span> main.rs</div><div class="f"><span class="box"></span> README.md</div>
+  </div>
+  <div class="dim"></div>
+  <div class="menu">
+    <div>Refresh</div><div>Fetch ▸</div><hr>
+    <div>Stash ▸</div><div>Reviews</div><div>Local History</div><hr>
+    <div>Compare Branches…</div><div>Open in Editor</div><div>Open in Terminal</div><div>Open on the Web</div><hr>
+    <div>View ▸</div><div>Settings…</div>
+  </div>
+  <div class="status">&nbsp;</div>
+</div>
+<div class="legend">
+  <p><span class="call">5</span>Everything that is not a main task of a side panel. Open, Theme and the project tabs do not show in an embed: the host gives them.</p>
+</div>
+</div>
+
+</div></div>
+
+<div class="section"><div class="row">
+
+<!-- 4 Log -->
+<div class="col">
+<p class="cap">4 · Log tab</p>
+<div class="frame">
+  <div class="top"><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">⋯</span></div>
+  <div class="tabs"><span>Changes 5</span><span class="on">Log</span><span>Branches</span></div>
+  <div class="body">
+    <div class="f"><span class="call">6</span><div class="input" style="flex:1">Text or hash <i>.* Aa</i></div><span class="btn">⚲ 1</span></div>
+    <div style="height:6px"></div>
+    <div class="lr"><span class="g"></span><span class="tag">agent/fix</span> Add a CLI entry point</div>
+    <div class="lr"><span class="g"></span>Print arguments one per line</div>
+    <div class="lr sel"><span class="g"></span><span class="tag">main</span> <b>Add a binary logo</b></div>
+    <div class="lr"><span class="g side"></span>Merge branch 'fix/readme'</div>
+    <div class="lr"><span class="g side"></span>Document the build</div>
+    <div class="lr"><span class="g"></span>Rename math to arith</div>
+    <div class="lr"><span class="g"></span>Merge branch 'feature/parser'</div>
+    <div class="lr"><span class="g side"></span>Parser: split on commas</div>
+    <div class="lr"><span class="g"></span>Greet the world</div>
+    <div class="lr"><span class="g"></span><span class="tag">v0.1.0</span> Add math module</div>
+    <div class="lr"><span class="g"></span>Initial commit</div>
+    <div class="f" style="margin-top:6px"><span class="call">7</span><span style="color:var(--mute)">Graph and subject only. Author and date in a tooltip.</span></div>
+  </div>
+  <div class="status">14 commits</div>
+</div>
+<div class="legend">
+  <p><span class="call">6</span>The text filter stays. Branch, user, path and date go behind ⚲ (the number shows the active filters).</p>
+  <p><span class="call">7</span>No author, date and hash columns under the breakpoint.</p>
+</div>
+</div>
+
+<div class="arrow">→</div>
+
+<!-- 5 Commit page -->
+<div class="col">
+<p class="cap">5 · Commit page <small>a click on a commit</small></p>
+<div class="frame">
+  <div class="top"><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">⋯</span></div>
+  <div class="pagebar">←<b>Add a binary logo</b><span>⋯</span></div>
+  <div class="body">
+    <span class="call">8</span>
+    <div class="kv"><span>Hash</span><span>bb2f8898 ⧉</span><span>Author</span><span>Ada Lovelace</span><span>Date</span><span>2026-09-09 10:00</span><span>Parent</span><span style="color:var(--acc)">daea5d10</span></div>
+    <div style="color:var(--mute);margin:6px 0">Add the logo for the README.</div>
+    <div class="grp" style="border-top:1px solid var(--line);padding-top:6px">Changed files · 3 &nbsp;<span style="float:right">☰</span></div>
+    <div class="f">▾ src</div>
+    <div class="f" style="padding-left:14px">arith.rs <span class="m">M</span></div>
+    <div class="f" style="padding-left:14px">main.rs <span class="m">M</span></div>
+    <div class="f">logo.bin <span class="m" style="color:green">A</span></div>
+    <div style="height:150px"></div>
+    <div class="f"><span class="call">9</span><span style="color:var(--mute)">A click on a file opens the diff page (2). Back returns here.</span></div>
+  </div>
+  <div class="status">14 commits</div>
+</div>
+<div class="legend">
+  <p><span class="call">8</span>Commit Details and changed files on one page, in place of the right column.</p>
+  <p><span class="call">9</span>The same diff page as for a local change. The ⋯ of the page has the commit actions (the menu of a log row).</p>
+</div>
+</div>
+
+<!-- 6 Branches -->
+<div class="col">
+<p class="cap">6 · Branches tab <small>and the branch switcher</small></p>
+<div class="frame">
+  <div class="top"><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b" style="background:var(--hi)">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">⋯</span></div>
+  <div class="tabs"><span>Changes 5</span><span>Log</span><span class="on">Branches</span></div>
+  <div class="body">
+    <div class="f"><div class="input" style="flex:1">Search branches and tags</div><span>☆</span></div>
+    <div class="grp"><span class="call" style="display:inline-flex">10</span> ▾ Worktrees · 3 <span style="float:right">＋</span></div>
+    <div class="f sel">▣ <b>demo</b> <span class="tag">agent/fix</span></div>
+    <div class="f">▣ demo-agent2 <span class="tag">agent/ui</span></div>
+    <div class="f">▣ demo-review <span class="tag">main</span></div>
+    <div class="grp">▾ Recent · 3</div>
+    <div class="f">⑂ agent/fix <span style="color:green">↑2</span></div>
+    <div class="f">⑂ feature/cli <span style="color:green">↑1</span></div>
+    <div class="f">⑂ fix/readme</div>
+    <div class="grp">▸ Local · 5</div>
+    <div class="grp">▸ Remote: origin · 4</div>
+    <div class="grp">▸ Tags · 2</div>
+    <div style="height:70px"></div>
+    <div class="f"><span class="call">11</span><span style="color:var(--mute)">Row buttons (favorite, show only) show on hover only. The context menu stays.</span></div>
+  </div>
+  <div class="status">14 commits</div>
+</div>
+<div class="legend">
+  <p><span class="call">10</span>Worktrees move to the top: an agent often works in its own worktree.</p>
+  <p><span class="call">11</span>The full width of the panel; no cut buttons.</p>
+</div>
+</div>
+
+</div></div>
+
+<div class="section">
+<p class="cap">7 · From 640 to 948 px (here 760 px) <small>two columns: the left pane stays, the right column goes into the commit page</small></p>
+<div class="wide"><div class="frame">
+  <div class="top"><span class="b">⇣ Update</span><span class="b">⇡ Push 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">Compare</span><span class="b">⋯</span></div>
+  <div class="cols">
+    <div>
+      <div class="tabs" style="margin:-6px -8px 6px"><span>Branches</span><span class="on">Changes 5</span><span>⋯</span></div>
+      <div class="f sel"><span class="box x"></span> arith.rs <span class="m">M</span></div>
+      <div class="f"><span class="box x"></span> main.rs <span class="m">M</span></div>
+      <div class="f"><span class="box x"></span> README.md <span class="m">M</span></div>
+      <div class="f"><span class="box x"></span> sub.rs <span class="m">A</span></div>
+      <div style="height:90px"></div>
+      <div class="msg" style="height:56px">Commit message</div>
+      <div class="btns"><span class="btn pri">Commit</span><span class="btn">and Push</span></div>
+    </div>
+    <div style="border-right:0">
+      <div class="f"><div class="input" style="flex:1">Text or hash</div><span class="btn">⚲</span></div>
+      <div class="lr"><span class="g"></span>Add a CLI entry point <span style="margin-left:auto;color:var(--mute)">Ada · 2d</span></div>
+      <div class="lr sel"><span class="g"></span>Add a binary logo <span style="margin-left:auto;color:var(--mute)">Ada · 2d</span></div>
+      <div class="lr"><span class="g side"></span>Document the build <span style="margin-left:auto;color:var(--mute)">Linus · 3d</span></div>
+      <div class="code" style="border-top:1px solid var(--line);margin-top:6px;padding-top:4px">
+        <div style="color:var(--mute)">arith.rs · inline</div>
+        <div class="d"><span class="n">3</span>    a.wrapping_add(b)</div>
+        <div class="a"><span class="n">3</span>    a.saturating_add(b)</div>
+      </div>
+    </div>
+  </div>
+  <div class="status">4 files checked · 14 commits</div>
+</div></div>
+<div class="legend" style="width:760px"><p>The log shows the subject and a short author and date. The diff stays under the log, in inline mode. A click on a commit opens the commit page (5) over the right part.</p></div>
+</div>
+
+</body></html>
