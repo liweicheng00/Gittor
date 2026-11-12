@@ -12,7 +12,6 @@ tauri-build = { version = "2", features = [] }
 gittor-service = { path = "../service" }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
-tauri-plugin-process = "2"
 # Without the default "zip" feature: the zip crate is only for updates on Windows, and macOS updates use
 # tar.gz.
 tauri-plugin-updater = { version = "2", default-features = false, features = ["rustls-tls", "system-proxy"] }

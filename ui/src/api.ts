@@ -496,8 +496,8 @@ export async function restartApp(): Promise<void> {
     if (fake) fake.restarted = true;
     return;
   }
-  const { relaunch } = await import("@tauri-apps/plugin-process");
-  await relaunch();
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("restart_app");
 }
 
 /** The label of the app window, or null in a browser. */
