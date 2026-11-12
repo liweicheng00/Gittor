@@ -256,11 +256,30 @@ impl Repo {
         self.update_with(mode, &UpdateOptions::default())
     }
 
+    /// The default branch of a remote: the branch of `refs/remotes/<remote>/HEAD`, else `main` or `master`
+    /// when the remote has it.
+    pub fn remote_default_branch(&self, remote: &str) -> Option<String> {
+        let prefix = format!("refs/remotes/{remote}/");
+        if let Ok(target) = self.git(&["symbolic-ref", "-q", &format!("{prefix}HEAD")]).map(text) {
+            if let Some(b) = target.strip_prefix(&prefix).filter(|b| !b.is_empty()) {
+                return Some(b.to_string());
+            }
+        }
+        ["main", "master"].into_iter().find(|b| self.git(&["rev-parse", "-q", "--verify", &format!("{prefix}{b}")]).is_ok()).map(String::from)
+    }
+
     /// Update with the options of the Update dialog. The fast-forward options apply to a merge only.
     pub fn update_with(&self, mode: UpdateMode, o: &UpdateOptions) -> Result<OpResult> {
         let branch = self.current_branch()?;
         let (remote, remote_branch) =
             self.upstream_of(&branch).ok_or_else(|| GitError(format!("{branch} has no tracked branch. Push it with a tracked branch first")))?;
+        // The default branch of the remote comes too, so that a compare or a rebase sees its new state.
+        // An error here does not stop the update.
+        if let Some(default) = self.remote_default_branch(&remote).filter(|d| *d != remote_branch) {
+            if let (Ok(r), Ok(d)) = (safe(&remote), safe(&default)) {
+                let _ = self.git_write(&["fetch", "--no-tags", r, d], &[]);
+            }
+        }
         let before = self.resolve("HEAD");
         let mut args = vec!["pull", "--autostash", "--no-edit"];
         args.push(if mode == UpdateMode::Rebase { "--rebase" } else { "--no-rebase" });

@@ -210,3 +210,29 @@ fn checkout_of_a_remote_branch_fetches_it_first() {
     assert!(r.ok && r.message.contains("last fetched state"), "{}", r.message);
     assert_eq!(git(&mine, &["rev-parse", "HEAD"]), newest);
 }
+
+#[test]
+fn update_fetches_the_default_branch_too() {
+    let (_origin, seed, mine) = setup("default");
+    let repo = Repo::open(&mine).unwrap();
+    assert_eq!(repo.remote_default_branch("origin").as_deref(), Some("main"));
+    // A feature branch that tracks origin/feature.
+    git(&seed, &["checkout", "-q", "-b", "feature"]);
+    commit(&seed, "f.txt", "f\n", "Feature");
+    git(&seed, &["push", "-q", "-u", "origin", "feature"]);
+    git(&mine, &["fetch", "-q"]);
+    git(&mine, &["checkout", "-q", "-b", "feature", "--track", "origin/feature"]);
+    // Both branches get new commits on the remote.
+    commit(&seed, "g.txt", "g\n", "Feature 2");
+    git(&seed, &["push", "-q"]);
+    git(&seed, &["checkout", "-q", "main"]);
+    commit(&seed, "m.txt", "m\n", "Main 2");
+    git(&seed, &["push", "-q", "origin", "main"]);
+    // Update of feature brings feature, and origin/main moves too.
+    let r = repo.update(UpdateMode::Merge).unwrap();
+    assert!(r.ok, "{}", r.message);
+    assert_eq!(git(&mine, &["log", "-1", "--format=%s", "HEAD"]), "Feature 2");
+    assert_eq!(git(&mine, &["log", "-1", "--format=%s", "origin/main"]), "Main 2");
+    // The local main does not move: only the remote branch is fetched.
+    assert_eq!(git(&mine, &["log", "-1", "--format=%s", "main"]), "Initial");
+}
