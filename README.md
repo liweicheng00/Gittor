@@ -29,7 +29,7 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | `Ctrl/Cmd+K`, `Ctrl/Cmd+Enter` | Commit (from the tab, from the message field) |
 | `Ctrl/Cmd+Alt+K` | Commit and push |
 | `Ctrl/Cmd+Shift+K` | Push |
-| `Ctrl/Cmd+B` | New branch from HEAD |
+| `Ctrl/Cmd+B` | New branch (from the current branch, or another one) |
 | `Ctrl/Cmd+T` | Update |
 | `Ctrl/Cmd+R`, `F5` | Refresh |
 | `Ctrl/Cmd+F` | Filter the log |

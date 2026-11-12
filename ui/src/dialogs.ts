@@ -75,6 +75,8 @@ export interface Field {
   options?: [string, string][];
   /** The groups of a branch field, for its picker. */
   sections?: () => PickerSection[];
+  /** The text of a branch field for a value, for example a short hash for a commit. */
+  display?: (value: string) => string;
   placeholder?: string;
   browse?: () => Promise<string | null>;
 }
@@ -91,11 +93,12 @@ export async function formDialog(title: string, fields: Field[], okLabel: string
     if (f.type === "branch") {
       // A button that opens the branch picker, as the branch switcher of the toolbar. A hidden input keeps the value.
       const input = h("input", { type: "hidden", value: String(f.value ?? "") });
+      const show = (v: string) => btn.set(f.display?.(v) ?? v);
       const btn = branchButton("dialog-input dialog-branch", f.sections ?? (() => []), (v) => {
         input.value = v;
-        btn.set(v);
+        show(v);
       });
-      btn.set(input.value);
+      show(input.value);
       inputs.set(f.key, input);
       return h("div", { class: "dialog-field" }, h("span", {}, f.label), btn.el, input);
     }

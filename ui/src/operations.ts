@@ -2,6 +2,7 @@
 
 import { allowRewrite } from "./protected";
 import { api, type BranchInfo, type ErrorKind, errorHint, inTauri, type Op, type OpOutcome, pickFolder, type PlanEntry, type Row, type Worktree } from "./api";
+import { branchSections, type PickerSection } from "./branch-picker";
 import { showBranchSwitcher } from "./branch-switcher";
 import { mergeFile, offerContinue, resolveConflicts } from "./conflicts";
 import { showMenu } from "./context-menu";
@@ -73,14 +74,33 @@ export async function checkoutCommit(oid: string, label = short(oid)) {
   await runOp({ op: "checkout", target: oid, kind: "commit" }, `Checking out ${label}`);
 }
 
+/** The New Branch dialog. "From" starts at `at` (a branch, HEAD or a commit), and the branch picker can
+ * choose another branch. A commit that is not a branch shows as its own group in the picker. */
 export async function newBranch(at: string, atLabel: string) {
-  const r = await formDialog(`New branch from ${atLabel}`, [
+  const isRef = at === "HEAD" || app.refs.some((b) => b.name === at);
+  const extra: PickerSection[] = isRef ? [] : [["Start point", [{ value: at, label: atLabel }]]];
+  if (at === "HEAD") extra.push(["Detached HEAD", [{ value: "HEAD", label: atLabel }]]);
+  const r = await formDialog("New Branch", [
     { key: "name", label: "Branch name", placeholder: "feature/my-change" },
+    {
+      key: "from",
+      label: "From",
+      type: "branch",
+      value: at,
+      sections: () => [...extra, ...branchSections()],
+      display: (v) => (v === at ? atLabel : v),
+    },
     { key: "checkout", label: "Checkout the new branch", type: "checkbox", value: true },
   ], "Create");
   if (!r || !String(r.name).trim()) return;
-  await runOp({ op: "createBranch", name: String(r.name).trim(), at, checkout: !!r.checkout }, "Creating branch");
+  await runOp({ op: "createBranch", name: String(r.name).trim(), at: String(r.from || at), checkout: !!r.checkout }, "Creating branch");
 }
+
+/** The New Branch dialog for the current branch, or for HEAD when it is detached. */
+export const newBranchHere = () => {
+  const cur = currentBranch();
+  return newBranch(cur ?? "HEAD", cur ?? "HEAD");
+};
 
 export async function newTag(at: string, atLabel: string) {
   const r = await formDialog(`New tag on ${atLabel}`, [
@@ -336,7 +356,7 @@ sidebar.onWorktreeMenu = (w, e) =>
 branchBtn.addEventListener("click", () =>
   showBranchSwitcher(branchBtn, app.refs, app.recent, {
     checkout: (b) => void checkoutBranch(b),
-    newBranch: () => void newBranch("HEAD", currentBranch() ?? "HEAD"),
+    newBranch: () => void newBranchHere(),
     menu: (b, e) => sidebar.onContextMenu(b, e),
   }),
 );
