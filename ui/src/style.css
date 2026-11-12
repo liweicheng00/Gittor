@@ -314,6 +314,8 @@ html.titlebar-tabs .tab { border-top: 2px solid transparent; }
 .primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .primary.big, .big { padding: 8px 20px; font-size: 14px; }
 .welcome-actions { display: flex; gap: 10px; justify-content: center; }
+.welcome-settings { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; color: var(--muted); font-size: 12px; cursor: pointer; padding: 2px 6px; }
+.welcome-settings:hover { color: var(--fg); }
 
 .dialog.wide { width: min(760px, calc(100vw - 32px)); }
 .dialog button { color: var(--fg); }
@@ -631,8 +633,9 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .commit-push:disabled { opacity: 0.5; cursor: default; }
 
 /* welcome */
-.welcome { flex: 1; display: flex; align-items: center; justify-content: center; overflow: auto; padding: 16px; }
-.welcome-card { width: min(560px, 100%); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.welcome { flex: 1; display: flex; overflow: auto; padding: 16px; }
+/* margin: auto centers the card, and a card higher than the window starts at the top: it can scroll. */
+.welcome-card { margin: auto; width: min(560px, 100%); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
 .welcome-card h1 { margin: 0; font-size: 24px; font-weight: 600; }
 .welcome-card p { margin: 0 0 8px; }
 .welcome-logo { position: relative; width: 64px; height: 64px; border-radius: 14px; background: var(--panel); border: 1px solid var(--border); }

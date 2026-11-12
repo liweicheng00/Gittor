@@ -51,7 +51,7 @@ export const branchBtn = h("button", { class: "tb-button tb-branch-button", titl
 export const viewBtn = h("button", { class: "tb-button", title: "View options" }, "View", icon("chevron-down", "icon-caret"));
 const themeBtn = h("button", { class: "tb-button tb-icon", title: "Theme" }, icon("theme"));
 export const settingsBtn = h("button", { class: "tb-button tb-icon", title: "Settings" }, icon("settings"));
-const toolbar = h("header", { class: "toolbar" }, openBtn, refreshBtn, h("span", { class: "tb-split" }, updateBtn, fetchBtn), pushBtn, localHistoryBtn, repoLabel, branchBtn, h("span", { class: "spacer" }), remoteBtn, ideBtn, terminalBtn, viewBtn, themeBtn, settingsBtn);
+export const toolbar = h("header", { class: "toolbar" }, openBtn, refreshBtn, h("span", { class: "tb-split" }, updateBtn, fetchBtn), pushBtn, localHistoryBtn, repoLabel, branchBtn, h("span", { class: "spacer" }), remoteBtn, ideBtn, terminalBtn, viewBtn, themeBtn, settingsBtn);
 
 export const tabBar = h("nav", { class: "tabbar", hidden: true });
 /** The tabs, in a part of the tab bar that scrolls without a scroll bar. The + button stays outside it. */
@@ -71,7 +71,7 @@ const statusLeft = h("span", { class: "sb-left" });
 const statusMid = h("span", { class: "sb-mid" });
 /** The running or the last operation. It is at the left end, where the eye looks first. */
 export const statusActivity = h("span", { class: "sb-activity" });
-const statusBar = h("footer", { class: "statusbar" }, statusActivity, statusLeft, statusMid);
+export const statusBar = h("footer", { class: "statusbar" }, statusActivity, statusLeft, statusMid);
 
 const sideGrip = h("div", { class: "vgrip" });
 const rightGrip = h("div", { class: "vgrip" });
