@@ -6,7 +6,7 @@ import { openInEditorHere, openProjectInEditor } from "./editor-flow";
 import { openInTerminal } from "./terminal-flow";
 import { showLocalHistory } from "./history-flow";
 import { isMac, type KeyAction, Keymap } from "./keymap";
-import { undoLast } from "./operations";
+import { currentBranch, newBranch, undoLast } from "./operations";
 import { askForRepo, closeActiveTab, fetchAll, refresh, switchTab } from "./repo";
 import { settings } from "./settings";
 import { openSettings } from "./settings-flow";
@@ -44,6 +44,7 @@ for (const a of [
   { id: "fetch", label: "Fetch", defaults: [], run: () => app.view && void fetchAll() },
   { id: "update", label: "Update the Current Branch", defaults: ["Mod+T"], run: () => app.view && void updateBranch() },
   { id: "push", label: "Push", defaults: ["Mod+Shift+K"], run: () => app.view && void pushBranch() },
+  { id: "newBranch", label: "New Branch (from HEAD)", defaults: ["Mod+B"], run: () => app.view && void newBranch("HEAD", currentBranch() ?? "HEAD") },
   {
     id: "commit",
     label: "Changes Tab (and the commit message)",

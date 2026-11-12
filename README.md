@@ -29,6 +29,7 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | `Ctrl/Cmd+K`, `Ctrl/Cmd+Enter` | Commit (from the tab, from the message field) |
 | `Ctrl/Cmd+Alt+K` | Commit and push |
 | `Ctrl/Cmd+Shift+K` | Push |
+| `Ctrl/Cmd+B` | New branch from HEAD |
 | `Ctrl/Cmd+T` | Update |
 | `Ctrl/Cmd+R`, `F5` | Refresh |
 | `Ctrl/Cmd+F` | Filter the log |
@@ -40,6 +41,7 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | `F7`, `Shift+F7` | Next and previous change |
 | `Alt+Down`, `Alt+Up` | Next and previous file |
 | `Ctrl/Cmd+PageDown`, `Ctrl/Cmd+PageUp` | Next and previous tab |
+| `Alt+1` … `Alt+9` | Project tab 1 to 8, and the last project tab |
 | `Ctrl/Cmd+W` | Close the project tab (`Cmd+Shift+W` closes the window on macOS) |
 | `Ctrl/Cmd+Alt+Left`, `Ctrl/Cmd+Alt+Right` | Back and Forward (also `Cmd+[` and `Cmd+]` on macOS) |
 | `Esc` | Hide the diff panel |

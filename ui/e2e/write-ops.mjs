@@ -2,6 +2,7 @@
 // Start the dev server first (see README). Build a fresh repository with make-demo-repo.sh, because
 // the scenario changes it. Then: node e2e/write-ops.mjs <repo> <screenshot-dir>
 // Set CHROMIUM to a Chromium binary when Playwright has no downloaded browser.
+import { execFileSync } from "node:child_process";
 import { chromium } from "playwright";
 const [,, repo, outDir] = process.argv;
 const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
@@ -28,6 +29,24 @@ await page.click(".switcher .menu-item:has-text('feature/cli')");
 await page.waitForTimeout(1500);
 console.log("after checkout:", await branchBtn(), "|", await toastText());
 await clearToasts();
+
+// Mod+B: a new branch from HEAD. Without Checkout, the current branch stays.
+const check = (what, ok) => { console.log(ok ? "ok  " : "FAIL", what); if (!ok) errors.push("check: " + what); };
+await page.click(".log-row >> nth=0");
+await page.keyboard.press("Control+b");
+await page.waitForSelector(".dialog");
+check("Mod+B opens New branch from the current branch", ((await page.textContent(".dialog")) ?? "").includes("New branch from feature/cli"));
+await page.fill(".dialog-field:has-text('Branch name') input", "topic/from-key");
+await page.click(".dialog-check:has-text('Checkout') input");
+await page.click(".dialog-buttons button:has-text('Create')");
+await page.waitForSelector(".sidebar .branch:has-text('topic/from-key')");
+check("the new branch is in the Branches tab, and the current branch stays", (await branchBtn()) === "feature/cli");
+await clearToasts();
+// The steps below rewrite feature/cli: a second branch on its commits changes them. Remove it.
+execFileSync("git", ["-C", repo, "branch", "-D", "topic/from-key"]);
+await page.waitForTimeout(2000);
+await page.keyboard.press("F5");
+await page.waitForSelector(".sidebar .branch:has-text('topic/from-key')", { state: "detached" });
 
 // squash two commits
 await page.click(".log-row:has-text('Print arguments')");
