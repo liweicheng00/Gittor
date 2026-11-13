@@ -7,6 +7,7 @@ import { statusName } from "./changes-panel";
 import { fileIcon } from "./file-icon";
 import { buildTree, treeOrder, walkTree } from "./file-tree";
 import { h, icon, twisty } from "./dom";
+import { type KeyedItem, reconcile } from "./keyed";
 import { save, settings } from "./settings";
 
 /** A file row: a tracked change in a changelist, or an unversioned file. */
@@ -213,6 +214,11 @@ export class CommitPanel {
     return (this.data?.unversioned.length ?? 0) > 0;
   }
 
+  /** True when a file of this path is in the local changes. */
+  hasPath(path: string): boolean {
+    return this.files.some((f) => f.change.path === path);
+  }
+
   get head(): string | null {
     return this.data?.head ?? null;
   }
@@ -239,7 +245,8 @@ export class CommitPanel {
     }
     this.files = files;
     this.render();
-    this.updateTarget();
+    // A reload while the user writes the message does not put another draft into the field.
+    this.updateTarget(document.activeElement === this.message);
   }
 
   private tracked(list: string, c: Change): LocalFile {
@@ -332,10 +339,11 @@ export class CommitPanel {
     this.message.focus();
   }
 
-  setActiveFile(key: string | null) {
+  /** Marks the file whose diff shows. With `reveal`, the list scrolls to it. */
+  setActiveFile(key: string | null, reveal = true) {
     this.activeKey = key;
     for (const el of this.tree.querySelectorAll<HTMLElement>(".cl-file")) el.classList.toggle("active", el.dataset.key === key);
-    this.tree.querySelector(".cl-file.active")?.scrollIntoView({ block: "nearest" });
+    if (reveal) this.tree.querySelector(".cl-file.active")?.scrollIntoView({ block: "nearest" });
   }
 
   /** Moves to the next or previous file in display order and opens it. */
@@ -421,8 +429,10 @@ export class CommitPanel {
     return best ?? (lists.some((l) => l.id === DEFAULT_LIST) ? DEFAULT_LIST : null);
   }
 
-  private updateTarget() {
-    const t = this.computeTarget();
+  /** With `keep`, the changelist of the message stays while it is still there. */
+  private updateTarget(keep = false) {
+    const stays = keep && this.target !== null && !!this.data?.lists.some((l) => l.id === this.target);
+    const t = stays ? this.target : this.computeTarget();
     if (!this.amend.checked && t !== this.target) {
       this.flushSave();
       this.target = t;
@@ -436,11 +446,13 @@ export class CommitPanel {
   private updateSummary() {
     const n = this.files.filter((f) => this.included.has(f.key)).length;
     const p = [...this.partial.keys()].filter((k) => this.included.has(k)).length;
-    this.summary.textContent = n ? `${n} file${n === 1 ? "" : "s"}${p ? `, ${p} in part` : ""}` : "";
+    const summary = n ? `${n} file${n === 1 ? "" : "s"}${p ? `, ${p} in part` : ""}` : "";
+    if (this.summary.textContent !== summary) this.summary.textContent = summary;
     const verb = this.amend.checked ? "Amend Commit" : "Commit";
     const name = this.data?.lists.find((l) => l.id === this.target)?.name;
     const multi = (this.data?.lists.length ?? 0) > 1;
-    this.commitBtn.textContent = multi && name && n ? `${verb} ${ellipsis(name, 18)}` : verb;
+    const label = multi && name && n ? `${verb} ${ellipsis(name, 18)}` : verb;
+    if (this.commitBtn.textContent !== label) this.commitBtn.textContent = label;
     this.commitBtn.disabled = !this.data || (n === 0 && !this.amend.checked);
     this.pushBtn.disabled = this.commitBtn.disabled;
   }
@@ -492,8 +504,11 @@ export class CommitPanel {
     this.updateSummary();
   }
 
+  /**
+   * Draws the list in place. A row that did not change keeps its element: the mouse stays on it, a
+   * click or a drag that started on it still works, and the list keeps its scroll position.
+   */
   private render() {
-    const frag = document.createDocumentFragment();
     if (!this.data) {
       this.tree.replaceChildren(h("div", { class: "muted commit-empty" }, this.emptyText));
       this.updateSummary();
@@ -505,26 +520,40 @@ export class CommitPanel {
       this.included.delete(f.key);
       this.partial.delete(f.key);
     }
+    const rows: KeyedItem<HTMLElement>[] = [];
     for (const l of this.data.lists) {
-      frag.append(this.header(l.id, l.name, l.changes.map((c) => this.tracked(l.id, c).key), l));
-      if (!this.collapsed.has(l.id)) this.appendFiles(frag, l.id, l.changes.map((c) => this.tracked(l.id, c)));
+      const files = l.changes.map((c) => this.tracked(l.id, c));
+      rows.push(this.headerItem(l.id, l.name, files.map((f) => f.key), l));
+      if (!this.collapsed.has(l.id)) this.appendFiles(rows, l.id, files);
     }
     if (this.data.unversioned.length) {
-      frag.append(this.header(UNVERSIONED, UNVERSIONED, this.data.unversioned.map((p) => `u:${p}`), null));
-      if (!this.collapsed.has(UNVERSIONED)) {
-        this.appendFiles(frag, UNVERSIONED, this.data.unversioned.map((p) => ({ key: `u:${p}`, change: { status: "?", path: p, old_path: null }, list: null })));
-      }
+      const files: LocalFile[] = this.data.unversioned.map((p) => ({ key: `u:${p}`, change: { status: "?", path: p, old_path: null }, list: null }));
+      rows.push(this.headerItem(UNVERSIONED, UNVERSIONED, files.map((f) => f.key), null));
+      if (!this.collapsed.has(UNVERSIONED)) this.appendFiles(rows, UNVERSIONED, files);
     }
-    if (!this.files.length) frag.append(h("div", { class: "muted commit-empty" }, "There are no local changes."));
-    this.tree.replaceChildren(frag);
-    this.setActiveFile(this.activeKey);
+    if (!this.files.length) rows.push({ key: "empty", sig: "", build: () => h("div", { class: "muted commit-empty" }, "There are no local changes.") });
+    reconcile(this.tree, rows);
+    this.paintSelection();
+    // No scroll here: a reload must not move the list of the user.
+    this.setActiveFile(this.activeKey, false);
     this.updateSummary();
   }
 
+  private headerItem(id: string, name: string, keys: string[], list: ChangeListView | null): KeyedItem<HTMLElement> {
+    const n = keys.filter((k) => this.included.has(k)).length;
+    // The menu of the header uses the whole changelist, so all of it is in the signature.
+    return { key: `h:${id}`, sig: JSON.stringify([name, keys, n, !this.collapsed.has(id), list]), build: () => this.header(id, name, keys, list) };
+  }
+
+  private fileItem(f: LocalFile, depth?: number): KeyedItem<HTMLElement> {
+    const sig = [f, depth, this.included.has(f.key), this.partial.has(f.key), f.split ? this.hunksOf(f.change.path) : null, f.split ? this.splitTitle(f) : null];
+    return { key: `r:${f.key}`, sig: JSON.stringify(sig), build: () => this.fileRow(f, depth) };
+  }
+
   /** The rows of the files of one changelist: a flat list, or a tree of folders. */
-  private appendFiles(frag: DocumentFragment, listId: string, files: LocalFile[]) {
+  private appendFiles(rows: KeyedItem<HTMLElement>[], listId: string, files: LocalFile[]) {
     if (!settings.localChangesAsTree) {
-      for (const f of files) frag.append(this.fileRow(f));
+      for (const f of files) rows.push(this.fileItem(f));
       return;
     }
     const sorted = [...files].sort((a, b) => treeOrder(a.change.path, b.change.path));
@@ -533,8 +562,12 @@ export class CommitPanel {
     const prefix = `${listId}\0`;
     const closed = new Set([...this.collapsed].filter((k) => k.startsWith(prefix)).map((k) => k.slice(prefix.length)));
     walkTree(tree, closed, {
-      dir: (label, full, depth, open, _count, _viewed, indexes) => frag.append(this.dirRow(prefix + full, label, depth, open, indexes.map((i) => sorted[i]))),
-      file: (index, depth) => frag.append(this.fileRow(sorted[index], depth)),
+      dir: (label, full, depth, open, _count, _viewed, indexes) => {
+        const inDir = indexes.map((i) => sorted[i]);
+        const n = inDir.filter((f) => this.included.has(f.key)).length;
+        rows.push({ key: `d:${prefix}${full}`, sig: JSON.stringify([label, depth, open, inDir, n]), build: () => this.dirRow(prefix + full, label, depth, open, inDir) });
+      },
+      file: (index, depth) => rows.push(this.fileItem(sorted[index], depth)),
     });
   }
 

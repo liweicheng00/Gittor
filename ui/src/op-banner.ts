@@ -15,12 +15,19 @@ export class OpBanner {
     this.el = h("div", { class: "op-banner", hidden: true, role: "alert" });
   }
 
+  private shownKey = "";
+
   update(state: RepoState | null) {
     // Conflicts without an operation come from a stash apply or pop.
     if (!state || (state.operation === "none" && state.conflicts.length === 0)) {
       this.el.hidden = true;
+      this.shownKey = "";
       return;
     }
+    // The same state again: the buttons stay, so a click on one still works.
+    const key = JSON.stringify({ ...state, changedFiles: 0 });
+    if (key === this.shownKey) return;
+    this.shownKey = key;
     const op = state.operation === "none" ? null : state.operation;
     const name = op ? { merge: "Merge", rebase: "Rebase", "cherry-pick": "Cherry-pick", revert: "Revert" }[op] : null;
     const cont = h("button", { class: "primary", disabled: state.conflicts.length > 0 }, "Continue");
