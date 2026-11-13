@@ -87,3 +87,18 @@ export function toPlan(lines: PlanLine[]): PlanEntry[] {
     author: undefined,
   }));
 }
+
+/** Where a drop puts a commit: right above (newer than) the target, right below it, or into it. */
+export type DropPlace = "above" | "below" | "onto";
+
+/** Moves the commit `fromOid` next to `targetOid`, or joins it into the target (squash, or fixup). A drop
+ * in the log graph uses this to start the editor with the move done. Unknown oids change nothing. */
+export function placeRelative(lines: PlanLine[], fromOid: string, targetOid: string, where: DropPlace, fixup = false): PlanLine[] {
+  const from = lines.findIndex((l) => l.oid === fromOid);
+  const target = lines.findIndex((l) => l.oid === targetOid);
+  if (from < 0 || target < 0 || from === target) return lines;
+  if (where === "onto") return squashOnto(lines, from, target, fixup);
+  // The target moves up by one when the dragged line leaves a place above it.
+  const t = from < target ? target - 1 : target;
+  return moveLine(lines, from, where === "above" ? t : t + 1);
+}

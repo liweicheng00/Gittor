@@ -3,6 +3,7 @@
 import { api, type Row } from "./api";
 import { dragResize, formatDate, h, icon } from "./dom";
 import { ELEMENT_WIDTH, ROW_HEIGHT, foldAt, foldMarks, maxPosition, paintRow } from "./graph-paint";
+import type { DropPlace } from "./rebase-plan";
 import { refLabel } from "./ref-label";
 import { save, settings } from "./settings";
 
@@ -43,6 +44,8 @@ export class LogView {
   onRowsLoaded: (rows: Row[]) => void = () => {};
   onExpandEdge: (up: number, down: number) => void = () => {};
   onCollapseAll: () => void = () => {};
+  /** A drag of a commit node ended on another row: move the commit next to it, or join it into it. */
+  onNodeDrop: (from: Row, target: Row, where: DropPlace, fixup: boolean) => void = () => {};
   onExpandAll: () => void = () => {};
   private collapsed = false;
 
@@ -243,6 +246,18 @@ export class LogView {
       const node = r.elements.find((e) => e.k === "n");
       if (node) canvas.dataset.head = String(node.p);
     }
+    // A commit of the current branch can be dragged by its node: the rebase editor opens with the move.
+    const node = r.elements.find((e) => e.k === "n");
+    if (node && r.onHead && !r.merge) {
+      const onNode = (x: number) => Math.abs(x - (node.p * ELEMENT_WIDTH + ELEMENT_WIDTH / 2)) <= ELEMENT_WIDTH / 2;
+      canvas.addEventListener("mousedown", (e) => {
+        if (e.button === 0 && !e.shiftKey && !e.metaKey && !e.ctrlKey && onNode(e.offsetX)) this.dragNode(r, e);
+      });
+      canvas.addEventListener("mousemove", (e) => {
+        if (canvas.style.cursor !== "pointer") canvas.style.cursor = onNode(e.offsetX) ? "grab" : "";
+      });
+      canvas.dataset.node = String(node.p);
+    }
     const arrows = r.elements.filter((e) => e.j !== undefined);
     if (arrows.length || folds.length) {
       canvas.addEventListener("mousedown", (e) => {
@@ -369,6 +384,107 @@ export class LogView {
     }
     if (select) this.select([row], row, auto);
     this.focus();
+  }
+
+  /** Drags the node of a commit. A drop between two rows moves the commit there; a drop on the middle of a
+   * row joins it into that commit (Alt: fixup). Only commits of the current branch that are not merges are
+   * targets. Nothing changes here: `onNodeDrop` opens the rebase editor. */
+  private dragNode(from: Row, down: MouseEvent) {
+    const startX = down.clientX;
+    const startY = down.clientY;
+    let dragging = false;
+    let lastY = startY;
+    let fixup = false;
+    let decision: { target: Row; where: DropPlace } | null = null;
+    const line = h("div", { class: "log-drop-line", hidden: true });
+    const box = h("div", { class: "log-drop-target", hidden: true });
+    const dot = h("div", { class: "log-drag-dot" });
+    const tip = h("div", { class: "log-drag-tip" });
+    const short = (r: Row) => (r.subject.length > 40 ? `${r.subject.slice(0, 40)}…` : r.subject);
+    const mark = (on: boolean) => this.rendered.get(from.row)?.div.classList.toggle("drag-source", on);
+
+    const update = () => {
+      if (!line.isConnected) this.body.append(line, box);
+      mark(true);
+      const rect = this.scroller.getBoundingClientRect();
+      const y = lastY - rect.top + this.scroller.scrollTop;
+      const index = Math.max(0, Math.min(this.rowCount - 1, Math.floor(y / ROW_HEIGHT)));
+      const target = this.row(index);
+      const inRow = y - index * ROW_HEIGHT;
+      line.hidden = box.hidden = true;
+      decision = null;
+      if (!target || target.oid === from.oid) {
+        tip.textContent = "Drop next to another commit of the branch";
+      } else if (!target.onHead || target.merge) {
+        tip.textContent = target.merge ? "A merge commit cannot be a target" : "Only commits of the current branch";
+      } else if (inRow > ROW_HEIGHT / 3 && inRow < (ROW_HEIGHT * 2) / 3) {
+        decision = { target, where: "onto" };
+        box.hidden = false;
+        box.style.top = `${index * ROW_HEIGHT}px`;
+        tip.textContent = `${fixup ? "Fixup" : "Squash"} "${short(from)}" into "${short(target)}"${fixup ? "" : " · Alt: fixup"}`;
+      } else {
+        const where: DropPlace = inRow < ROW_HEIGHT / 2 ? "above" : "below";
+        decision = { target, where };
+        line.hidden = false;
+        line.style.top = `${(where === "above" ? index : index + 1) * ROW_HEIGHT - 1}px`;
+        tip.textContent = `Move "${short(from)}" ${where} "${short(target)}"`;
+      }
+      tip.classList.toggle("blocked", !decision);
+    };
+
+    // Near the top or bottom edge, the log scrolls while the mouse holds still.
+    const scroll = window.setInterval(() => {
+      if (!dragging) return;
+      const rect = this.scroller.getBoundingClientRect();
+      const step = lastY < rect.top + 30 ? -ROW_HEIGHT : lastY > rect.bottom - 30 ? ROW_HEIGHT : 0;
+      if (!step) return;
+      this.scroller.scrollTop += step;
+      update();
+    }, 60);
+
+    const move = (e: MouseEvent) => {
+      if (!dragging && Math.hypot(e.clientX - startX, e.clientY - startY) < 6) return;
+      if (!dragging) {
+        dragging = true;
+        document.body.append(dot, tip);
+        this.el.classList.add("node-dragging");
+      }
+      lastY = e.clientY;
+      fixup = e.altKey;
+      dot.style.left = `${e.clientX - 7}px`;
+      dot.style.top = `${e.clientY - 7}px`;
+      tip.style.left = `${e.clientX + 16}px`;
+      tip.style.top = `${e.clientY + 10}px`;
+      update();
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        decision = null;
+        end();
+      } else if (e.key === "Alt" && dragging) {
+        fixup = e.type === "keydown";
+        update();
+      }
+    };
+    const end = () => {
+      window.clearInterval(scroll);
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
+      document.removeEventListener("keydown", key, true);
+      document.removeEventListener("keyup", key, true);
+      for (const el of [line, box, dot, tip]) el.remove();
+      this.el.classList.remove("node-dragging");
+      mark(false);
+    };
+    const up = () => {
+      const d = decision;
+      end();
+      if (dragging && d) this.onNodeDrop(from, d.target, d.where, fixup);
+    };
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
+    document.addEventListener("keydown", key, true);
+    document.addEventListener("keyup", key, true);
   }
 
   private onClick(row: number, e: MouseEvent) {

@@ -894,3 +894,13 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .rebase-sum.warn { color: var(--tag); }
 .rebase-sum.ok { color: var(--ok, #4caf50); }
 .rebase-checking { color: var(--muted); font-size: 12px; margin-right: auto; align-self: center; }
+
+/* A drag of a commit node in the log graph: it opens the rebase editor with the move. */
+.log.node-dragging, .log.node-dragging * { cursor: grabbing !important; }
+.log-row.drag-source { opacity: 0.45; }
+.log-drop-line { position: absolute; left: 0; right: 0; height: 2px; background: var(--accent, #3574f0); z-index: 3; pointer-events: none; }
+.log-drop-line::before { content: ""; position: absolute; left: 2px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent, #3574f0); }
+.log-drop-target { position: absolute; left: 0; right: 0; height: 22px; outline: 2px dashed var(--tag); outline-offset: -2px; background: color-mix(in srgb, var(--tag) 12%, transparent); z-index: 3; pointer-events: none; }
+.log-drag-dot { position: fixed; z-index: 1000; width: 14px; height: 14px; border-radius: 50%; background: var(--accent, #3574f0); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent, #3574f0) 30%, transparent); pointer-events: none; }
+.log-drag-tip { position: fixed; z-index: 1000; background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; font-size: 12px; white-space: nowrap; box-shadow: 0 4px 14px #0004; pointer-events: none; }
+.log-drag-tip.blocked { color: var(--muted); }

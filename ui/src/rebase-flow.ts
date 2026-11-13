@@ -2,15 +2,18 @@
 // "Copy for an Agent". The rows show newest first, like the log. The check runs in memory on the backend
 // and changes nothing. Run moves the branch; with a conflict, Run runs a real rebase that stops at it.
 
-import { api, type PlanAction, type RewriteCheck, type RewriteRange, type StepCheck } from "./api";
+import { api, type PlanAction, type RewriteCheck, type RewriteRange, type Row, type StepCheck } from "./api";
 import { messageDialog } from "./dialogs";
 import { copyText, h } from "./dom";
 import { toast } from "./notify";
-import { runOp } from "./operations";
+import { currentBranch, runOp } from "./operations";
+import { allowRewrite } from "./protected";
 import { dragRow } from "./rebase-drag";
 import { agentText } from "./rebase-agent-text";
 import { autosquash } from "./autosquash";
-import { autosquashCount, linesOf, moveLine, planError, setAction, squashGroups, squashOnto, type PlanLine, toPlan } from "./rebase-plan";
+import { autosquashCount, type DropPlace, linesOf, moveLine, placeRelative, planError, setAction, squashGroups, squashOnto, type PlanLine, toPlan } from "./rebase-plan";
+import { settings } from "./settings";
+import { log } from "./shell";
 import { short } from "./selection";
 
 const ACTIONS: [PlanAction, string][] = [
@@ -30,7 +33,6 @@ const STATUS_TEXT: Record<StepCheck["status"], string> = {
   afterConflict: "? after a conflict",
 };
 
-/** Opens the editor for a range and runs the chosen plan. */
 /** The start lines of a range, newest first, with autosquash applied to fixup!/squash! commits. */
 function startLines(range: RewriteRange): PlanLine[] {
   const oldest = [...linesOf(range)].reverse();
@@ -38,8 +40,10 @@ function startLines(range: RewriteRange): PlanLine[] {
   return oldest.reverse();
 }
 
-export function openRebaseEditor(range: RewriteRange, repoPath: string, branch: string) {
-  let lines = startLines(range);
+/** Opens the editor for a range and runs the chosen plan. `start` changes the first plan, for example the
+ * move of a drag in the log. Reset Plan goes back to the plan without it. */
+export function openRebaseEditor(range: RewriteRange, repoPath: string, branch: string, start?: (lines: PlanLine[]) => PlanLine[]) {
+  let lines = start ? start(startLines(range)) : startLines(range);
   let check: RewriteCheck | null = null;
   let generation = 0;
 
@@ -273,3 +277,24 @@ export function openRebaseEditor(range: RewriteRange, repoPath: string, branch: 
   runBtn.disabled = true;
   void recheck();
 }
+
+/** A drop of a commit node in the log: the editor opens for the range from the older of the two commits,
+ * with the move or the squash done. The log does not change before Run. */
+export async function rebaseByDrag(from: Row, target: Row, where: DropPlace, fixup: boolean) {
+  // The log shows newer commits above older ones, so the higher row is the older commit.
+  const older = from.row > target.row ? from : target;
+  let range: RewriteRange;
+  try {
+    range = await api.rewriteRange(`${older.oid}^`);
+  } catch (e) {
+    return void toast(String(e).replace(/^Error: /, ""), "error");
+  }
+  const oids = new Set(range.entries.map((e) => e.oid));
+  if (!oids.has(from.oid) || !oids.has(target.oid)) {
+    return void toast("Drag a commit of the current branch next to another commit of it.", "error");
+  }
+  if (!(await allowRewrite(older.oid))) return;
+  openRebaseEditor(range, settings.activeTab ?? "", currentBranch() ?? "HEAD", (lines) => placeRelative(lines, from.oid, target.oid, where, fixup));
+}
+
+log.onNodeDrop = (from, target, where, fixup) => void rebaseByDrag(from, target, where, fixup);
