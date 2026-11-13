@@ -1,6 +1,8 @@
 // Monaco diff of one file, with a toolbar for navigation and diff options.
 
 import { revertChange } from "./revert-change";
+import { diffLines } from "./diff3";
+import { lineAfter, lineHunks, rangeEdits } from "./text-edit";
 import * as monaco from "./monaco";
 import "monaco-editor/esm/vs/basic-languages/monaco.contribution";
 import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
@@ -8,7 +10,7 @@ import { api, type Blame, type Change, type FileContent, type MermaidSvg, type R
 import { statusName } from "./changes-panel";
 import { copyText, h, icon } from "./dom";
 import { markBlocks, removedAnchors } from "./markdown-model";
-import { blocksOf, renderMarkdown } from "./markdown-preview";
+import { blocksOf, renderMarkdown, updateDoc } from "./markdown-preview";
 import { NoteLayer, type NoteHandlers, type NoteItem } from "./note-layer";
 import { save, settings } from "./settings";
 
@@ -346,13 +348,25 @@ export class DiffView {
       if (c.modifiedEndLineNumber > 0) add += c.modifiedEndLineNumber - c.modifiedStartLineNumber + 1;
       if (c.originalEndLineNumber > 0) del += c.originalEndLineNumber - c.originalStartLineNumber + 1;
     }
-    this.stats.replaceChildren(
-      h("span", { class: "stat-add" }, `+${add}`),
-      " ",
-      h("span", { class: "stat-del" }, `−${del}`),
-      h("span", { class: "muted-inline" }, ` · ${changes.length} change${changes.length === 1 ? "" : "s"}`),
-    );
-    if (this.keepScroll) {
+    const stats = `+${add} −${del} · ${changes.length} change${changes.length === 1 ? "" : "s"}`;
+    // The same numbers again make no new elements.
+    if (this.stats.textContent !== stats) {
+      this.stats.replaceChildren(
+        h("span", { class: "stat-add" }, `+${add}`),
+        " ",
+        h("span", { class: "stat-del" }, `−${del}`),
+        h("span", { class: "muted-inline" }, ` · ${changes.length} change${changes.length === 1 ? "" : "s"}`),
+      );
+    }
+    if (this.placeAfterEdit) {
+      // The new diff can add or remove space above the line of the view, so the line goes back to its
+      // place. Not when the user scrolled since the edit.
+      const ed = this.editor.getModifiedEditor();
+      const p = this.placeAfterEdit;
+      this.placeAfterEdit = null;
+      if (Math.abs(ed.getScrollTop() - p.set) < 1) ed.setScrollTop(ed.getTopForLineNumber(p.line) + p.offset);
+      this.revealFirst = false;
+    } else if (this.keepScroll) {
       // The same file again: the new diff can move the view, so the old place comes back after it.
       const ed = this.editor.getModifiedEditor();
       ed.setScrollTop(this.keepScroll.top);
@@ -607,7 +621,8 @@ export class DiffView {
 
   setSides(left: string, right: string) {
     this.sideNames = [left, right];
-    this.sides.textContent = `${left}  ⟷  ${right}`;
+    const text = `${left}  ⟷  ${right}`;
+    if (this.sides.textContent !== text) this.sides.textContent = text;
   }
 
   message(text: string, title = "") {
@@ -619,12 +634,18 @@ export class DiffView {
     this.userPos = null;
     this.sides.textContent = "";
     this.title.textContent = title;
+    delete this.title.dataset.key;
     this.stats.textContent = "";
     this.notice.textContent = text;
     this.notice.hidden = false;
     this.setModels("", "", undefined);
     this.markdown = null;
     this.renderPreview();
+  }
+
+  /** True when the view shows this file with these texts already. */
+  shows(change: Change, left: FileContent, right: FileContent): boolean {
+    return this.notice.hidden && this.shownKey === JSON.stringify([change.path, change.old_path, change.status, left, right]);
   }
 
   show(change: Change, left: FileContent, right: FileContent) {
@@ -645,15 +666,20 @@ export class DiffView {
     this.revealFirst = !same;
     if (!same) this.userPos = null;
     this.path = change.path;
-    this.title.replaceChildren(
-      h("span", { class: `status status-${change.status}`, title: statusName(change.status) }, change.status),
-      " ",
-      change.old_path ? `${change.old_path} → ${change.path}` : change.path,
-    );
     // A submodule, or a Git LFS object that is not downloaded.
     const note = left.note ?? right.note;
-    if (note) this.title.append(h("span", { class: "muted-inline diff-note" }, ` · ${note}`));
-    this.stats.textContent = "";
+    const titleKey = JSON.stringify([change.status, change.old_path, change.path, note]);
+    if (titleKey !== this.title.dataset.key) {
+      this.title.dataset.key = titleKey;
+      this.title.replaceChildren(
+        h("span", { class: `status status-${change.status}`, title: statusName(change.status) }, change.status),
+        " ",
+        change.old_path ? `${change.old_path} → ${change.path}` : change.path,
+      );
+      if (note) this.title.append(h("span", { class: "muted-inline diff-note" }, ` · ${note}`));
+    }
+    // The numbers of the same file stay until the new diff is ready.
+    if (!same) this.stats.textContent = "";
     const tooBig = (f: FileContent) => !f.binary && !f.missing && f.text === null && f.size > 0;
     if (left.binary || right.binary) return this.showNotice("Binary file. The contents cannot be compared as text.");
     if (tooBig(left) || tooBig(right)) return this.showNotice("The file is larger than 5 MB. The diff is not shown.");
@@ -681,6 +707,7 @@ export class DiffView {
       const was = !this.previewHost.hidden;
       this.previewHost.hidden = true;
       this.previewHost.replaceChildren();
+      this.previewLayout = "";
       this.oldBlocks = [];
       if (this.notice.hidden) {
         this.host.hidden = this.editorMode !== "diff";
@@ -701,28 +728,39 @@ export class DiffView {
       openUrl: (url: string) => void api.openUrl(url),
     };
     const m = this.markdown;
-    const column = (text: string, label: string) => {
-      const doc = renderMarkdown(text, ctx);
-      return { doc, el: h("div", { class: "md-col" }, h("div", { class: "md-col-label" }, label), doc) };
-    };
-    this.oldBlocks = [];
-    let cols: HTMLElement[];
-    if (m.kind !== "diff") {
-      cols = [column(m.kind === "deleted" ? m.left : m.right, m.kind === "deleted" ? "Deleted file" : "New file").el];
-    } else if (settings.sideBySide) {
-      cols = [column(m.left, this.sideNames[0] || "Before").el, column(m.right, this.sideNames[1] || "After").el];
+    // The columns: the text and the label of each.
+    let texts: [string, string][];
+    if (m.kind !== "diff") texts = [[m.kind === "deleted" ? m.left : m.right, m.kind === "deleted" ? "Deleted file" : "New file"]];
+    else if (settings.sideBySide) texts = [[m.left, this.sideNames[0] || "Before"], [m.right, this.sideNames[1] || "After"]];
+    else texts = [[m.right, this.sideNames[1] || "After"]];
+    // In one column, the old blocks that a change removed show between the new blocks.
+    for (const b of this.oldBlocks) b.el.remove();
+    this.oldBlocks = m.kind === "diff" && !settings.sideBySide ? blocksOf(renderMarkdown(m.left, ctx)) : [];
+    const layout = `${this.path}\0${m.kind}\0${settings.sideBySide}\0${texts.map((t) => t[1]).join("\0")}`;
+    const docs = [...this.previewHost.querySelectorAll<HTMLElement>(".md-col > .md-body")];
+    if (keep && layout === this.previewLayout && docs.length === texts.length) {
+      // The same file again, changed on disk: the blocks with the same source keep their elements.
+      texts.forEach(([text], i) => updateDoc(docs[i], renderMarkdown(text, ctx), text));
     } else {
-      // One column: the old blocks that a change removed show between the new blocks.
-      this.oldBlocks = blocksOf(renderMarkdown(m.left, ctx));
-      cols = [column(m.right, this.sideNames[1] || "After").el];
+      const cols = texts.map(([text, label]) => {
+        const doc = renderMarkdown(text, ctx);
+        updateDoc(doc, doc, text);
+        return h("div", { class: "md-col" }, h("div", { class: "md-col-label" }, label), doc);
+      });
+      this.previewHost.replaceChildren(h("div", { class: `md-cols md-cols-${cols.length}` }, ...cols));
+      this.previewHost.scrollTop = top;
     }
-    this.previewHost.replaceChildren(h("div", { class: `md-cols md-cols-${cols.length}` }, ...cols));
-    this.previewHost.scrollTop = top;
+    this.previewLayout = layout;
     this.markPreview();
   }
 
+  /** The file and the columns of the preview that shows, to update it in place. */
+  private previewLayout = "";
+
   /** Draws the preview again, for example in the colors of a new theme. */
   refreshPreview() {
+    // All blocks draw again: the colors of the diagrams are in their images.
+    this.previewLayout = "";
     if (!this.previewHost.hidden) this.renderPreview(true);
   }
 
@@ -807,6 +845,8 @@ export class DiffView {
   private keepView: monaco.editor.ICodeEditorViewState | null = null;
   /** The scroll position of the same file, for after its new diff. */
   private keepScroll: { top: number; left: number } | null = null;
+  /** After an edit of the texts in place: the line at the top of the view, and where the view was put. */
+  private placeAfterEdit: { line: number; offset: number; set: number } | null = null;
   /** Scroll to the first change when the diff is ready; not when the same file is shown again. */
   private revealFirst = true;
 
@@ -816,8 +856,25 @@ export class DiffView {
     // The same file, changed on disk: new texts in the models that show now. The editors keep their
     // lines on the screen, so the view does not flash.
     if (this.keepView && old && !this.host.hidden && old.modified.getLanguageId() === (lang ?? "plaintext")) {
-      for (const [m, t] of [[old.original, a], [old.modified, b]] as const) if (m.getValue() !== t) m.pushEditOperations([], [{ range: m.getFullModelRange(), text: t }], () => null);
+      // Only the lines that changed get new text. The other lines, the cursor and the selection stay.
+      // The first line of the view stays at its place, also when lines above it come or go.
+      const ed = this.editor.getModifiedEditor();
+      const first = ed.getVisibleRanges()[0]?.startLineNumber ?? 1;
+      const offset = ed.getScrollTop() - ed.getTopForLineNumber(first);
+      let line = first;
+      for (const [m, t] of [[old.original, a], [old.modified, b]] as const) {
+        const [before, after] = [m.getLinesContent(), t.split(/\r?\n/)];
+        const hunks = lineHunks(before, after, diffLines);
+        if (!hunks.length) continue;
+        const edits = rangeEdits(before, after, hunks).map((e) => ({ range: new monaco.Range(e.startLine, e.startColumn, e.endLine, e.endColumn), text: e.text }));
+        m.pushEditOperations([], edits, () => null);
+        if (m === old.modified) line = lineAfter(first - 1, hunks) + 1;
+      }
+      const top = ed.getTopForLineNumber(line) + offset;
+      ed.setScrollTop(top);
+      this.placeAfterEdit = { line, offset, set: ed.getScrollTop() };
       this.keepView = null;
+      this.keepScroll = null;
       return;
     }
     this.editorMode = "diff";

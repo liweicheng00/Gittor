@@ -141,6 +141,16 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   `recent-groups.ts` puts them in groups by project and keeps 12 projects with 8 worktrees each, so many
   worktrees do not push other projects out. `recent.ts` gives the rows of the Open menu and the welcome
   screen, and reads the projects of old entries with `api.repoInfo`.
+- Refresh after a change outside the app (`docs/refresh.md`): the watcher sends a batch after 300 ms
+  without an event, or 1 s after its first event (`Coalescer` in `watch.rs`). `watch.ts` gives the
+  counters to `RefreshScheduler`: one load at a time, one more after it, and none while the user
+  interacts (`interaction.ts`: the mouse is down, a drag or a menu is open, a scroll; 5 s at most). A
+  load must not flash: draw a list with `reconcile()` of `keyed.ts` (a key and a signature for each
+  row; the signature holds all that the row shows and all that its handlers use), and set a text
+  only when it changed. `LogView.reload` keeps the rows until the new rows are there. `DiffView`
+  puts the changed lines into its models (`text-edit.ts`) and keeps the first line of the view in
+  its place. A `files` load does not load stashes and reviews. `window.__gittorRefresh` has the
+  counts of requests, loads and holds.
 - Conflicts: `conflicts.ts` (`resolveConflicts`: the Conflicts dialog, then the next file in the merge
   window; `offerContinue` after the last file) and `merge-view.ts` (the merge window). `runOp` opens the
   dialog when an operation stops with conflicts. A bar of actions in a Monaco view zone gets the mouse
@@ -237,6 +247,10 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
   `receive.denyCurrentBranch ignore` on it.
 - Do not draw a whole bar or list again when nothing changed. A new element under the mouse loses
   the click (this broke the tabs scenario).
+- One wheel event of Playwright scrolls a Monaco editor by about 50 px, whatever its delta. Send many
+  events for a long scroll.
+- A test module for `node --test` cannot import another module of `ui/src` without its `.ts` ending,
+  and `tsc` refuses the ending. Give the function of the other module as a parameter (`lineHunks`).
 - Never call `monaco.editor.colorizeElement`: it sets the theme of all Monaco editors (to the light
   "vs" without a theme). Use `monaco.editor.colorize`, which only returns HTML.
 - A Monaco menu item with a condition shows only after the diff loaded. A menu that opened before

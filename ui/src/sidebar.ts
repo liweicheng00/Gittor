@@ -4,6 +4,17 @@ import type { BranchInfo, RecentBranch, Worktree } from "./api";
 import { pathLabels } from "./path-labels";
 import { compareTags } from "./version-sort";
 import { h, icon, twisty } from "./dom";
+import { type KeyedItem, reconcile } from "./keyed";
+
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/** The rows of one draw of the list, with the key and the signature of each for `reconcile`. */
+class RowList {
+  readonly items: KeyedItem<HTMLElement>[] = [];
+  add(key: string, sig: unknown, el: HTMLElement) {
+    this.items.push({ key, sig: JSON.stringify(sig), build: () => el });
+  }
+}
 
 export class Sidebar {
   readonly el: HTMLElement;
@@ -60,7 +71,10 @@ export class Sidebar {
     this.render();
   }
 
+  // Each setter draws the list only when its data changed. A reload of the same refs then makes no new
+  // elements: the list does not flash, and a click on a row still works.
   setRefs(refs: BranchInfo[]) {
+    if (same(refs, this.refs)) return;
     this.refs = refs;
     const known = new Set(refs.map((b) => b.full));
     this.selection = new Set([...this.selection].filter((f) => known.has(f)));
@@ -68,7 +82,9 @@ export class Sidebar {
   }
 
   setRemoteTags(remote: string | null, names: string[] | null) {
-    this.remoteTags = remote && names ? { remote, names: new Set(names) } : null;
+    const next = remote && names ? { remote, names: new Set(names) } : null;
+    if (same(next && [next.remote, [...next.names]], this.remoteTags && [this.remoteTags.remote, [...this.remoteTags.names]])) return;
+    this.remoteTags = next;
     this.render();
   }
 
@@ -78,17 +94,21 @@ export class Sidebar {
   }
 
   setRecent(recent: RecentBranch[]) {
+    if (same(recent, this.recent)) return;
     this.recent = recent;
     this.render();
   }
 
   setWorktrees(w: Worktree[]) {
+    if (same(w, this.worktrees)) return;
     this.worktrees = w;
     this.render();
   }
 
   setFavorites(full: Iterable<string>) {
-    this.favorites = new Set(full);
+    const next = new Set(full);
+    if (same([...next].sort(), [...this.favorites].sort())) return;
+    this.favorites = next;
     this.render();
   }
 
@@ -97,6 +117,7 @@ export class Sidebar {
   }
 
   setFilter(names: string[]) {
+    if (same([...names].sort(), [...this.filterSet].sort())) return;
     this.filterSet = new Set(names);
     this.render();
   }
@@ -160,7 +181,7 @@ export class Sidebar {
     for (const [remote, list] of remotes) groups.push([`Remote: ${remote}`, list]);
     groups.push(["Tags", this.refs.filter((b) => b.kind === "tag" && match(b)).sort((a, b) => compareTags(a.name, b.name))]);
 
-    const frag = document.createDocumentFragment();
+    const frag = new RowList();
     if (current.length) {
       const c = current[0];
       const head = h("div", { class: "sidebar-head", title: `${c.subject}\nClick: go to the commit of HEAD` }, h("span", { class: "head-icon" }, "HEAD"), " ", c.name);
@@ -169,7 +190,7 @@ export class Sidebar {
         e.preventDefault();
         this.onContextMenu(c, e);
       });
-      frag.append(head);
+      frag.add("head", c, head);
     }
     for (const [title, unsorted] of groups) {
       // Favorites first, as in IntelliJ; the order stays otherwise.
@@ -206,17 +227,24 @@ export class Sidebar {
           this.onRemoteMenu(title.slice("Remote: ".length), e);
         });
       }
-      frag.append(header);
+      frag.add(`g:${title}`, [open, items.length], header);
       if (!open) continue;
       const label = (b: BranchInfo) => (title.startsWith("Remote") ? b.name.slice(b.name.indexOf("/") + 1) : b.name);
       if (this.groupByPrefix && !q && (title === "Local" || title.startsWith("Remote: "))) this.renderFolders(frag, title, items, label);
-      else for (const b of items) frag.append(this.item(b, label(b)));
+      else for (const b of items) frag.add(`b:${title}\0${b.full}`, this.itemSig(b, label(b), 0), this.item(b, label(b)));
     }
     this.renderWorktrees(frag);
-    this.list.replaceChildren(frag);
+    reconcile(this.list, frag.items);
+    this.paintSelection();
   }
 
-  private renderWorktrees(frag: DocumentFragment) {
+  /** All that the row of a branch shows. */
+  private itemSig(b: BranchInfo, label: string, depth: number): unknown {
+    const localTag = b.kind === "tag" && !!this.remoteTags && !this.remoteTags.names.has(b.name);
+    return [b, label, depth, this.filterSet.has(b.name), this.favorites.has(b.full), localTag && this.remoteTags?.remote];
+  }
+
+  private renderWorktrees(frag: RowList) {
     const title = "Worktrees";
     const open = !this.collapsed.has(title);
     const add = h("button", { class: "icon-button group-action", title: "Add a worktree" }, "+");
@@ -237,7 +265,7 @@ export class Sidebar {
       else this.collapsed.add(title);
       this.render();
     });
-    frag.append(header);
+    frag.add(`g:${title}`, [open, this.worktrees.length], header);
     if (!open) return;
     // Worktrees with the same folder name show the folders above them too.
     const labels = pathLabels(this.worktrees.map((w) => w.path));
@@ -257,12 +285,12 @@ export class Sidebar {
         e.preventDefault();
         this.onWorktreeMenu(w, e);
       });
-      frag.append(el);
+      frag.add(`w:${w.path}`, [w, name], el);
     }
   }
 
   /** The branches of a group in folders of their prefixes. A folder opens and closes with a click. */
-  private renderFolders(frag: DocumentFragment, group: string, items: BranchInfo[], label: (b: BranchInfo) => string) {
+  private renderFolders(frag: RowList, group: string, items: BranchInfo[], label: (b: BranchInfo) => string) {
     interface Folder {
       dirs: Map<string, Folder>;
       branches: BranchInfo[];
@@ -297,13 +325,13 @@ export class Sidebar {
           else this.collapsed.delete(key);
           this.render();
         });
-        frag.append(row);
+        frag.add(`f:${key}`, [open, sub.count, depth], row);
         if (open) walk(sub, `${path}${name}/`, depth + 1);
       }
       for (const b of f.branches) {
         const el = this.item(b, label(b).split("/").pop()!);
         el.style.paddingLeft = `${22 + depth * 14}px`;
-        frag.append(el);
+        frag.add(`b:${group}\0${b.full}`, this.itemSig(b, label(b), depth + 1), el);
       }
     };
     walk(root, "", 0);

@@ -184,7 +184,16 @@ export async function task<T>(label: string, fn: () => Promise<T>): Promise<T | 
   }
 }
 
-export function updateStatus() {
+/** Sets a text only when it changed: the same text again makes no new node. */
+function setText(el: HTMLElement, text: string) {
+  if (el.textContent !== text) el.textContent = text;
+}
+
+let shownStatus = "";
+
+/** Shows the repository, the branch and the counts. `background` is a reload after a change outside
+ * the app: it leaves the activity text. The parts that did not change keep their elements. */
+export function updateStatus(background = false) {
   if (!app.view) return;
   const branch = app.repoState?.rebasing
     ? `rebasing ${app.repoState.rebasing}`
@@ -192,17 +201,22 @@ export function updateStatus() {
   // The same short name as the tab: folders with the same name show the folders above them.
   const root = app.view.root;
   const tabs = settings.tabs.includes(root) ? settings.tabs : [...settings.tabs, root];
-  repoLabel.replaceChildren(h("b", { title: root }, pathLabels(tabs)[tabs.indexOf(root)] ?? root));
+  const label = pathLabels(tabs)[tabs.indexOf(root)] ?? root;
+  const key = JSON.stringify([root, label, branch]);
+  if (key !== shownStatus) {
+    shownStatus = key;
+    repoLabel.replaceChildren(h("b", { title: root }, label));
+    branchBtn.replaceChildren(icon("branch"), branch, icon("chevron-down", "icon-caret"));
+  }
   branchBtn.hidden = false;
-  branchBtn.replaceChildren(icon("branch"), branch, icon("chevron-down", "icon-caret"));
   const changed = app.repoState?.changedFiles ?? 0;
-  statusLeft.textContent = app.view.root + (changed ? `  ·  ${changed} changed file${changed === 1 ? "" : "s"}` : "");
-  statusMid.textContent = app.view.filtered
+  setText(statusLeft, app.view.root + (changed ? `  ·  ${changed} changed file${changed === 1 ? "" : "s"}` : ""));
+  const commits = app.view.filtered
     ? `${app.view.rowCount.toLocaleString()} of ${app.view.totalCommits.toLocaleString()} commits match the filter`
     : `${app.view.totalCommits.toLocaleString()} commits`;
-  if (app.view.collapsed) statusMid.textContent += ` · ${app.view.rowCount.toLocaleString()} rows shown, linear branches collapsed`;
+  setText(statusMid, commits + (app.view.collapsed ? ` · ${app.view.rowCount.toLocaleString()} rows shown, linear branches collapsed` : ""));
   filterBar.setInfo(app.view.filtered ? `${app.view.rowCount.toLocaleString()} of ${app.view.totalCommits.toLocaleString()}` : "");
-  if (!app.busy) statusActivity.textContent = `loaded in ${app.view.loadMs} ms`;
+  if (!app.busy && !background) statusActivity.textContent = `loaded in ${app.view.loadMs} ms`;
 }
 
 /** Shows or hides the diff panel. The panel comes back with the size that it had. */
