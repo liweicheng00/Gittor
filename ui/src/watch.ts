@@ -2,11 +2,13 @@
 
 import { notifyRepoChange } from "./windows";
 import { api, type AskpassPrompt, onBackendEvent } from "./api";
-import { showLocalDiff } from "./commit-flow";
+import { refreshLocalDiff } from "./commit-flow";
 import { credentialDialog } from "./dialogs";
+import { userIsBusy } from "./interaction";
+import { type RefreshKind, RefreshScheduler } from "./refresh-scheduler";
 import { applyView, jumpToOid, loadLocalChanges, loadRefs, reloadView } from "./repo";
 import { settings } from "./settings";
-import { authors, banner, commitPanel, filterBar, log, updateStatus } from "./shell";
+import { authors, banner, filterBar, log, updateStatus } from "./shell";
 import { app } from "./state";
 
 // Git can ask for a password through the askpass program of the app; the backend sends the prompts.
@@ -29,94 +31,84 @@ async function showPrompts(prompts: AskpassPrompt[]) {
   void showPrompts(askpassWaiting);
 }
 
-/** The watcher counters that the view shows; changes after a write operation of the app are expected. */
+/** Files changed in the quiet time after an operation of the app. They load after it. */
 let filesChangedWhileQuiet = false;
 
-let reloading = false;
-let again = false;
-
-/** Reloads what changed outside the app. One reload runs at a time: a change during a reload gives one
- * more reload after it, with the newest counters. */
-async function onCounters(c: { repo: number; files: number }) {
-  if (reloading) {
-    again = true;
-    return;
+/**
+ * Loads what changed outside the app. Each part draws only what is new: a list keeps the rows that did
+ * not change, and the diff keeps its place (see docs/refresh.md).
+ */
+async function reload(kind: RefreshKind) {
+  // An operation of the app loads the view itself when it ends.
+  if (!app.view || app.busy > 0) return;
+  const root = app.view.root;
+  notifyRepoChange(kind);
+  if (kind === "repo") {
+    const r = await api.refresh().catch(() => null);
+    if (!r || app.view?.root !== root) return;
+    await applyView(r, true, true);
+    await loadRefs(true);
+  } else {
+    app.repoState = await api.repoState().catch(() => app.repoState);
+    if (app.view?.root !== root) return;
+    banner.update(app.repoState);
+    updateStatus(true);
+    await loadLocalChanges(true);
   }
-  reloading = true;
-  try {
-    await applyCounters(c);
-  } finally {
-    reloading = false;
-  }
-  if (again) {
-    again = false;
-    const next = await api.watchState().catch(() => null);
-    if (next) void onCounters(next);
-  }
+  await refreshLocalDiff();
 }
 
-/** Reloads what changed outside the app, from the counters of the watcher. */
-async function applyCounters(c: { repo: number; files: number }) {
-  if (!app.view || app.busy > 0 || document.hidden || !settings.autoRefresh) return;
+const scheduler = new RefreshScheduler({
+  now: () => Date.now(),
+  setTimer: (fn, ms) => window.setTimeout(fn, ms),
+  clearTimer: (t) => clearTimeout(t as number),
+  held: userIsBusy,
+  visible: () => !document.hidden,
+  run: reload,
+});
+// For the UI tests and for measurements: the number of requests, loads and holds.
+(window as unknown as { __gittorRefresh?: unknown }).__gittorRefresh = scheduler.stats;
+
+/** Asks for a load of what changed, from the counters of the watcher. */
+function onCounters(c: { repo: number; files: number }) {
+  if (!app.view || app.busy > 0 || !settings.autoRefresh) return;
   const before = app.watchSeen;
   app.watchSeen = c;
   if (!before) return;
-  if (Date.now() < app.watchQuietUntil || app.busy > 0) {
+  if (Date.now() < app.watchQuietUntil) {
     // The operation itself changed these files, but a file can also change on disk in this time. The
     // local changes load once more after the quiet time; that is cheap. Ref changes stay ignored here,
     // because a graph reload after each operation costs much on a large repository.
     if (c.files !== before.files) filesChangedWhileQuiet = true;
     return;
   }
-  if (filesChangedWhileQuiet && c.files === before.files && c.repo === before.repo) {
-    filesChangedWhileQuiet = false;
-    notifyRepoChange("files");
-    await loadLocalChanges();
-    const f = commitPanel.activeFile();
-    if (app.diffSource === "local" && f) void showLocalDiff(f);
-    return;
-  }
+  if (c.repo !== before.repo) scheduler.request("repo");
+  else if (c.files !== before.files || filesChangedWhileQuiet) scheduler.request("files");
   filesChangedWhileQuiet = false;
-  if (c.repo !== before.repo) {
-    notifyRepoChange("repo");
-    const r = await api.refresh().catch(() => null);
-    if (r) {
-      await applyView(r, true);
-      await loadRefs();
-    }
-  } else if (c.files !== before.files) {
-    notifyRepoChange("files");
-    app.repoState = await api.repoState().catch(() => app.repoState);
-    banner.update(app.repoState);
-    updateStatus();
-    await loadLocalChanges();
-    const f = commitPanel.activeFile();
-    if (app.diffSource === "local" && f) void showLocalDiff(f);
-  }
 }
 
 void onBackendEvent((e) => {
   if (e.kind === "askpass") void showPrompts(e.prompts);
-  else if (e.kind === "watch" && e.root === app.view?.root) void onCounters(e);
+  else if (e.kind === "watch" && e.root === app.view?.root) onCounters(e);
 });
 
 // A slow poll covers two cases: an event that got lost, and the end of the quiet time after an
 // operation, which no event marks.
 setInterval(() => {
-  if (app.view) void api.watchState().then((c) => c && onCounters(c)).catch(() => {});
+  if (app.view && !document.hidden) void api.watchState().then((c) => c && onCounters(c)).catch(() => {});
 }, 3000);
+
+// A load that waited for the window runs when the window shows again.
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) scheduler.poke();
+});
 
 // Files change outside the app; reload the local changes when the window gets the focus.
 let focusTimer = 0;
 window.addEventListener("focus", () => {
   if (!app.view || Date.now() - focusTimer < 1500) return;
   focusTimer = Date.now();
-  void api.repoState().then((st) => {
-    app.repoState = st;
-    banner.update(st);
-    updateStatus();
-  }).catch(() => {});
-  void loadLocalChanges();
+  scheduler.request("files");
 });
 
 filterBar.onChange = () => void reloadView();
