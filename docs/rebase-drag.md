@@ -15,6 +15,8 @@ touches, the tests that it needs, and the open questions.
   with that move done.
 - No git client that we examined shows a conflict check of the whole plan before the run. Gittor can
   be the first.
+- The owner decided the open points (section 10). New: "Copy for an Agent" copies the plan, the check
+  and the rules, so a coding agent can run the rebase and resolve the conflicts (section 6.1).
 
 ## 2. What exists now
 
@@ -223,7 +225,12 @@ Recommendation: **the dialog first, the log graph as a shortcut.**
   run (an error), a different final tree (a warning, with the files).
 - A click on a conflict row opens the three versions of the file (base, the new history, the commit)
   in the Compare window, read only.
-- Run Rebase is off while a step has a conflict or a check has an error.
+- When the plan is clean, Run Rebase runs the in-memory rewrite.
+- When a step has a conflict, the button is "Run and Stop at the Conflict" (decision of the owner).
+  It runs a real `git rebase -i` with the plan as its todo list, as the Edit action does now. The
+  rebase stops at the predicted step; the op banner and the Conflicts dialog then guide the user. An
+  error of a check (protected branch, local changes that block the run) still turns the button off.
+- "Copy for an Agent" copies the plan as a task for a coding agent (section 6.1).
 
 Can the user resolve a predicted conflict before the run?
 
@@ -233,9 +240,77 @@ Can the user resolve a predicted conflict before the run?
   that tree for the step. This is the idea of jj and GitButler, but before the run.
 - The resolution belongs to the inputs of the step (parent, the tree before, the commit). A change of
   the plan before that step makes it invalid. The UI must say so.
-- Recommendation: the first version only shows the conflict. As a way out, "Run and stop at the
-  conflict" runs a real `git rebase -i` (the path of the Edit action), which stops at the predicted step
-  and opens the Conflicts dialog. Resolution ahead of time comes later.
+- The first version only shows the conflict, and offers "Run and Stop at the Conflict" and "Copy for
+  an Agent". Resolution ahead of time can come later.
+
+### 6.1 Copy for an Agent
+
+The owner wants a way to give the plan to an agent (for example Claude Code in a terminal). The agent
+runs the rebase and resolves the conflicts at the same time.
+
+- A button "Copy for an Agent" in the plan editor copies one Markdown text to the clipboard. It works
+  for a clean plan and for a plan with conflicts. A plan with conflicts is the main case.
+- The text has these parts:
+  1. The repository path, the branch, the full oid of HEAD and of the base. The agent stops when HEAD
+     is not that oid.
+  2. The todo list of `git rebase -i`, oldest first, with full oids and subjects. A reword or a squash
+     group gets its message in a block, and an `exec git commit --amend -F <file>` line, as
+     `rebase_interactive` writes now. An Edit step says what the user wants changed, if the user wrote
+     a note.
+  3. The result of the check for each step: the predicted conflicts with their files and kinds, the
+     empty steps, and the steps "after a conflict".
+  4. The rules: keep empty commits (`--empty=keep`); do not skip or drop a commit; resolve each conflict
+     so that the commit keeps its intent on the new history; `git add` and `git rebase --continue`;
+     do not push; do not change other branches.
+  5. The end: a list of the conflicts and how the agent resolved them, then `git log --oneline` of the
+     range.
+  6. Undo: `git reset --keep <old HEAD>`, or `git rebase --abort` while the rebase runs.
+- Gittor shows the work of the agent by itself: the watcher sees the rebase, the op banner shows it,
+  and the log loads again when it ends.
+- Gittor keeps the old HEAD of a copied plan. When the branch moves away from it after a rebase, a
+  toast offers Undo (a `Reset { mode: Keep }` step with the new HEAD as `expected_head`).
+- The text is made by a pure function `rebase-agent-text.ts`, as `note-format.ts` makes the text of
+  review notes. It has unit tests.
+
+Example for the demo plan "drop A, then B C D E":
+
+````markdown
+# Rebase task from Gittor
+
+Repository: /work/demo
+Branch: topic/plan
+HEAD must be: 81d616ca… (full oid). Stop if it is not.
+Base: e84df80a… (full oid)
+
+## Todo (oldest first)
+
+```
+drop 22d3079e… A: add notes
+pick 03b13306… B: change notes
+pick 127739a2… C: add util
+pick c12dbf1e… D: louder greeting
+pick 81d616ca… E: remove util again
+```
+
+## Check of Gittor (nothing changed yet)
+
+- pick 03b13306 "B: change notes": CONFLICT in notes.md (modify/delete). B changes notes.md, which A
+  added. A is dropped.
+- C, D, E: no conflict found, but they come after a conflict.
+
+## Rules
+
+- Run: write the todo to a file, then
+  `GIT_SEQUENCE_EDITOR="cp <todo file>" git rebase -i --empty=keep <base>`.
+- At each conflict, resolve it so that the commit keeps its intent on the new history. Then
+  `git add` the files and `git rebase --continue`. Do not skip or drop a commit.
+- Do not push. Do not change other branches.
+- At the end, list each conflict and how you resolved it, then show `git log --oneline <base>..HEAD`.
+
+Undo: `git rebase --abort` during the rebase, or `git reset --keep 81d616ca…` after it.
+````
+
+![Copy for an Agent](rebase-drag/sketch-s4.png)
 
 ## 7. Risks and limits
 
@@ -253,8 +328,11 @@ Can the user resolve a predicted conflict before the run?
   allow Run only for the current result.
 - A change of the repository between the check and the run (a commit in a terminal, the watcher):
   the run must refuse when HEAD moved, and the dialog checks again on `onRepoChange`.
-- Empty commits: `rewrite` keeps them now; `git rebase -i` drops or stops. The check makes them
-  visible, so the user can drop them.
+- Empty commits: Gittor keeps them (decision of the owner). `rewrite` keeps them now. The real
+  `git rebase -i` path (Edit, Run and Stop at the Conflict, the agent text) must use `--empty=keep`, so
+  all paths agree. The check shows them, so the user can drop them by hand.
+- An agent works outside Gittor: it can push, change other branches or resolve badly. The text forbids
+  this, and Undo of the old HEAD stays possible. The reflog keeps the old commits too.
 - Drag in WebKitGTK and WKWebView: test in the real app (Xvfb and xdotool on Linux; the owner on a Mac).
 
 ## 8. Layers that the change touches
@@ -268,7 +346,8 @@ Can the user resolve a predicted conflict before the run?
    - Optional `Action::Fixup` without a message in the UI (the backend has it).
    - `rewrite` takes an optional `expected_head` and refuses when HEAD moved.
 2. `crates/service`: a query `rewrite_check` in `queries.rs` and one line in `dispatch.rs`. The `Rewrite`
-   variant of `Op` gets `expected_head`.
+   variant of `Op` gets `expected_head`. The real
+   rebase path gets `--empty=keep` and a mode that stops at the first conflict.
 3. Types: `RewriteCheck`, `StepCheck`, `StepStatus` with `#[derive(ts_rs::TS)]`; run
    `export_bindings`. Add `rewriteCheck` to `api.ts` and the new field to the `Op` union.
 4. UI
@@ -277,6 +356,10 @@ Can the user resolve a predicted conflict before the run?
    - `rebase-drag.ts`: the custom drag of rows, after `tab-drag.ts`.
    - `rebase-flow.ts`: the editor, the debounced check, the check box, Run. It replaces
      `interactiveRebaseDialog`; `interactiveRebase` in `operations.ts` calls it.
+   - `rebase-agent-text.ts`: the text of Copy for an Agent. Unit tests in
+     `ui/test/rebase-agent-text.test.ts`.
+   - The action menu of a row gets Reword and Edit (decision of the owner). Reword edits the message in
+     place; Edit runs the real rebase that stops at the commit.
    - `log-view.ts`: an `onNodeDrag` callback from the graph canvas for the shortcut.
    - `protected.ts`: check the first changed commit.
    - `keyboard.ts`, `style.css`: the new actions and classes, at their places in order.
@@ -297,7 +380,11 @@ Rust (`crates/git/tests/rewrite_check.rs`):
 - With `commit.gpgsign`, the check does not sign (in `signing.rs`, which has gpg).
 - `rewrite` with an old `expected_head` refuses.
 
-UI unit tests: `rebase-plan.test.ts` for the model.
+UI unit tests: `rebase-plan.test.ts` for the model, `rebase-agent-text.test.ts` for the text (full
+oids, oldest first, messages of squash groups, the conflicts, the Undo line).
+
+More Rust tests: Run and Stop at the Conflict stops at the predicted step with the predicted files;
+empty commits stay on both paths.
 
 e2e scenarios (one file each):
 
@@ -306,16 +393,32 @@ e2e scenarios (one file each):
 - `rebase-graph-drag.mjs`: drag a node in the log; the editor opens with the move; a drop on a merge
   or on a protected commit does nothing.
 - Keyboard: Alt+Up/Down and the action letters.
+- `rebase-agent.mjs`: Copy for an Agent puts the text on the clipboard (read it with
+  `navigator.clipboard` in Chromium). The scenario then runs the todo of the text with a script in
+  place of the agent, as the scenarios of Open in Editor do, and checks that the log shows the result
+  and that Undo brings the old HEAD back.
+- Run and Stop at the Conflict: the op banner shows the rebase at the predicted commit.
 - Add the check to the large repository scenario, or measure it there, before a release.
 
-## 10. Open questions for the owner
+## 10. Decisions of the owner
 
-1. Is the order right: the plan editor in the dialog first, then the drag in the log as a shortcut?
-2. When the check finds a conflict, is Run off, or does "Run and stop at the conflict" (a real rebase)
-   come in the first version? Is resolution ahead of time wanted later?
-3. Empty commits: keep them (as now), drop them by themselves, or ask?
-4. Other local branches that contain rewritten commits: move them too, as `git rebase --update-refs`?
-5. A drop on a commit: Squash by default and Fixup with Alt (as Tower), or the other way?
-6. Should the dialog have Reword and Edit in its action menu? The backend has both already.
-7. Should the main log show a preview of the new order (ghost nodes) while the dialog is open, or only
-   the small graph in the dialog?
+1. The plan editor in the dialog comes first. The drag in the log is a shortcut to it.
+2. The first version has "Run and Stop at the Conflict" (a real rebase that stops at the conflict).
+3. Empty commits stay.
+4. Other local branches that contain rewritten commits do not move.
+5. A drop on a commit is a Squash; with Alt it is a Fixup.
+6. The action menu gets Reword and Edit.
+7. Left to the designer. Decision: the main log shows no preview. The small graph in the dialog shows
+   the new order, with ghost nodes. The main log shows the result after the run. A preview in the main
+   log would mix two states in one view, and the log is virtual and filtered.
+8. New: "Copy for an Agent" copies the plan, the check and the rules for a coding agent, which runs the
+   rebase and resolves the conflicts (section 6.1).
+
+## 11. Open questions
+
+1. The agent text: Markdown for any agent, or also a file in `app_dir` that the text names, so a long
+   plan does not fill the clipboard?
+2. Should Gittor offer to start the agent itself (a command in `settings.json`, as Open in Terminal),
+   or only copy the text?
+3. Undo after the work of an agent: a toast when the branch moves, or a menu item "Undo the last
+   rebase" from the kept old HEAD?
