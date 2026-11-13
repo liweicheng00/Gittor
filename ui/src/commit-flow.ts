@@ -28,18 +28,30 @@ commitPanel.onCopyNotes = async () => {
   void copyText(paths.map((p) => formatNotes(p, open.filter((n) => n.path === p))).join("\n\n"));
 };
 
-export async function showLocalDiff(f: LocalFile) {
+/** Loads the diff of the local file that shows again, after a change outside the app. */
+export async function refreshLocalDiff() {
+  const f = commitPanel.activeFile();
+  if (app.diffSource === "local" && f) await showLocalDiff(f, true);
+}
+
+/**
+ * Shows the diff of a local file. `refresh` is a load of the file that shows already: when the file
+ * and HEAD are the same as before, nothing draws; else the diff gets the new text in place.
+ */
+export async function showLocalDiff(f: LocalFile, refresh = false) {
   const path = f.change.path;
-  visit({
-    key: `local\0${path}`,
-    label: `Local change: ${path}`,
-    open: () => {
-      showLeftTab("commit");
-      commitPanel.revealFile(path, f.list);
-    },
-  });
+  if (!refresh) {
+    visit({
+      key: `local\0${path}`,
+      label: `Local change: ${path}`,
+      open: () => {
+        showLeftTab("commit");
+        commitPanel.revealFile(path, f.list);
+      },
+    });
+    app.request++;
+  }
   const req = ++localRequest;
-  app.request++;
   app.diffSource = "local";
   const head = commitPanel.head;
   const status = f.change.status === "?" ? "A" : f.change.status === "U" ? "M" : f.change.status;
@@ -51,6 +63,7 @@ export async function showLocalDiff(f: LocalFile) {
       : { left: { text: null, binary: false, size: 0, missing: true }, right: (await api.filePair("worktree", "worktree", change.path, null)).right };
     if (req !== localRequest || app.diffSource !== "local") return;
     if (f.change.status === "?") pair.left = { text: null, binary: false, size: 0, missing: true };
+    if (refresh && diff.shows(change, pair.left, pair.right)) return;
     diff.setSource(
       f.change.status === "D" ? (head ? { path: f.change.old_path ?? f.change.path, rev: { commit: head } } : null) : { path: f.change.path, rev: "worktree" },
     );
