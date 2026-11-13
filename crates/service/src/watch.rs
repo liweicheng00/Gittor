@@ -12,7 +12,7 @@ use std::process::Stdio;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{channel, Receiver, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// Counters that go up when something changed.
 #[derive(Default)]
@@ -46,7 +46,60 @@ pub struct RepoWatcher {
     _watcher: Arc<Mutex<RecommendedWatcher>>,
 }
 
-const DEBOUNCE: Duration = Duration::from_millis(300);
+/// A batch of events goes out after this time without a new event.
+const QUIET: Duration = Duration::from_millis(300);
+/// A batch goes out at most this long after its first event, also when events keep coming.
+const MAX_WAIT: Duration = Duration::from_millis(1000);
+/// The shortest time between two batches.
+const MIN_GAP: Duration = Duration::from_millis(1000);
+
+/// Decides when the events that wait go out as one batch. Many writes in a short time give one batch.
+/// The first batch after a pause goes out after `quiet`. While events keep coming, one batch goes out
+/// each `max_wait`, so the data of the front end is never older than that.
+#[derive(Debug)]
+pub(crate) struct Coalescer {
+    quiet: Duration,
+    max_wait: Duration,
+    min_gap: Duration,
+    first: Option<Instant>,
+    last: Option<Instant>,
+    flushed: Option<Instant>,
+}
+
+impl Coalescer {
+    pub(crate) fn new(quiet: Duration, max_wait: Duration, min_gap: Duration) -> Coalescer {
+        Coalescer { quiet, max_wait, min_gap, first: None, last: None, flushed: None }
+    }
+
+    /// An event came at `now`.
+    pub(crate) fn push(&mut self, now: Instant) {
+        self.first.get_or_insert(now);
+        self.last = Some(now);
+    }
+
+    /// The time at which the batch goes out. None when no event waits.
+    pub(crate) fn due_at(&self) -> Option<Instant> {
+        let (first, last) = (self.first?, self.last?);
+        let due = (last + self.quiet).min(first + self.max_wait);
+        Some(self.flushed.map_or(due, |f| due.max(f + self.min_gap)))
+    }
+
+    /// How long to wait for the next event: until the batch is due, or `idle` when no event waits.
+    pub(crate) fn wait(&self, now: Instant, idle: Duration) -> Duration {
+        self.due_at().map_or(idle, |due| due.saturating_duration_since(now))
+    }
+
+    /// True when the batch is due at `now`. The batch is then empty again.
+    pub(crate) fn take(&mut self, now: Instant) -> bool {
+        if self.due_at().is_none_or(|due| now < due) {
+            return false;
+        }
+        self.first = None;
+        self.last = None;
+        self.flushed = Some(now);
+        true
+    }
+}
 
 /// Files in the git dir that change what the log, the refs or the operation banner show.
 fn is_repo_file(rel: &Path) -> bool {
@@ -131,25 +184,26 @@ struct Worker {
 impl Worker {
     fn run(self, rx: Receiver<notify::Result<Event>>) {
         let mut paths: Vec<(PathBuf, bool)> = Vec::new();
+        let mut batch = Coalescer::new(QUIET, MAX_WAIT, MIN_GAP);
         loop {
-            match rx.recv_timeout(DEBOUNCE) {
+            match rx.recv_timeout(batch.wait(Instant::now(), QUIET)) {
                 Ok(Ok(ev)) => {
-                    if matches!(ev.kind, EventKind::Access(_)) {
-                        continue;
+                    if !matches!(ev.kind, EventKind::Access(_)) {
+                        let created = matches!(ev.kind, EventKind::Create(_));
+                        paths.extend(ev.paths.into_iter().map(|p| (p, created)));
+                        batch.push(Instant::now());
                     }
-                    let created = matches!(ev.kind, EventKind::Create(_));
-                    paths.extend(ev.paths.into_iter().map(|p| (p, created)));
                 }
                 Ok(Err(_)) => {}
                 Err(RecvTimeoutError::Timeout) => {
-                    if !paths.is_empty() {
-                        self.flush(std::mem::take(&mut paths));
-                    }
                     if self.watcher.strong_count() == 0 {
                         return;
                     }
                 }
                 Err(RecvTimeoutError::Disconnected) => return,
+            }
+            if batch.take(Instant::now()) {
+                self.flush(std::mem::take(&mut paths));
             }
         }
     }
@@ -279,9 +333,93 @@ fn is_gitlink(root: &Path, dir: &Path) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::is_gitlink;
+    use super::{is_gitlink, Coalescer, RepoWatcher, WatchCounters};
     use std::path::Path;
     use std::process::Command;
+    use std::sync::{Arc, Mutex};
+    use std::time::{Duration, Instant};
+
+    const MS: Duration = Duration::from_millis(1);
+
+    fn coalescer() -> Coalescer {
+        Coalescer::new(300 * MS, 1000 * MS, 1000 * MS)
+    }
+
+    #[test]
+    fn a_batch_goes_out_after_the_quiet_time() {
+        let t = Instant::now();
+        let mut c = coalescer();
+        assert_eq!(c.due_at(), None);
+        assert!(!c.take(t));
+        c.push(t);
+        c.push(t + 100 * MS);
+        assert_eq!(c.due_at(), Some(t + 400 * MS));
+        assert_eq!(c.wait(t + 150 * MS, 300 * MS), 250 * MS);
+        assert!(!c.take(t + 399 * MS));
+        assert!(c.take(t + 400 * MS));
+        assert_eq!(c.due_at(), None, "the batch is empty after it went out");
+    }
+
+    #[test]
+    fn events_that_keep_coming_do_not_hold_a_batch_back() {
+        let t = Instant::now();
+        let mut c = coalescer();
+        // One event each 100 ms: the quiet time never comes.
+        let mut out = Vec::new();
+        for i in 0..50u32 {
+            let now = t + i * 100 * MS;
+            c.push(now);
+            if c.take(now) {
+                out.push(i * 100);
+            }
+        }
+        assert_eq!(out, [1000, 2100, 3200, 4300], "about one batch each second");
+    }
+
+    #[test]
+    fn two_batches_keep_a_gap() {
+        let t = Instant::now();
+        let mut c = coalescer();
+        c.push(t);
+        assert!(c.take(t + 300 * MS));
+        // A write 100 ms after the first batch waits for the gap, not only for the quiet time.
+        c.push(t + 400 * MS);
+        assert_eq!(c.due_at(), Some(t + 1300 * MS));
+        assert!(!c.take(t + 700 * MS));
+        assert!(c.take(t + 1300 * MS));
+        // After a long pause the next batch needs the quiet time only.
+        c.push(t + 5000 * MS);
+        assert_eq!(c.due_at(), Some(t + 5300 * MS));
+    }
+
+    #[test]
+    fn a_burst_of_writes_gives_few_batches_and_the_last_write_shows() {
+        let base = std::env::temp_dir().join(format!("gittor-watch-burst-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&base).unwrap();
+        git(&base, &["init", "-q", "-b", "main"]);
+        let seen: Arc<Mutex<Vec<(Instant, WatchCounters)>>> = Arc::default();
+        let log = seen.clone();
+        let git_dir = base.join(".git");
+        let watcher = RepoWatcher::start(&base, &git_dir, &git_dir, None, Some(Arc::new(move |c| log.lock().unwrap().push((Instant::now(), c))))).unwrap();
+        std::thread::sleep(200 * MS);
+        // 40 writes in 2 s. Without a limit, the quiet time of 300 ms never comes in this time.
+        let start = Instant::now();
+        let mut last_write = start;
+        for i in 0..40 {
+            last_write = Instant::now();
+            std::fs::write(base.join(format!("f{}.txt", i % 5)), format!("{i}\n")).unwrap();
+            std::thread::sleep(50 * MS);
+        }
+        std::thread::sleep(1600 * MS);
+        let seen = seen.lock().unwrap().clone();
+        assert!(seen.len() >= 2 && seen.len() <= 4, "2 to 4 batches for 40 writes, got {}", seen.len());
+        assert!(seen[0].0 - start < 1500 * MS, "the first batch comes during the burst");
+        assert!(seen.last().unwrap().0 >= last_write, "a batch comes after the last write");
+        assert_eq!(watcher.state.counters().files as usize, seen.len());
+        assert_eq!(watcher.state.counters().repo, 0, "no ref changed");
+        let _ = std::fs::remove_dir_all(&base);
+    }
 
     fn git(dir: &Path, args: &[&str]) {
         let out = Command::new("git").arg("-C").arg(dir).args(args).output().unwrap();
