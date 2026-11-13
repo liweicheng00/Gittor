@@ -1146,7 +1146,7 @@ dependencies = [
 
 [[package]]
 name = "gittor"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "gittor-service",
  "serde_json",
@@ -1158,7 +1158,7 @@ dependencies = [
 
 [[package]]
 name = "gittor-devserver"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "gittor-git",
  "gittor-service",
@@ -1167,7 +1167,7 @@ dependencies = [
 
 [[package]]
 name = "gittor-git"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "gittor-graph",
  "serde",
@@ -1177,11 +1177,11 @@ dependencies = [
 
 [[package]]
 name = "gittor-graph"
-version = "0.1.4"
+version = "0.1.5"
 
 [[package]]
 name = "gittor-service"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "flate2",
  "gittor-git",
