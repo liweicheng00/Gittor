@@ -1,6 +1,7 @@
 // Virtualized commit log: a header, then one row per commit with the graph, refs, subject, author, date and hash.
 
 import { api, type Row } from "./api";
+import { reconcile } from "./keyed";
 import { dragResize, formatDate, h, icon } from "./dom";
 import { ELEMENT_WIDTH, ROW_HEIGHT, foldAt, foldMarks, maxPosition, paintRow } from "./graph-paint";
 import { refLabel } from "./ref-label";
@@ -29,7 +30,10 @@ export class LogView {
   private graphFull = 0;
   private graphCol = 0;
   private paintKey = "";
-  private rendered = new Map<number, { div: HTMLElement; selected: boolean }>();
+  /** Counts the loads of a new view. The rows of the last view go away then. */
+  private epoch = 0;
+  /** Reloads that load their rows now. No draw runs in this time: the old rows stay on the screen. */
+  private reloads = 0;
   /** Selected rows in click order. */
   selection: number[] = [];
   private anchor = -1;
@@ -130,6 +134,7 @@ export class LogView {
   }
 
   reset(rowCount: number, recommendedWidth: number, keepScroll = false) {
+    this.epoch++;
     this.generation++;
     this.rowCount = rowCount;
     this.chunks.clear();
@@ -140,6 +145,40 @@ export class LogView {
     this.empty.hidden = rowCount > 0;
     if (!keepScroll) this.scroller.scrollTop = 0;
     this.paintKey = "";
+    this.render();
+  }
+
+  /**
+   * Loads the rows of the same view again, after a change of the repository. The rows on the screen
+   * stay until the new rows are loaded; then the rows that changed get new elements, in one draw. So
+   * the log does not go blank. `place` puts a row at a distance from the top of the view, and
+   * `selection` is the selected rows in the new view.
+   */
+  async reload(rowCount: number, recommendedWidth: number, place: { row: number; offset: number } | null, selection: number[]) {
+    const gen = ++this.generation;
+    this.chunks.clear();
+    this.rowCount = rowCount;
+    this.graphLanes = Math.max(1, Math.min(recommendedWidth, MAX_GRAPH_LANES));
+    const top = place ? Math.max(0, place.row * ROW_HEIGHT - place.offset) : this.scroller.scrollTop;
+    const first = Math.max(0, Math.floor(top / ROW_HEIGHT) - OVERSCAN);
+    const last = Math.max(first, Math.min(rowCount - 1, Math.ceil((top + this.scroller.clientHeight) / ROW_HEIGHT) + OVERSCAN));
+    this.reloads++;
+    try {
+      const wanted: Promise<unknown>[] = [];
+      for (let i = Math.floor(first / CHUNK); i <= Math.floor(last / CHUNK) && rowCount > 0; i++) wanted.push(this.rowAsync(i * CHUNK));
+      await Promise.all(wanted);
+    } catch {
+      // The draw below asks for the rows again.
+    } finally {
+      this.reloads--;
+    }
+    // A newer reload took over.
+    if (gen !== this.generation) return;
+    this.spacer.style.height = `${rowCount * ROW_HEIGHT}px`;
+    this.empty.hidden = rowCount > 0;
+    this.selection = selection;
+    this.anchor = selection[0] ?? -1;
+    if (place) this.scroller.scrollTop = top;
     this.render();
   }
 
@@ -187,6 +226,7 @@ export class LogView {
   }
 
   render() {
+    if (this.reloads > 0) return;
     const top = this.scroller.scrollTop;
     const height = this.scroller.clientHeight;
     const start = Math.max(0, Math.floor(top / ROW_HEIGHT) - OVERSCAN);
@@ -203,34 +243,60 @@ export class LogView {
     this.graphFull = lanes * ELEMENT_WIDTH + 6;
     this.graphCol = settings.graphWidth ? Math.max(MIN_GRAPH_WIDTH, Math.min(settings.graphWidth, this.graphFull)) : Math.max(MIN_GRAPH_WIDTH, this.graphFull);
     this.header.querySelector<HTMLElement>(".graph-tools")?.style.setProperty("flex-basis", `${this.graphCol}px`);
-    const key = `${lanes}|${this.graphCol}|${fg}|${dpr}|${this.generation}|${settings.showAuthor}${settings.showDate}${settings.showHash}`;
+    const key = `${lanes}|${this.graphCol}|${fg}|${dpr}|${this.epoch}|${settings.showAuthor}${settings.showDate}${settings.showHash}`;
     if (key !== this.paintKey) {
       this.paintKey = key;
       this.graphLanes = lanes;
-      this.rendered.clear();
       this.body.replaceChildren();
     }
+    // A row that shows the same commit in the same way keeps its element, also at a new place: a new
+    // commit at the top moves the rows and draws one new row. The elements stay in the order of the rows.
     const selected = new Set(this.selection);
-    const keep = new Set<number>();
-    for (const r of rows) {
-      keep.add(r.row);
-      const isSel = selected.has(r.row);
-      const existing = this.rendered.get(r.row);
-      if (existing && existing.selected === isSel) continue;
-      const div = this.buildRow(r, this.graphFull, this.graphCol, fg, dpr, isSel);
-      if (existing) existing.div.replaceWith(div);
-      else this.body.append(div);
-      this.rendered.set(r.row, { div, selected: isSel });
-    }
-    for (const [row, v] of this.rendered) {
-      if (!keep.has(row)) {
-        v.div.remove();
-        this.rendered.delete(row);
-      }
-    }
+    const graphFull = this.graphFull;
+    const graphCol = this.graphCol;
+    reconcile(
+      this.body,
+      rows.map((r) => {
+        const isSel = selected.has(r.row);
+        return {
+          key: r.oid,
+          sig: (isSel ? "s" : "-") + this.sigOf(r),
+          build: () => {
+            const live = { row: r };
+            const div = this.buildRow(live, graphFull, graphCol, fg, dpr, isSel);
+            this.live.set(div, live);
+            return div;
+          },
+          update: (div: HTMLElement) => {
+            const live = this.live.get(div);
+            if (!live || live.row === r) return;
+            if (live.row.row !== r.row) {
+              div.style.top = `${r.row * ROW_HEIGHT}px`;
+              div.dataset.row = String(r.row);
+            }
+            live.row = r;
+          },
+        };
+      }),
+    );
   }
 
-  private buildRow(r: Row, graphWidth: number, colWidth: number, fg: string, dpr: number, selected: boolean): HTMLElement {
+  /** The row that each element shows now. The handlers of the element read it, so they have the place of today. */
+  private live = new WeakMap<HTMLElement, { row: Row }>();
+  private sigs = new WeakMap<Row, string>();
+
+  /** All of a row but its place in the log. */
+  private sigOf(r: Row): string {
+    let s = this.sigs.get(r);
+    if (s === undefined) {
+      s = JSON.stringify({ ...r, row: 0 });
+      this.sigs.set(r, s);
+    }
+    return s;
+  }
+
+  private buildRow(live: { row: Row }, graphWidth: number, colWidth: number, fg: string, dpr: number, selected: boolean): HTMLElement {
+    const r = live.row;
     const canvas = h("canvas", { width: graphWidth * dpr, height: ROW_HEIGHT * dpr });
     canvas.style.width = `${graphWidth}px`;
     canvas.style.height = `${ROW_HEIGHT}px`;
@@ -303,7 +369,7 @@ export class LogView {
       const ref = (e.target as HTMLElement).closest<HTMLElement>(".ref")?.dataset.ref;
       if (ref && e.detail === 2) {
         e.preventDefault();
-        void this.onRefDoubleClick(ref, r);
+        void this.onRefDoubleClick(ref, live.row);
         return;
       }
       if (ref && e.detail === 1) this.onRefClick(ref);
@@ -311,14 +377,19 @@ export class LogView {
       // then has no row to focus and moves the focus to the body, and the arrow keys stop. onClick
       // focuses the list itself.
       e.preventDefault();
-      this.onClick(r.row, e);
+      this.onClick(live.row.row, e);
     });
     div.addEventListener("contextmenu", (e) => {
       e.preventDefault();
-      if (!this.selection.includes(r.row)) this.select([r.row]);
-      this.onContextMenu(r, e);
+      if (!this.selection.includes(live.row.row)) this.select([live.row.row]);
+      this.onContextMenu(live.row, e);
     });
     return div;
+  }
+
+  /** True when the view is at the first row. */
+  get atTop(): boolean {
+    return this.scroller.scrollTop === 0;
   }
 
   /** Where the view is: the first selected row on the screen, else the top row, and its distance from the

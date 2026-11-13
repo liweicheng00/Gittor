@@ -245,28 +245,32 @@ async function loadRepo(r: ViewResult, state: TabState | null) {
  * commits stay selected, and the file list and the diff stay as they are. A reload runs after each
  * operation and after a change in the git directory, so it must not move the view of the user.
  */
-export async function applyView(r: ViewResult, keepSelection: boolean) {
+export async function applyView(r: ViewResult, keepSelection: boolean, background = false) {
   const keepOids = keepSelection ? app.selected.map((s) => s.oid) : [];
-  const anchor = keepSelection ? log.viewAnchor() : null;
+  // At the top of the log, the view stays at the top: new commits show there.
+  const anchor = keepSelection && !log.atTop ? log.viewAnchor() : null;
   app.view = r;
-  document.title = `${r.root.split(/[\\/]/).pop()} – Gittor`;
+  const title = `${r.root.split(/[\\/]/).pop()} – Gittor`;
+  if (document.title !== title) document.title = title;
   refreshBtn.disabled = fetchBtn.disabled = updateBtn.disabled = pushBtn.disabled = remoteBtn.disabled = localHistoryBtn.disabled = terminalBtn.disabled = ideBtn.disabled = false;
-  updateStatus();
+  updateStatus(background);
   log.setCollapsed(r.collapsed);
-  log.reset(r.rowCount, r.recommendedWidth, keepSelection);
-  if (anchor) {
-    const at = await api.find(anchor.oid).catch(() => null);
-    if (at?.row != null) log.scrollToRow(at.row, anchor.offset);
-  }
   if (!keepSelection) {
+    log.reset(r.rowCount, r.recommendedWidth);
     app.selected = [];
     return clearCompare();
   }
+  // A reload: the rows on the screen stay until the new rows are there, so the log does not go blank.
+  const [at, found] = await Promise.all([
+    anchor ? api.find(anchor.oid).catch(() => null) : null,
+    Promise.all(keepOids.map((o) => api.find(o).catch(() => null))),
+  ]);
+  const rows = found.map((f) => f?.row ?? null).filter((x): x is number => x !== null);
+  const all = rows.length === keepOids.length;
+  await log.reload(r.rowCount, r.recommendedWidth, anchor && at?.row != null ? { row: at.row, offset: anchor.offset } : null, all ? rows : []);
   // Nothing was selected: the file list and the diff, for example of a local change, stay.
   if (!keepOids.length) return;
-  const rows = (await Promise.all(keepOids.map((o) => api.find(o)))).map((f) => f.row).filter((x): x is number => x !== null);
-  if (rows.length === keepOids.length) {
-    log.restoreSelection(rows);
+  if (all) {
     app.selected = await log.selectedRows();
     // The labels of the commits can change, so the details load again; the files and the diff stay.
     void details.show(app.selected);
@@ -280,7 +284,8 @@ export async function applyView(r: ViewResult, keepSelection: boolean) {
   } else clearCompare();
 }
 
-export async function loadRefs() {
+/** Loads the branches, the worktrees and the local changes. `background`: after a change outside the app. */
+export async function loadRefs(background = false) {
   const [r, rec, wt, st] = await Promise.all([
     api.refs().catch(() => [] as BranchInfo[]),
     api.recentBranches().catch(() => [] as RecentBranch[]),
@@ -300,7 +305,7 @@ export async function loadRefs() {
     if (app.view) void refreshTabInfo(app.view.root);
     log.myEmail = (await api.userEmail().catch(() => "")).toLowerCase();
     banner.update(app.repoState);
-    updateStatus();
+    updateStatus(background);
   } catch (e) {
     // The local changes still load.
     console.error("Loading the branches failed", e);
@@ -316,7 +321,11 @@ function setTabLabel(tab: HTMLElement, label: string, count: number) {
   tab.replaceChildren(label, count ? h("span", { class: "lp-count" }, String(count)) : "");
 }
 
-export async function loadLocalChanges() {
+/**
+ * Loads the local changes, the stashes, the reviews and the submodules. With `filesOnly`, only files
+ * of the working tree changed: the stashes and the reviews are refs, so they do not load again.
+ */
+export async function loadLocalChanges(filesOnly = false) {
   try {
     commitPanel.set(await api.localChanges().catch(async () => {
       // One retry: the first call can meet a repository that is still opening.
@@ -328,6 +337,11 @@ export async function loadLocalChanges() {
   }
   const n = commitPanel.changeCount;
   setTabLabel(tabCommit, "Changes", n);
+  if (filesOnly) {
+    // Without submodules, only a change of .gitmodules can bring one.
+    if (submodulePanel.count > 0 || commitPanel.hasPath(".gitmodules")) await loadSubmodules();
+    return;
+  }
   try {
     stashPanel.set(await api.stashes());
   } catch {
