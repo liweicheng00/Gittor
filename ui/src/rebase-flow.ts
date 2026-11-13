@@ -90,6 +90,8 @@ export function openRebaseEditor(range: RewriteRange, repoPath: string, branch: 
           "div",
           { class: `rebase-row action-${l.action}`, role: "listitem", "data-oid": l.oid },
           grip,
+          // The node of the commit in a small graph of the new order. The color shows the result of the check.
+          h("span", { class: `rebase-node${status ? ` node-${status}` : ""}`, "aria-hidden": "true" }),
           select,
           h("code", { class: "rebase-hash" }, l.oid.slice(0, 8)),
           h("span", { class: "rebase-subject" }, reword, l.subject),

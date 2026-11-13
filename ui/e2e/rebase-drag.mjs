@@ -32,6 +32,22 @@ await within("the check finds no conflict at the start", async () => (await stat
 check("the primary button is Run Rebase", (await page.textContent(".rebase-dialog .dialog-buttons .primary")) === "Run Rebase");
 await shot("rebase1-editor");
 
+// Esc during a drag cancels the drag, not the dialog. The hint near the mouse says what a drop does.
+{
+  const g = await page.locator(".rebase-row").nth(0).locator(".rebase-grip").boundingBox();
+  const c = await page.locator(".rebase-row").nth(2).boundingBox();
+  await page.mouse.move(g.x + 5, g.y + g.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(g.x + 5, g.y + g.height / 2 + 10);
+  await page.mouse.move(c.x + 300, c.y + c.height / 2, { steps: 4 });
+  check("the hint names the squash", ((await page.textContent(".rebase-drag-tip")) ?? "").includes('Squash "E remove util again" into "C add util"'));
+  await shot("rebase0-drag-hint");
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  check("Esc keeps the dialog open", !!(await page.$(".rebase-dialog")));
+  check("Esc keeps the plan", (await page.$$eval(".rebase-row select", (s) => s.map((x) => x.value))).every((v) => v === "pick"));
+}
+
 // Drag B (row 3) to the bottom, below A (row 4): B before A conflicts on notes.md.
 const bGrip = await page.locator(".rebase-row").nth(3).locator(".rebase-grip").boundingBox();
 const aBox = await page.locator(".rebase-row").nth(4).boundingBox();
