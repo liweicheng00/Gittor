@@ -96,7 +96,8 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   colors come from the app; `setMonacoTheme` draws open previews again.
 - Notes on local changes: `crates/git/src/local_notes.rs` (`gittor/local-notes.json` of the worktree).
   The notes of a file keep the git hash of its content; when the file changes, they go away.
-  `showLocalDiff` in `commit-flow.ts` gives them to the same note layer.
+  They show in the Compare window only, while its right side is the working tree (`local-notes.ts`, the
+  `notes` callback of `openCompare`). The diff panel under the Changes tab has no notes.
 - Updates of the app: `update-flow.ts` (checks 10 s after the start and every 6 h, only in the main
   window). Only a build with the public key checks: `scripts/build-dmg.sh --updater` merges
   `target/tauri.build.conf.json`, and `main.rs` registers the updater plugin only then. A local

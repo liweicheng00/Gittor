@@ -7,6 +7,7 @@ import type { Change, FileContent, OutgoingCommit, RevSpec } from "./api";
 import { statusName } from "./changes-panel";
 import { dragResize, formatDate, h, icon, rowSplitter, twisty } from "./dom";
 import { fileIcon } from "./file-icon";
+import type { NoteHandlers, NoteItem } from "./note-layer";
 import { buildTree, treeOrder, walkTree } from "./file-tree";
 import { showMenu } from "./context-menu";
 import { save, settings } from "./settings";
@@ -33,6 +34,9 @@ export interface CompareCallbacks {
   /** One changelist of the local changes. With the working tree on the right, the window lists only the
    * files of this changelist. `paths` reads them again at each load. */
   scope?: { name: string; paths: () => Promise<Set<string>> };
+  /** The notes on the working tree. The window shows them, and the user can add notes, while the right
+   * side is the working tree. */
+  notes?: { list: (path: string) => Promise<NoteItem[]>; handlers: (path: string, reload: () => Promise<void>) => NoteHandlers };
 }
 
 /** Opens the window. `path` is the file to show first; without it, the first file. */
@@ -167,6 +171,15 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
       if (req !== request) return;
       d.setSource(c.status === "D" ? { path: c.old_path ?? c.path, rev: revs.l } : { path: c.path, rev: revs.r });
       d.show(c, pair.left, pair.right);
+      const notes = cb.notes;
+      if (notes && r === WORKTREE && c.status !== "D" && !pair.right.missing && !pair.right.binary) {
+        // A reload after an edit shows the notes only while the same file shows.
+        const reload = async () => {
+          const list = await notes.list(p);
+          if (right === WORKTREE && files[selected]?.path === p && d.currentPath === p) d.setNotes(list, notes.handlers(p, reload));
+        };
+        await reload();
+      }
     } catch (err) {
       if (req === request) d.message(String(err));
     }
