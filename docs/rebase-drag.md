@@ -414,11 +414,11 @@ e2e scenarios (one file each):
 8. New: "Copy for an Agent" copies the plan, the check and the rules for a coding agent, which runs the
    rebase and resolves the conflicts (section 6.1).
 
-## 11. Open questions
+## 11. More decisions of the owner
 
-1. The agent text: Markdown for any agent, or also a file in `app_dir` that the text names, so a long
-   plan does not fill the clipboard?
-2. Should Gittor offer to start the agent itself (a command in `settings.json`, as Open in Terminal),
-   or only copy the text?
-3. Undo after the work of an agent: a toast when the branch moves, or a menu item "Undo the last
-   rebase" from the kept old HEAD?
+1. The agent text goes to the clipboard only. Gittor writes no file for it.
+2. Gittor does not start the agent. It only copies the text.
+3. Undo after the work of an agent is a toast. Gittor keeps the old HEAD of the copied plan. When the
+   rebase ends and the branch is not at that HEAD, a toast with Undo shows (section 6.1).
+
+No question is open now.
