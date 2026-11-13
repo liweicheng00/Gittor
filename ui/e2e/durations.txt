@@ -17,8 +17,8 @@ errors 33
 file-actions 12
 global-ignore 5
 graph-width 5
-history-edit 11
 history 8
+history-edit 11
 local-history 9
 log-options 6
 merge-options 8
@@ -29,12 +29,13 @@ open-remote 3
 partial-changelists 5
 partial-commit 6
 push-update 19
+refresh-quiet 19
 reload-keeps-place 6
 remotes 5
 repo-at-revision 4
+review 10
 review-folders 4
 review-refresh 3
-review 10
 settings 4
 small-features 5
 squash-root 3

@@ -72,13 +72,13 @@ export function reconcile<E extends KeyedNode>(parent: KeyedParent, items: Keyed
     }
     if (el === cursor) cursor = cursor.nextSibling as E | null;
     else parent.insertBefore(el, cursor);
-    // An element that moved forward is now before the cursor; it must not go away as a stale one.
     after.set(item.key, { el, sig: item.sig });
   }
-  // What is left after the last row: stale rows only, because each staying row was placed.
+  // What is left after the last row is stale: each staying row was placed before the cursor.
+  const placed = new Set<unknown>([...after.values()].map((v) => v.el));
   while (cursor) {
     const next = cursor.nextSibling as E | null;
-    if (![...after.values()].some((v) => v.el === cursor)) {
+    if (!placed.has(cursor)) {
       parent.removeChild(cursor);
       result.removed++;
     }
