@@ -61,13 +61,6 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
 - In-memory rewrites (`crates/git/src/rewrite.rs`): `git merge-tree --write-tree` and
   `git commit-tree`, then `update-ref` or `reset --keep`. A conflict stops before any ref changes.
   `rewrite_files` builds a tree in a temporary index (`GIT_INDEX_FILE`).
-- Interactive rebase: `rebase-flow.ts` (the editor), `rebase-plan.ts` (the pure plan, newest first),
-  `rebase-drag.ts` (the drag of rows), `rebase-agent-text.ts` (Copy for an Agent). `Repo::replay` serves
-  both the run and `rewrite_check`, so the check equals the run; the check writes to a temporary object
-  directory. A drag of a node in the log (`dragNode` in `log-view.ts`, `rebaseByDrag`) opens the editor
-  with the move done. A real rebase (Edit, Run and Stop at the Conflict) uses `--empty=keep`.
-  `ui/test` runs the source with Node, which needs the `.ts` extension: a module there cannot import
-  another module of `ui/src` without it, so `rebase-plan.ts` imports nothing at run time.
 - Undo (`crates/git/src/undo.rs`): `Reset`, `Checkout`, `CreateRef`, `DeleteRef`, `MoveRef`,
   `RenameBranch`, `StashStore`, `SetConfig`. Each step checks that nothing moved since.
 - Files of the app in a git dir: always `app_dir(git_dir)`.

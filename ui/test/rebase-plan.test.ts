@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { moveLine, placeRelative, planError, setAction, squashGroups, squashOnto, toPlan, type PlanLine } from "../src/rebase-plan.ts";
+import { moveLine, planError, setAction, squashGroups, squashOnto, toPlan, type PlanLine } from "../src/rebase-plan.ts";
 
 // Display order is newest first. These commits are, top to bottom: E D C B A.
 const mk = (oid: string, action = "pick"): PlanLine => ({ oid, subject: oid, message: oid, author: "x", action: action as PlanLine["action"] });
@@ -59,21 +59,4 @@ test("toPlan returns the entries oldest first and keeps group messages", () => {
 test("toPlan drops the message of a dropped commit", () => {
   const ls = setAction(lines(), 0, "drop");
   assert.equal(toPlan(ls).find((e) => e.oid === "E")?.message, undefined);
-});
-
-test("placeRelative puts a commit above or below another one", () => {
-  // E D C B A: C above E, D below B, A below D.
-  assert.deepEqual(order(placeRelative(lines(), "C", "E", "above")), ["pick C", "pick E", "pick D", "pick B", "pick A"]);
-  assert.deepEqual(order(placeRelative(lines(), "D", "B", "below")), ["pick E", "pick C", "pick B", "pick D", "pick A"]);
-  assert.deepEqual(order(placeRelative(lines(), "A", "D", "below")), ["pick E", "pick D", "pick A", "pick C", "pick B"]);
-});
-
-test("placeRelative onto a commit squashes, or fixes up", () => {
-  assert.deepEqual(order(placeRelative(lines(), "E", "C", "onto")), ["pick D", "squash E", "pick C", "pick B", "pick A"]);
-  assert.deepEqual(order(placeRelative(lines(), "E", "C", "onto", true)), ["pick D", "fixup E", "pick C", "pick B", "pick A"]);
-});
-
-test("placeRelative ignores an unknown commit and a drop on itself", () => {
-  assert.deepEqual(order(placeRelative(lines(), "X", "C", "above")), order(lines()));
-  assert.deepEqual(order(placeRelative(lines(), "C", "C", "onto")), order(lines()));
 });
