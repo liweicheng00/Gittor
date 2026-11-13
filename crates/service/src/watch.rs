@@ -183,14 +183,21 @@ struct Worker {
 
 impl Worker {
     fn run(self, rx: Receiver<notify::Result<Event>>) {
-        let mut paths: Vec<(PathBuf, bool)> = Vec::new();
+        let mut paths: Vec<PathBuf> = Vec::new();
         let mut batch = Coalescer::new(QUIET, MAX_WAIT, MIN_GAP);
         loop {
             match rx.recv_timeout(batch.wait(Instant::now(), QUIET)) {
                 Ok(Ok(ev)) => {
                     if !matches!(ev.kind, EventKind::Access(_)) {
                         let created = matches!(ev.kind, EventKind::Create(_));
-                        paths.extend(ev.paths.into_iter().map(|p| (p, created)));
+                        for p in ev.paths {
+                            // A new directory gets its watches at once, not when the batch goes out:
+                            // a file that comes into it in that time would give no event.
+                            if created && cfg!(target_os = "linux") && !p.starts_with(&self.git_dir) && !p.starts_with(&self.common_dir) && p.is_dir() {
+                                paths.extend(self.watch_new_dir(&p));
+                            }
+                            paths.push(p);
+                        }
                         batch.push(Instant::now());
                     }
                 }
@@ -208,14 +215,14 @@ impl Worker {
         }
     }
 
-    fn flush(&self, paths: Vec<(PathBuf, bool)>) {
+    fn flush(&self, paths: Vec<PathBuf>) {
         let mut repo = false;
         let mut index = false;
         let mut files: Vec<PathBuf> = Vec::new();
         let mut submodule = false;
         // For each repository inside this one: is it a submodule of this one?
         let mut gitlinks: std::collections::HashMap<PathBuf, bool> = std::collections::HashMap::new();
-        for (p, created) in paths {
+        for p in paths {
             let in_git = [&self.git_dir, &self.common_dir].iter().find_map(|d| p.strip_prefix(d).ok().map(Path::to_path_buf));
             match in_git {
                 Some(rel) if rel.as_os_str().is_empty() => {}
@@ -231,9 +238,6 @@ impl Worker {
                     }
                 }
                 None => {
-                    if created && p.is_dir() && cfg!(target_os = "linux") {
-                        self.watch_new_dir(&p);
-                    }
                     if !p.starts_with(&self.root) || files.contains(&p) {
                         continue;
                     }
@@ -277,14 +281,20 @@ impl Worker {
         path.ancestors().skip(1).take_while(|a| *a != self.root && a.starts_with(&self.root)).find(|a| a.join(".git").exists()).map(Path::to_path_buf)
     }
 
-    fn watch_new_dir(&self, dir: &Path) {
-        let Some(w) = self.watcher.upgrade() else { return };
+    /// Watches a new directory and the directories in it. Returns the files that are in them already:
+    /// they came before the watch, so no event reports them.
+    fn watch_new_dir(&self, dir: &Path) -> Vec<PathBuf> {
+        let mut files = Vec::new();
+        let Some(w) = self.watcher.upgrade() else { return files };
         let mut w = w.lock().unwrap();
         for d in worktree_dirs(dir) {
             if w.watch(&d, RecursiveMode::NonRecursive).is_err() {
                 break;
             }
+            let entries = std::fs::read_dir(&d).into_iter().flatten().flatten();
+            files.extend(entries.map(|e| e.path()).filter(|p| p.is_file()));
         }
+        files
     }
 
     /// Drops the paths that git ignores. A tracked file is never ignored.
