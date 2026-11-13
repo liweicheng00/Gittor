@@ -6,12 +6,14 @@ import { branchSections, type PickerSection } from "./branch-picker";
 import { showBranchSwitcher } from "./branch-switcher";
 import { mergeFile, offerContinue, resolveConflicts } from "./conflicts";
 import { showMenu } from "./context-menu";
-import { confirmDialog, deleteMergedDialog, formDialog, interactiveRebaseDialog, messageDialog, removeWorktreeDialog, resetDialog } from "./dialogs";
+import { confirmDialog, deleteMergedDialog, formDialog, messageDialog, removeWorktreeDialog, resetDialog } from "./dialogs";
 import { copyText } from "./dom";
 import { toast } from "./notify";
 import { applyView, jumpToOid, loadRefs, openRepo } from "./repo";
 import { short } from "./selection";
 import { banner, branchBtn, sidebar, statusActivity, task } from "./shell";
+import { openRebaseEditor } from "./rebase-flow";
+import { settings } from "./settings";
 import { app } from "./state";
 
 /** Runs a write operation, reloads the log, and reports the result. */
@@ -239,9 +241,7 @@ export async function interactiveRebase(from: Row) {
   }
   if (!range.entries.length) return toast("There are no commits to rebase.", "info");
   if (!(await allowRewrite(from.oid))) return;
-  const plan = await interactiveRebaseDialog(range);
-  if (!plan) return;
-  await runOp({ op: "rewrite", base: range.base, plan, what: "Interactive rebase" }, "Rebasing");
+  openRebaseEditor(range, settings.activeTab ?? "", currentBranch() ?? "HEAD");
 }
 
 export async function deleteBranch(b: BranchInfo) {

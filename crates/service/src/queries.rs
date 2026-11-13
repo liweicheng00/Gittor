@@ -1,10 +1,10 @@
 //! The read commands.
 
-use crate::{err, history, watch, BlameArgs, BlobArgs, CompareArgs, CompareRefsArgs, MergedBranchesArgs, MergedIntoArgs, UrlArgs, TagArgs, RemoteArgs, ReviewArgs, ReviewEdit, CompareResult, FilePair, FilePairArgs, IndexArgs, ImageArgs, MermaidArgs, MermaidSvg, OidArgs, PathArgs, PushInfoArgs, Result, RevSpec, Service};
+use crate::{err, history, watch, BlameArgs, BlobArgs, CompareArgs, CompareRefsArgs, MergedBranchesArgs, MergedIntoArgs, UrlArgs, TagArgs, RemoteArgs, ReviewArgs, ReviewEdit, CompareResult, FilePair, FilePairArgs, IndexArgs, ImageArgs, MermaidArgs, MermaidSvg, OidArgs, PathArgs, PushInfoArgs, Result, RevSpec, RewriteCheckArgs, Service};
 use gittor_git::changelist::{ChangeListOp, LocalChanges};
 use gittor_git::history::{Blame, HistoryEntry};
 use gittor_git::merge::MergeSides;
-use gittor_git::ops::{RepoState, RewriteRange};
+use gittor_git::ops::{RepoState, RewriteCheck, RewriteRange};
 use gittor_git::remote::PushInfo;
 use gittor_git::stash::{Stash, StashDetail};
 use gittor_git::worktree::{RecentBranch, Worktree};
@@ -183,6 +183,11 @@ impl Service {
 
     pub fn rewrite_range(&self, args: OidArgs) -> Result<RewriteRange> {
         self.with_repo(|r| r.rewrite_range(&args.oid).map_err(err))
+    }
+
+    /// Replays a plan in memory, without a change of the repository, and gives the result of each step.
+    pub fn rewrite_check(&self, args: RewriteCheckArgs) -> Result<RewriteCheck> {
+        self.with_repo(|r| r.rewrite_check(&args.base, &args.plan).map_err(err))
     }
 
     pub(crate) fn rev(repo: &Repo, spec: &RevSpec) -> Result<Rev> {

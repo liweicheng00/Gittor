@@ -279,6 +279,13 @@ pub struct OidArgs {
     pub oid: String,
 }
 
+/// A plan of an interactive rebase to check before it runs.
+#[derive(Deserialize)]
+pub struct RewriteCheckArgs {
+    pub base: String,
+    pub plan: Vec<gittor_git::ops::PlanEntry>,
+}
+
 /// A file at a commit, for Show Repository at Revision.
 #[derive(Deserialize)]
 pub struct FileAtArgs {

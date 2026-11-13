@@ -873,3 +873,24 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .branch-folder { display: flex; gap: 6px; align-items: center; padding: 1px 6px 1px 8px; white-space: nowrap; cursor: default; color: var(--muted); }
 .branch-folder:hover { background: var(--hover); }
 .branch-folder .branch-name { color: var(--fg); }
+
+/* The interactive rebase editor: the plan, its drag and drop, and the check. */
+.rebase-dialog .rebase-list { margin: 8px 0; }
+.rebase-row { grid-template-columns: auto 96px 76px minmax(0, 1fr) auto auto; cursor: default; }
+.rebase-grip { color: var(--muted); cursor: grab; user-select: none; letter-spacing: -2px; padding: 0 2px; }
+.rebase-row .rebase-status { white-space: nowrap; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+.rebase-status.status-ok { color: var(--ok, #4caf50); }
+.rebase-status.status-conflict { color: var(--danger, #e05555); }
+.rebase-status.status-empty, .rebase-status.status-afterConflict, .rebase-status.status-dropped { color: var(--muted); }
+.rebase-row.drop-squash { outline: 2px dashed var(--tag); outline-offset: -2px; background: var(--panel); }
+.rebase-row.drop-above { box-shadow: inset 0 2px 0 var(--accent, #3574f0); }
+.rebase-row.drop-below { box-shadow: inset 0 -2px 0 var(--accent, #3574f0); }
+.rebase-list.dragging { cursor: grabbing; }
+.rebase-reworded { color: var(--tag); margin-right: 4px; }
+.rebase-drag-ghost { position: fixed; z-index: 1000; pointer-events: none; background: var(--accent, #3574f0); color: #fff; padding: 3px 10px; border-radius: 4px; font-size: 12px; box-shadow: 0 6px 18px #0009; opacity: 0.95; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rebase-drag-ghost.fixup::before { content: "fixup "; opacity: 0.8; }
+.rebase-summary { margin: 6px 0; display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+.rebase-sum.bad { color: var(--danger, #e05555); }
+.rebase-sum.warn { color: var(--tag); }
+.rebase-sum.ok { color: var(--ok, #4caf50); }
+.rebase-checking { color: var(--muted); font-size: 12px; margin-right: auto; align-self: center; }

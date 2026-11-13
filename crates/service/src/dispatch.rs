@@ -78,6 +78,7 @@ impl Service {
             "worktrees" => serde_json::to_string(&self.worktrees()?),
             "worktree_blockers" => serde_json::to_string(&self.worktree_blockers(parse(body)?)?),
             "recent_branches" => serde_json::to_string(&self.recent_branches()?),
+            "rewrite_check" => serde_json::to_string(&self.rewrite_check(parse(body)?)?),
             "rewrite_range" => serde_json::to_string(&self.rewrite_range(parse(body)?)?),
             "run_op" => serde_json::to_string(&self.run_op(parse(body)?)?),
             "compare" => serde_json::to_string(&self.compare(parse(body)?)?),

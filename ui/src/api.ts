@@ -39,6 +39,9 @@ import type { RemoteInfo } from "./bindings/RemoteInfo";
 import type { RepoState } from "./bindings/RepoState";
 import type { Revision } from "./bindings/Revision";
 import type { RewriteRange } from "./bindings/RewriteRange";
+import type { RewriteCheck } from "./bindings/RewriteCheck";
+import type { StepCheck } from "./bindings/StepCheck";
+import type { ConflictFile } from "./bindings/ConflictFile";
 import type { Row } from "./bindings/Row";
 import type { Stash } from "./bindings/Stash";
 import type { StashDetail } from "./bindings/StashDetail";
@@ -94,6 +97,9 @@ export type {
   RepoState,
   Revision,
   RewriteRange,
+  RewriteCheck,
+  StepCheck,
+  ConflictFile,
   Row,
   Stash,
   StashDetail,
@@ -228,7 +234,7 @@ export type Op =
   | { op: "continue" }
   | { op: "abort" }
   | { op: "markResolved"; paths: string[] }
-  | { op: "rewrite"; base: string; plan: PlanEntry[]; what: string }
+  | { op: "rewrite"; base: string; plan: PlanEntry[]; what: string; expectedHead?: string; stopAtConflict?: boolean }
   | { op: "undo"; actions: UndoAction[] }
   | { op: "checkoutSubmoduleBranch"; path: string; branch: string; remote: boolean }
   | { op: "updateSubmodules"; paths: string[] }
@@ -309,6 +315,7 @@ export const api = {
     call<ViewResult>("collapse", { mode, row, up, down }),
   repoState: () => call<RepoState>("repo_state"),
   rewriteRange: (base: string) => call<RewriteRange>("rewrite_range", { oid: base }),
+  rewriteCheck: (base: string, plan: PlanEntry[]) => call<RewriteCheck>("rewrite_check", { base, plan }),
   runOp: (op: Op) => call<OpOutcome>("run_op", op),
   worktrees: () => call<Worktree[]>("worktrees"),
   worktreeBlockers: (path: string) => call<WorktreeBlockers>("worktree_blockers", { path }),

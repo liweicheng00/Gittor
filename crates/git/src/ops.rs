@@ -1,7 +1,7 @@
 //! Write operations. Every command runs the git CLI without a terminal or an editor, so it never waits for input.
 //! The in-memory rewrites are in `rewrite`, and Undo is in `undo`.
 
-pub use crate::rewrite::{parse_author, Action, PlanEntry, RangeCommit, RewriteRange};
+pub use crate::rewrite::{parse_author, Action, ConflictFile, PlanEntry, RangeCommit, RemoteHit, RewriteCheck, RewriteRange, StepCheck, StepStatus};
 pub use crate::undo::{UndoAction, UndoMode};
 use crate::{GitError, Repo, Result};
 use serde::{Deserialize, Serialize};
