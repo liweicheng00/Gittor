@@ -17,7 +17,7 @@ import { resetZoom, zoomBy } from "./zoom";
 
 export const keymap = new Keymap();
 const typing = (t: HTMLElement) => t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || !!t.closest(".monaco-editor");
-/** The next open project, as Cmd+` in macOS. With one project open, the Open menu shows the recent ones. */
+/** The next open project, with the key left of 1 (Alt+` by default). With one project open, the Open menu shows the recent ones. */
 const switchProject = (d: number) => {
   if (settings.tabs.length < 2) return openBtn.click();
   nextTab(d);
@@ -65,7 +65,7 @@ for (const a of [
   },
   { id: "stash", label: "Stash Tab", defaults: ["Mod+3"], run: () => showLeftTab("stash") },
   { id: "reviews", label: "Reviews Tab", defaults: ["Mod+4"], run: () => showLeftTab("reviews") },
-  { id: "files", label: "Files Tab", defaults: ["Mod+6"], run: () => { showLeftTab("files"); filesPanel.focus(); } },
+  { id: "files", label: "Files Tab", defaults: ["Mod+`"], run: () => { showLeftTab("files"); filesPanel.focus(); } },
   {
     id: "submodules",
     label: "Submodules (in the Changes tab)",
@@ -79,8 +79,8 @@ for (const a of [
   { id: "diffPanel", label: "Diff Panel (show or hide)", defaults: [], run: () => toggleDiff() },
   { id: "hideDiff", label: "Hide the Diff Panel", defaults: ["Escape"], run: () => toggleDiff(false), when: (t: HTMLElement) => !typing(t) && settings.showDiff },
   { id: "closeProject", label: "Close the Project Tab", defaults: ["Mod+W"], run: () => void closeActiveTab() },
-  { id: "switchProject", label: "Switch Project", defaults: ["Mod+`"], run: () => switchProject(1) },
-  { id: "switchProjectBack", label: "Switch Project (back)", defaults: ["Mod+Shift+`"], run: () => switchProject(-1) },
+  { id: "switchProject", label: "Switch Project", defaults: ["Alt+`"], run: () => switchProject(1) },
+  { id: "switchProjectBack", label: "Switch Project (back)", defaults: ["Alt+Shift+`"], run: () => switchProject(-1) },
   ...projectKeys,
   { id: "openInEditor", label: "Open in Editor", defaults: ["F4"], run: (t: HTMLElement) => app.view && openInEditorHere(t) },
   {

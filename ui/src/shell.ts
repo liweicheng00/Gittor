@@ -85,10 +85,10 @@ export const tabBranches = h("button", { class: "lp-tab", title: `Branches (${mo
 export const tabCommit = h("button", { class: "lp-tab", title: `Local changes and commit (${mod}2)` }, "Changes");
 export const tabStash = h("button", { class: "lp-tab", title: `Stashes (${mod}3)` }, "Stash");
 export const tabReviews = h("button", { class: "lp-tab", title: `Reviews (${mod}4)` }, "Reviews");
-export const tabFiles = h("button", { class: "lp-tab", title: `The files of the working tree (${mod}6)` }, "Files");
+export const tabFiles = h("button", { class: "lp-tab", title: `The files of the working tree (${mod}\`)` }, "Files");
 // The submodules show under the commit message, so that their changes show together with the files.
 commitPanel.el.append(submodulePanel.el);
-const leftPane = h("aside", { class: "leftpane" }, h("div", { class: "lp-tabs" }, tabBranches, tabCommit, tabStash, tabReviews, tabFiles), sidebar.el, commitPanel.el, stashPanel.el, reviewPanel.el, filesPanel.el);
+const leftPane = h("aside", { class: "leftpane" }, h("div", { class: "lp-tabs" }, tabFiles, tabBranches, tabCommit, tabStash, tabReviews), sidebar.el, commitPanel.el, stashPanel.el, reviewPanel.el, filesPanel.el);
 /** Called when the Files tab shows, so that it can load its files. */
 export const leftTabHooks = { files: () => {} };
 export function showLeftTab(tab: "branches" | "commit" | "stash" | "reviews" | "files") {

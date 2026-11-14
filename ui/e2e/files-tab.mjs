@@ -1,5 +1,5 @@
 // UI scenario for the Files tab: the files of the working tree as a tree of folders, the colors of the
-// local changes, a file without a change, a new file on disk, the search, and the keys Mod+6 and Mod+1.
+// local changes, a file without a change, a new file on disk, the search, and the keys Mod+` and Mod+1.
 // Start the dev server first (see README). Build a fresh repository with make-demo-repo.sh, then:
 // node e2e/files-tab.mjs <repo> <screenshot-dir>.
 // Set CHROMIUM to a Chromium binary when Playwright has no downloaded browser.
@@ -36,10 +36,11 @@ await page.waitForSelector(".log-row", { timeout: 30000 });
 const cut = await page.$$eval(".lp-tab", (els) => els.filter((e) => e.scrollWidth > e.clientWidth).map((e) => e.textContent));
 check("no left tab label is cut", cut.length === 0);
 
-// Mod+6 shows the Files tab.
+// The Files tab is the first tab. Mod+` shows it.
+check("the Files tab is the first tab", ((await page.textContent(".lp-tab >> nth=0")) ?? "").trim() === "Files");
 await page.click(".log-row >> nth=0");
-await page.keyboard.press("Control+6");
-await within("Mod+6 shows the Files tab", async () => await page.isVisible(".files-panel"));
+await page.keyboard.press("Control+Backquote");
+await within("Mod+` shows the Files tab", async () => await page.isVisible(".files-panel"));
 await within("the tab lists the files of the working tree", async () => (await page.$$(".files-file")).length >= 5);
 check("a folder starts closed", (await page.$("[data-path='docs/guide/start.md']")) === null && (await page.$(".files-dir[data-dir='docs/']")) !== null);
 check("a changed file has the color of its status", (await nameClass(row("main.rs"))).includes("status-text-M"));

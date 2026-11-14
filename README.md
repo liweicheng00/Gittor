@@ -25,7 +25,7 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | Keys | Action |
 |---|---|
 | `Ctrl/Cmd+O` | Open a repository |
-| `Ctrl/Cmd+1` … `Ctrl/Cmd+4`, `Ctrl/Cmd+6` | Branches, Changes, Stash, Reviews and Files tabs |
+| ``Ctrl/Cmd+` ``, `Ctrl/Cmd+1` … `Ctrl/Cmd+4` | Files, Branches, Changes, Stash and Reviews tabs |
 | `Ctrl/Cmd+5` | The submodules in the Changes tab |
 | `Ctrl/Cmd+K`, `Ctrl/Cmd+Enter` | Commit (from the tab, from the message field) |
 | `Ctrl/Cmd+Alt+K` | Commit and push |
@@ -42,6 +42,7 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | `F7`, `Shift+F7` | Next and previous change |
 | `Alt+Down`, `Alt+Up` | Next and previous file |
 | `Ctrl/Cmd+PageDown`, `Ctrl/Cmd+PageUp` | Next and previous tab |
+| ``Alt+` ``, ``Alt+Shift+` `` | Next and previous project (with one project, the Open menu) |
 | `Alt+1` … `Alt+9` | Project tab 1 to 8, and the last project tab |
 | `Ctrl/Cmd+W` | Close the project tab (`Cmd+Shift+W` closes the window on macOS) |
 | `Ctrl/Cmd+Alt+Left`, `Ctrl/Cmd+Alt+Right` | Back and Forward (also `Cmd+[` and `Cmd+]` on macOS) |

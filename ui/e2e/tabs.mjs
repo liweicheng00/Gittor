@@ -67,11 +67,11 @@ await within("the local changes of the first repository", async () => (await pag
 await page.click(".log-row >> nth=0");
 await page.keyboard.press("Control+PageDown");
 await within("Ctrl+PageDown shows the second repository", async () => (await firstSubject()).includes("Second in second"));
-// Mod+` switches the project, and Mod+Shift+` goes back.
-await page.keyboard.press("Control+Backquote");
-await within("Mod+` shows the first repository", async () => !(await page.textContent(".tab.on")).includes("-second"));
-await page.keyboard.press("Control+Shift+Backquote");
-await within("Mod+Shift+` shows the second repository again", async () => (await page.textContent(".tab.on")).includes("-second"));
+// Alt+` switches the project, and Alt+Shift+` goes back.
+await page.keyboard.press("Alt+Backquote");
+await within("Alt+` shows the first repository", async () => !(await page.textContent(".tab.on")).includes("-second"));
+await page.keyboard.press("Alt+Shift+Backquote");
+await within("Alt+Shift+` shows the second repository again", async () => (await page.textContent(".tab.on")).includes("-second"));
 // Alt+<n> shows the project tab at place n; Alt+9 shows the last one.
 await page.keyboard.press("Alt+1");
 await within("Alt+1 shows the first repository", async () => !(await page.textContent(".tab.on")).includes("-second"));
