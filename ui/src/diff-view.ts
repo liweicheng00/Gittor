@@ -621,7 +621,8 @@ export class DiffView {
 
   setSides(left: string, right: string) {
     this.sideNames = [left, right];
-    const text = `${left}  ⟷  ${right}`;
+    // One name only: a file without a diff.
+    const text = right ? `${left}  ⟷  ${right}` : left;
     if (this.sides.textContent !== text) this.sides.textContent = text;
   }
 
@@ -648,10 +649,15 @@ export class DiffView {
     return this.notice.hidden && this.shownKey === JSON.stringify([change.path, change.old_path, change.status, left, right]);
   }
 
-  show(change: Change, left: FileContent, right: FileContent) {
+  /** Shows a file without changes: its text in one editor, without colors. For the Files tab. */
+  showFile(path: string, content: FileContent) {
+    this.show({ status: "M", path, old_path: null }, { text: null, binary: false, size: 0, missing: true }, content, true);
+  }
+
+  show(change: Change, left: FileContent, right: FileContent, view = false) {
     // The same file with the same texts, for example after a change of another file on disk: the diff
     // stays as it is. A new diff would draw both editors again, and the view would flash.
-    const key = JSON.stringify([change.path, change.old_path, change.status, left, right]);
+    const key = JSON.stringify([change.path, change.old_path, change.status, left, right, view]);
     if (key === this.shownKey && this.notice.hidden) return;
     this.shownKey = key;
     this.clearBlame();
@@ -668,12 +674,12 @@ export class DiffView {
     this.path = change.path;
     // A submodule, or a Git LFS object that is not downloaded.
     const note = left.note ?? right.note;
-    const titleKey = JSON.stringify([change.status, change.old_path, change.path, note]);
+    const titleKey = JSON.stringify([change.status, change.old_path, change.path, note, view]);
     if (titleKey !== this.title.dataset.key) {
       this.title.dataset.key = titleKey;
       this.title.replaceChildren(
-        h("span", { class: `status status-${change.status}`, title: statusName(change.status) }, change.status),
-        " ",
+        view ? "" : h("span", { class: `status status-${change.status}`, title: statusName(change.status) }, change.status),
+        view ? "" : " ",
         change.old_path ? `${change.old_path} → ${change.path}` : change.path,
       );
       if (note) this.title.append(h("span", { class: "muted-inline diff-note" }, ` · ${note}`));
@@ -685,8 +691,9 @@ export class DiffView {
     if (tooBig(left) || tooBig(right)) return this.showNotice("The file is larger than 5 MB. The diff is not shown.");
     this.notice.hidden = true;
     const lang = languageFor(change.path);
-    const kind = left.missing === right.missing ? "diff" : right.missing ? "deleted" : "added";
-    this.markdown = lang === "markdown" ? { left: left.text ?? "", right: right.text ?? "", kind } : null;
+    const kind = view ? "view" : left.missing === right.missing ? "diff" : right.missing ? "deleted" : "added";
+    // A file without changes shows as a diff of the same text in the preview: no marks.
+    this.markdown = lang === "markdown" ? (kind === "view" ? { left: right.text ?? "", right: right.text ?? "", kind: "diff" } : { left: left.text ?? "", right: right.text ?? "", kind }) : null;
     if (kind !== "diff") this.showSingle(kind === "deleted" ? left.text ?? "" : right.text ?? "", lang, kind);
     else this.setModels(left.text ?? "", right.text ?? "", lang);
     this.renderPreview(same);
@@ -811,7 +818,7 @@ export class DiffView {
   }
 
   /** An added or deleted file: its whole content in one editor, marked as added or removed. */
-  private showSingle(text: string, lang: string | undefined, kind: "added" | "deleted") {
+  private showSingle(text: string, lang: string | undefined, kind: "added" | "deleted" | "view") {
     this.editorMode = "single";
     this.host.hidden = true;
     this.singleHost.hidden = false;
@@ -820,6 +827,7 @@ export class DiffView {
     this.single.setModel(model);
     old?.dispose();
     const lines = text.endsWith("\n") ? model.getLineCount() - 1 : model.getLineCount();
+    if (kind === "view") return void this.stats.replaceChildren(h("span", { class: "muted-inline" }, "no local changes"));
     this.single.createDecorationsCollection([
       {
         range: new monaco.Range(1, 1, Math.max(1, lines), 1),

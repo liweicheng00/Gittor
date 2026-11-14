@@ -423,7 +423,19 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 /* left pane: branches and commit tabs */
 .leftpane { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--panel); border-right: 1px solid var(--border); }
 .leftpane[hidden] { display: none; }
-.leftpane > .sidebar, .leftpane > .commit-panel, .leftpane > .stash-panel { flex: 1; min-height: 0; border-right: 0; }
+.leftpane > .sidebar, .leftpane > .commit-panel, .leftpane > .stash-panel, .leftpane > .files-panel { flex: 1; min-height: 0; border-right: 0; }
+.files-panel { display: flex; flex-direction: column; min-height: 0; background: var(--panel-2); }
+.files-head { display: flex; align-items: center; gap: 6px; padding: 6px 8px; }
+.files-search { flex: 1; min-width: 0; padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--fg); }
+.files-count { flex: none; font-size: 11px; }
+.files-list { flex: 1; min-height: 0; overflow: auto; outline: none; padding-bottom: 8px; }
+.files-row { display: flex; align-items: center; gap: 5px; padding-top: 2px; padding-bottom: 2px; padding-right: 8px; white-space: nowrap; cursor: default; }
+.files-row:hover { background: var(--hover); }
+.files-row.selected, .files-row.cursor { background: var(--select); }
+.files-name { overflow: hidden; text-overflow: ellipsis; }
+/* A modified file is blue, as in IntelliJ. */
+.files-name.status-text-M { color: var(--renamed); }
+.files-dir-hint { overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
 .leftpane > [hidden] { display: none !important; }
 .leftpane .sidebar > .pane-title { display: none; }
 .lp-tabs { display: flex; overflow: hidden; border-bottom: 1px solid var(--border); padding: 0 2px; gap: 0; }

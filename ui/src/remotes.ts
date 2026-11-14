@@ -240,7 +240,7 @@ viewBtn.addEventListener("click", () => {
         sidebar.setGroupByPrefix(settings.groupBranchesByPrefix);
       },
     },
-    { label: "Branches Panel", checked: settings.showSidebar, shortcut: keymap.shortcut("branches"), action: toggleSidebar },
+    { label: "Left Panel", checked: settings.showSidebar, action: toggleSidebar },
     { label: "Diff Panel", checked: settings.showDiff, shortcut: keymap.shortcut("diffPanel"), action: () => toggleDiff() },
     { separator: true },
     { label: `Zoom In`, shortcut: keymap.shortcut("zoomIn"), action: () => zoomBy(1) },

@@ -123,6 +123,19 @@ rmSync(log, { force: true });
 await page.click(".cl-file:has(.path:text-is('main.rs'))");
 await page.keyboard.press("Shift+F4");
 await within("Shift+F4 opens the repository at the file of the diff", async () => opened().startsWith(`${repo}\n--goto\n${repo}/main.rs:`));
+// Mod+E does the same, from the selected file of the Changes tab.
+rmSync(log, { force: true });
+await page.click(".cl-file:has(.path:text-is('main.rs'))");
+await page.keyboard.press("Control+e");
+await within("Mod+E opens the repository at the selected file of the Changes tab", async () => opened().startsWith(`${repo}\n--goto\n${repo}/main.rs:`));
+// In the Files tab, Mod+E opens the selected file, also a file without a change.
+await page.click(".lp-tab:text-is('Files')");
+await page.waitForSelector(".files-file[data-path='arith.rs']");
+await page.click(".files-file[data-path='arith.rs']");
+rmSync(log, { force: true });
+await page.keyboard.press("Control+e");
+await within("Mod+E opens the repository at the selected file of the Files tab", async () => opened().startsWith(`${repo}\n--goto\n${repo}/arith.rs:1`));
+await page.click(".lp-tab:has-text('Changes')");
 
 // The Review window has the IDE button too, and Shift+F4 works there.
 await page.click(".lp-tab:text-is('Branches')");

@@ -25,7 +25,8 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | Keys | Action |
 |---|---|
 | `Ctrl/Cmd+O` | Open a repository |
-| `Ctrl/Cmd+1` … `Ctrl/Cmd+5` | Branches, Changes, Stash and Reviews tabs; the submodules in the Changes tab |
+| `Ctrl/Cmd+1` … `Ctrl/Cmd+4`, `Ctrl/Cmd+6` | Branches, Changes, Stash, Reviews and Files tabs |
+| `Ctrl/Cmd+5` | The submodules in the Changes tab |
 | `Ctrl/Cmd+K`, `Ctrl/Cmd+Enter` | Commit (from the tab, from the message field) |
 | `Ctrl/Cmd+Alt+K` | Commit and push |
 | `Ctrl/Cmd+Shift+K` | Push |
@@ -33,7 +34,7 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | `Ctrl/Cmd+T` | Update |
 | `Ctrl/Cmd+R`, `F5` | Refresh |
 | `Ctrl/Cmd+F` | Filter the log |
-| `Shift+F4` | Open the repository in the editor of Settings › Editor (the IDE button) |
+| `Ctrl/Cmd+E`, `Shift+F4` | Open the repository in the editor of Settings › Editor, with the selected file or the file of the diff (the IDE button) |
 | `Alt+F12` | Open a terminal in the folder of the repository (Settings › Terminal sets the app) |
 | `Ctrl/Cmd+Z` | Undo the last operation (outside a text field) |
 | `Ctrl/Cmd+C` | Copy the hash |

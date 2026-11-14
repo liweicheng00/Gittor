@@ -10,7 +10,7 @@ import { newBranchHere, undoLast } from "./operations";
 import { askForRepo, closeActiveTab, fetchAll, refresh, switchTab } from "./repo";
 import { settings } from "./settings";
 import { openSettings } from "./settings-flow";
-import { changes, commitPanel, diff, filterBar, openBtn, showLeftTab, statusActivity, submodulePanel, toggleDiff, toggleSidebar } from "./shell";
+import { changes, commitPanel, diff, filesPanel, filterBar, openBtn, showLeftTab, statusActivity, submodulePanel, toggleDiff } from "./shell";
 import { app } from "./state";
 import { pushBranch, updateBranch } from "./sync";
 import { resetZoom, zoomBy } from "./zoom";
@@ -58,15 +58,14 @@ for (const a of [
   { id: "filter", label: "Find in the Log (filter)", defaults: ["Mod+F"], run: () => { filterBar.text.focus(); filterBar.text.select(); }, when: (t: HTMLElement) => !t.closest(".monaco-editor") },
   {
     id: "branches",
-    label: "Branches Panel",
+    label: "Branches Tab",
     defaults: ["Mod+1"],
-    run: () => {
-      if (settings.showSidebar && settings.leftTab !== "branches") showLeftTab("branches");
-      else toggleSidebar();
-    },
+    // A second press stays on the tab. View › Sidebar hides the left panel.
+    run: () => showLeftTab("branches"),
   },
   { id: "stash", label: "Stash Tab", defaults: ["Mod+3"], run: () => showLeftTab("stash") },
   { id: "reviews", label: "Reviews Tab", defaults: ["Mod+4"], run: () => showLeftTab("reviews") },
+  { id: "files", label: "Files Tab", defaults: ["Mod+6"], run: () => { showLeftTab("files"); filesPanel.focus(); } },
   {
     id: "submodules",
     label: "Submodules (in the Changes tab)",
@@ -84,7 +83,12 @@ for (const a of [
   { id: "switchProjectBack", label: "Switch Project (back)", defaults: ["Mod+Shift+`"], run: () => switchProject(-1) },
   ...projectKeys,
   { id: "openInEditor", label: "Open in Editor", defaults: ["F4"], run: (t: HTMLElement) => app.view && openInEditorHere(t) },
-  { id: "openProjectInEditor", label: "Open the Repository in the Editor", defaults: ["Shift+F4"], run: () => app.view && openProjectInEditor() },
+  {
+    id: "openProjectInEditor",
+    label: "Open the Editor (the repository, with the file in view)",
+    defaults: ["Mod+E", "Shift+F4"],
+    run: (t: HTMLElement) => app.view && openProjectInEditor(t),
+  },
   { id: "openInTerminal", label: "Open in Terminal", defaults: ["Alt+F12"], run: () => app.view && openInTerminal() },
   { id: "localHistory", label: "Local History", defaults: [], run: () => app.view && showLocalHistory("") },
   { id: "nextTab", label: "Next Tab", defaults: ["Mod+PageDown"], run: () => nextTab(1) },

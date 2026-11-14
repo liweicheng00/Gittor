@@ -86,6 +86,8 @@ export class CommitPanel {
   onOpen: (f: LocalFile) => void = () => {};
   /** A double click on a file. */
   onActivate: (f: LocalFile) => void = () => {};
+  /** New local changes: the Files tab shows their status. */
+  onLoad: (files: LocalFile[]) => void = () => {};
   onFileMenu: (files: LocalFile[], e: MouseEvent) => void = () => {};
   onListMenu: (list: ChangeListView, e: MouseEvent) => void = () => {};
   onUnversionedMenu: (e: MouseEvent) => void = () => {};
@@ -247,6 +249,7 @@ export class CommitPanel {
     this.render();
     // A reload while the user writes the message does not put another draft into the field.
     this.updateTarget(document.activeElement === this.message);
+    this.onLoad(files);
   }
 
   private tracked(list: string, c: Change): LocalFile {
@@ -369,6 +372,11 @@ export class CommitPanel {
   /** The file whose diff is shown. */
   activeFile(): LocalFile | null {
     return this.files.find((f) => f.key === this.activeKey) ?? null;
+  }
+
+  /** All file rows: the changes of each changelist, then the unversioned files. */
+  allFiles(): LocalFile[] {
+    return this.files;
   }
 
   selectedFiles(): LocalFile[] {

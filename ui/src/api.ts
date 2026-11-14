@@ -331,6 +331,8 @@ export const api = {
   remoteContaining: (oid: string) => call<string[]>("remote_containing", { oid }),
   /** The paths of all files of a commit. */
   treeFiles: (oid: string) => call<string[]>("tree_files", { oid }),
+  /** The paths of the files of the working tree that git tracks or does not ignore. */
+  worktreeFiles: () => call<string[]>("worktree_files"),
   fileAt: (oid: string, path: string) => call<FileContent>("file_at", { oid, path }),
   askpassAnswer: (id: number, answer: string | null, remember: boolean) => call<null>("askpass_answer", { id, answer, remember }),
   watchState: () => call<{ repo: number; files: number } | null>("watch_state"),

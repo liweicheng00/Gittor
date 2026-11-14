@@ -175,6 +175,10 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
 - External apps: Open in Editor (`crates/service/src/editor.rs`, `editor-flow.ts`) and Open in Terminal
   (`terminal.rs`, `terminal-flow.ts`). Each runs a command of `settings.json` without a shell. The e2e
   scenarios use a small script in place of the app, and set the command back to empty at the end.
+- The Files tab (`files-panel.ts`, `files-flow.ts`, `Mod+6`): the files of the working tree from the
+  query `worktree_files` (`git ls-files --cached --others --exclude-standard`). The folders are closed at
+  first. It loads when the local changes change (`commitPanel.onLoad`), or when it shows after that. A
+  changed file opens its local diff; another file shows with `DiffView.showFile`, without colors.
 - Icons: add the Lucide file name to the glob and to `NAMES` in `ui/src/icons.ts`.
 - Trees of files: `buildTree`, `treeOrder`, `walkTree` in `file-tree.ts`.
   Unique short names of folders: `pathLabels` in `path-labels.ts`.
@@ -239,7 +243,7 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
   in a terminal right after an app operation must wait 2 s.
 - Playwright clicks only three mouse buttons. Send mouse buttons 3 and 4 with
   `window.dispatchEvent(new MouseEvent("mouseup", { button: 3 }))`.
-- `Control+1` toggles the Branches tab. Click `.lp-tab:text-is('Branches')` instead.
+- `Control+1` shows the Branches tab; a second press stays there. View › Left Panel hides the left panel.
 - Several toasts can have an Undo button. Pick the toast by its text.
 - `main` and `master` are protected by default. The demo repository has commits on origin/main, so
   a rewrite of them stops. Start rewrites above origin/main.

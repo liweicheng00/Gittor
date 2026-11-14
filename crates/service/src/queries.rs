@@ -148,6 +148,18 @@ impl Service {
         })
     }
 
+    /// The paths of the files of the working tree, for the Files tab: the tracked files and the files that
+    /// git does not ignore. Each path shows once, also with a conflict.
+    pub fn worktree_files(&self) -> Result<Vec<String>> {
+        self.with_repo(|r| {
+            let out = r.git(&["ls-files", "--cached", "--others", "--exclude-standard", "-z"]).map_err(err)?;
+            let mut files: Vec<String> = out.split(|&b| b == 0).filter(|p| !p.is_empty()).map(|p| String::from_utf8_lossy(p).into_owned()).collect();
+            files.sort();
+            files.dedup();
+            Ok(files)
+        })
+    }
+
     /// The paths of all files in the tree of a commit, for Show Repository at Revision.
     pub fn tree_files(&self, args: OidArgs) -> Result<Vec<String>> {
         self.with_repo(|r| {

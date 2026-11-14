@@ -54,11 +54,11 @@ await page.fill(".settings-content input[type=text]", gitPath);
 await page.click(".settings-content button:has-text('Test')");
 await within("git gives its version", async () => /^git \d/.test(await page.textContent(".settings-hint.ok").catch(() => "")));
 
-// The keymap: Alt+B for the Branches panel, and F7 for Refresh too, which is a conflict.
+// The keymap: Alt+B for the Branches tab, and F7 for Refresh too, which is a conflict.
 await pageOf("Keymap");
-await page.click(".keymap-row:has-text('Branches Panel') .key-chip");
+await page.click(".keymap-row:has-text('Branches Tab') .key-chip");
 await page.keyboard.press("Alt+b");
-await within("the new key shows", async () => (await page.textContent(".keymap-row:has-text('Branches Panel') .key-chip")).includes("Alt+B"));
+await within("the new key shows", async () => (await page.textContent(".keymap-row:has-text('Branches Tab') .key-chip")).includes("Alt+B"));
 await page.click(".keymap-row:has-text('Refresh') .icon-button[title='Add a key']");
 await page.keyboard.press("F7");
 await within("a key of two actions is marked", async () => (await page.$$(".key-chip.conflict")).length === 2);
@@ -70,14 +70,16 @@ await page.click(".settings-dialog .dialog-buttons button:has-text('OK')");
 await within("the diff font changes", async () => (await editorFontSize()) === "16px");
 
 // The new key works, and the old one does not.
-const sidebarShown = () => page.$eval(".left-pane, .sidebar", (e) => !e.closest("[hidden]") && e.offsetParent !== null).catch(() => false);
-const before = await sidebarShown();
+const branchesOn = () => page.$eval(".lp-tab:text-is('Branches')", (e) => e.classList.contains("on"));
+await page.click(".lp-tab:has-text('Changes')");
 await page.click(".log-row >> nth=1");
 await page.keyboard.press("Alt+b");
-await within("Alt+B toggles the Branches panel", async () => (await sidebarShown()) !== before);
+await within("Alt+B shows the Branches tab", branchesOn);
+await page.click(".lp-tab:has-text('Changes')");
+await page.click(".log-row >> nth=1");
 await page.keyboard.press("Control+1");
 await page.waitForTimeout(400);
-check("Ctrl+1 does nothing now", (await sidebarShown()) !== before);
+check("Ctrl+1 does nothing now", !(await branchesOn()));
 
 // The settings stay after a reload.
 await page.reload();
@@ -88,10 +90,10 @@ check("the font size stays", (await page.inputValue(".settings-number")) === "16
 await pageOf("Git");
 check("the git program stays", (await page.inputValue(".settings-content input[type=text]")) === gitPath);
 await pageOf("Keymap");
-check("the key stays", (await page.textContent(".keymap-row:has-text('Branches Panel') .key-chip")).includes("Alt+B"));
+check("the key stays", (await page.textContent(".keymap-row:has-text('Branches Tab') .key-chip")).includes("Alt+B"));
 // Reset: the default keys come back.
 await page.click(".settings-dialog button:has-text('Reset All Keys')");
-check("reset brings Ctrl+1 back", (await page.textContent(".keymap-row:has-text('Branches Panel') .key-chip")).includes("1"));
+check("reset brings Ctrl+1 back", (await page.textContent(".keymap-row:has-text('Branches Tab') .key-chip")).includes("1"));
 await page.click(".settings-dialog .dialog-buttons button:has-text('Cancel')");
 console.log("errors:", JSON.stringify(errors));
 await browser.close();
