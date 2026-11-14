@@ -118,11 +118,14 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
 - Videos: `scripts/video`. `stage.mjs` has the overlay (cursor, click rings, a fake window, a fake
   terminal), the `Director` and the loop that records a scene with Playwright. `run.sh` makes the intro
   video (`record.mjs`, `build.mjs`). `shorts.sh` makes the short videos for social posts
-  (`shorts-record.mjs`, `shorts-build.mjs`): the page is 1280x720, so the text is large on a phone. A
-  scene calls `d.mark(name)`; the build puts the captions and the bells of the music on the marks.
-  `music.py` computes the music with numpy (styles `pulse`, `lofi`, `drive`), with no samples and no
-  service. An agent cannot hear it: check the loudness with the `ebur128` filter of ffmpeg, and let the
-  owner listen. The theme of the shorts is the review of the work of a coding agent.
+  (`shorts-record.mjs`, `shorts-build.mjs`): 1080x1920 for a phone, with the caption above the app.
+  The page is 1000x1250 (4:5). A scene calls `d.cam(target, { zoom, align })` to point the camera at
+  some elements, and `d.mark(name)` for a caption; the build moves the camera with `zoompan` and puts
+  the captions and soft notes of the music on the marks. `music.py` computes the music with numpy
+  (styles `pulse`, `lofi`, `drive`), with no samples and no service. An agent cannot hear it: check the
+  loudness with the `ebur128` filter of ffmpeg, and let the owner listen. The owner wants slow, low
+  music, and no effect sound at the end. The theme of the shorts is the review of the work of a coding
+  agent.
 - CI: `.github/workflows/ci.yml` runs the tests, clippy, the types, the unit tests and all UI
   scenarios on each push to main, the scenarios in 4 parts on 4 machines. Failed scenarios run once
   more alone.

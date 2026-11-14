@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Makes the short videos for social posts from the start: builds the UI and the dev server, records the
-# scenes, and writes <scratch-dir>/out/gittor-short-<n>-<scene>.mp4.
+# scenes, and writes <scratch-dir>/out/gittor-short-<n>-<scene>.mp4 (1080x1920, for a phone).
 # Usage: scripts/video/shorts.sh <scratch-dir> [style]
 # The style of the music is pulse (the default), lofi or drive. Set CHROMIUM to a Chromium binary when
 # Playwright has no downloaded browser. ffmpeg and python3 with numpy must be on the PATH.

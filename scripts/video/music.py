@@ -5,7 +5,7 @@
 
 The spec: {"duration": seconds, "end": the start of the end card, "accents": [seconds, ...],
 "style": "pulse" | "lofi" | "drive"}. The tempo changes a little so that a bar starts at "end": the
-last chord and the two notes of the logo come with the end card. A bell marks each accent.
+last chord comes with the end card. A soft note marks each accent.
 """
 import json
 import sys
@@ -17,20 +17,22 @@ SR = 44100
 rng = np.random.default_rng(7)
 
 STYLES = {
-    # Soft plucks in eighths, a low kick, light hats.
-    "pulse": {"bpm": 104, "arp": 2, "keys": False, "kick": [0, 2], "snare": [], "hats": 2, "bass": [0, 2.5], "tone": 0.0, "noise": 0.0},
+    # Soft low plucks in eighths, a low kick, light hats.
+    "pulse": {"bpm": 84, "down": 5, "arp": 2, "keys": False, "kick": [0, 2], "snare": [], "hats": 2, "bass": [0, 2.5], "tone": 0.6, "noise": 0.0},
     # A slow electric piano, a soft snare, swing, the hiss of a tape.
-    "lofi": {"bpm": 82, "arp": 0, "keys": True, "kick": [0, 2.5], "snare": [1, 3], "hats": 2, "bass": [0, 2.5], "tone": 0.55, "noise": 0.0025},
+    "lofi": {"bpm": 70, "down": 4, "arp": 0, "keys": True, "kick": [0, 2.5], "snare": [1, 3], "hats": 2, "bass": [0, 2.5], "tone": 0.7, "noise": 0.002},
     # Sixteenths, a kick on each beat, a bass in eighths.
-    "drive": {"bpm": 122, "arp": 4, "keys": False, "kick": [0, 1, 2, 3], "snare": [1, 3], "hats": 4, "bass": [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5], "tone": 0.0, "noise": 0.0},
+    "drive": {"bpm": 104, "down": 4, "arp": 4, "keys": False, "kick": [0, 1, 2, 3], "snare": [1, 3], "hats": 4, "bass": [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5], "tone": 0.4, "noise": 0.0},
 }
+# The number of semitones that all notes go down: the style sets it.
+DOWN = 0
 # vi, IV, I, V in C major: the root of the bass and the notes of the chord, as MIDI numbers.
 CHORDS = [(45, [57, 60, 64, 71]), (41, [57, 60, 64, 65]), (48, [55, 60, 64, 67]), (43, [55, 59, 62, 67])]
 HOME = (48, [55, 60, 64, 67, 74])
 
 
 def hz(midi):
-    return 440.0 * 2 ** ((midi - 69) / 12)
+    return 440.0 * 2 ** ((midi - DOWN - 69) / 12)
 
 
 def clock(seconds):
@@ -46,11 +48,6 @@ def attack(sig, seconds=0.004):
 def pluck(midi, seconds=0.9, bright=1.0):
     t, f = clock(seconds), hz(midi)
     return attack(sum(np.sin(2 * np.pi * k * f * t) / k * np.exp(-t * (2.5 + k * 3.0 / bright)) for k in range(1, 7)))
-
-
-def bell(midi, seconds=1.8):
-    t, f = clock(seconds), hz(midi)
-    return attack(np.sin(2 * np.pi * f * t + 1.8 * np.exp(-t * 7) * np.sin(2 * np.pi * 3.5 * f * t)) * np.exp(-t / 0.55))
 
 
 def keys(midi, seconds=2.2):
@@ -130,9 +127,12 @@ def lowpass(stereo, amount):
 
 
 def compose(spec):
+    global DOWN
     style = STYLES[spec.get("style", "pulse")]
+    DOWN = style["down"]
     duration, end = spec["duration"], spec["end"]
-    bars = max(2, round(end / (240 / style["bpm"])))
+    # The tempo is the tempo of the style or a little slower, never faster.
+    bars = max(2, int(end / (240 / style["bpm"]) + 0.2))
     beat = end / (bars * 4)
     dry, wet = Bus(duration), Bus(duration)
     swing = beat * 0.08 if style["keys"] else 0.0
@@ -147,8 +147,8 @@ def compose(spec):
             step = beat / (style["arp"] / 2) / 2
             order = [0, 2, 1, 3, 2, 1, 3, 2] if style["arp"] == 2 else [0, 1, 2, 3, 2, 1, 2, 3, 0, 2, 1, 3, 2, 1, 3, 2]
             for i, k in enumerate(order):
-                wet.add(pluck(chord[k] + 12, 0.8, 1.0 if style["arp"] == 2 else 1.6), t0 + i * step, 0.11 if i % 2 == 0 else 0.075, 0.5 * (-1) ** i)
-                wet.add(pluck(chord[k] + 12, 0.8), t0 + i * step + 0.75 * beat, 0.03, -0.5 * (-1) ** i)
+                wet.add(pluck(chord[k], 1.0, 0.7 if style["arp"] == 2 else 1.1), t0 + i * step, 0.12 if i % 2 == 0 else 0.08, 0.5 * (-1) ** i)
+                wet.add(pluck(chord[k], 1.0, 0.7), t0 + i * step + 0.75 * beat, 0.03, -0.5 * (-1) ** i)
         if style["keys"]:
             for at in (0, 1.5, 2.5):
                 for j, m in enumerate(chord):
@@ -166,29 +166,26 @@ def compose(spec):
             n = 4 * style["hats"]
             for i in range(n):
                 off = swing if i % 2 else 0.0
-                dry.add(hat(), t0 + i * 4 * beat / n + off, (0.04 if i % 2 else 0.022) * (1.5 if style["hats"] == 4 and i % 4 == 2 else 1), 0.25)
+                dry.add(hat(), t0 + i * 4 * beat / n + off, (0.022 if i % 2 else 0.012) * (1.5 if style["hats"] == 4 and i % 4 == 2 else 1), 0.25)
 
-    # A bell on each accent, on the sixteenth that is nearest, with a note of the chord of that bar.
+    # A soft note on each accent, on the sixteenth that is nearest, with a note of the chord of that bar.
     for i, at in enumerate(a for a in spec.get("accents", []) if 0.2 < a < end - beat):
         at = round(at / (beat / 4)) * beat / 4
         chord = CHORDS[int(at // (4 * beat)) % 4][1]
-        wet.add(bell(chord[(i * 2) % 3] + 24), at, 0.11, 0.3 * (-1) ** i)
+        wet.add(pluck(chord[(i * 2) % 3] + 12, 1.6, 0.6), at, 0.085, 0.3 * (-1) ** i)
 
-    # The end card: the home chord, a long bass note, and the two notes of the logo.
+    # The end card: the home chord and a long bass note, which fade. No other sound marks the end.
     root, chord = HOME
-    for j, m in enumerate(chord):
+    for j, m in enumerate(chord[:4]):
         wet.add(pad(m, duration - end + 0.3), end, 0.05)
-        wet.add((keys if style["keys"] else pluck)(m + 12, 2.5), end + j * 0.03, 0.1, (j - 2) * 0.25)
-    dry.add(bass(root - 12, duration - end), end, 0.36)
-    dry.add(kick(), end, 0.5)
-    wet.add(bell(79), end + 0.5 * beat, 0.16, -0.2)
-    wet.add(bell(84), end + 1.0 * beat, 0.19, 0.2)
+        wet.add((keys if style["keys"] else pluck)(m, 2.5, *(() if style["keys"] else (0.6,))), end + j * 0.03, 0.07, (j - 1.5) * 0.25)
+    dry.add(bass(root - 12, duration - end), end, 0.3)
 
     mix = dry.out + reverb(wet.out)
     if style["noise"]:
         mix += style["noise"] * rng.standard_normal(mix.shape)
     mix = lowpass(mix, style["tone"])
-    fade = int(0.7 * SR)
+    fade = min(int(1.6 * SR), int((duration - end) * SR))
     mix[:, -fade:] *= np.linspace(1, 0, fade) ** 2
     mix[:, : int(0.05 * SR)] *= np.linspace(0, 1, int(0.05 * SR))
     # A soft limit, then the peak at -1 dB.

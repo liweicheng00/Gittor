@@ -149,8 +149,29 @@ export class Director {
     this.t0 = Date.now();
     /** Seconds from the start of the scene, by name. The build places captions and music on them. */
     this.marks = {};
+    /** The places of the camera, in order. */
+    this.cams = [];
   }
   mark(name) { this.marks[name] = (Date.now() - this.t0) / 1000; }
+  /**
+   * Points the camera of the build at the page ("full") or at the box around some elements. The build
+   * moves from the last place to this one. `zoom` sets the scale; without it the box fills the frame.
+   * `align` ("top", "left" or "top left") puts that edge of the box at the edge of the frame; without it
+   * the middle of the box is in the middle.
+   */
+  async cam(target = "full", { pad = 16, zoom, align = "" } = {}) {
+    let box = null;
+    if (target !== "full") {
+      for (const sel of [].concat(target)) {
+        const b = await this.page.locator(sel).first().boundingBox();
+        if (!b) continue;
+        const u = box ?? { x1: b.x, y1: b.y, x2: b.x + b.width, y2: b.y + b.height };
+        box = { x1: Math.min(u.x1, b.x), y1: Math.min(u.y1, b.y), x2: Math.max(u.x2, b.x + b.width), y2: Math.max(u.y2, b.y + b.height) };
+      }
+    }
+    const round = (v) => Math.round(v);
+    this.cams.push({ t: +((Date.now() - this.t0) / 1000).toFixed(2), zoom, align, box: box && { x: round(box.x1 - pad), y: round(box.y1 - pad), w: round(box.x2 - box.x1 + 2 * pad), h: round(box.y2 - box.y1 + 2 * pad) } });
+  }
   wait(ms) { return this.page.waitForTimeout(ms); }
   async point(target, dx = 0, dy = 0) {
     if (typeof target !== "string") return target;
@@ -280,7 +301,7 @@ export async function recordScenes({ scenes, work, out, only = [], makeRepos, se
     server.kill("SIGKILL");
     await exited;
     const marks = Object.fromEntries(Object.entries(d.marks).map(([k, v]) => [k, +v.toFixed(2)]));
-    meta[scene.name] = { start: +start.toFixed(2), duration: +duration.toFixed(2), marks };
+    meta[scene.name] = { start: +start.toFixed(2), duration: +duration.toFixed(2), marks, cams: d.cams, view };
     writeFileSync(join(out, "scenes.json"), JSON.stringify(meta, null, 2));
     console.log(`${scene.name}: start ${start.toFixed(1)} s, ${duration.toFixed(1)} s`);
   }
