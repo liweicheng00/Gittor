@@ -1,10 +1,12 @@
-// Records the scenes of the short videos for social posts with Playwright. Each short has one scene.
+// Records the scenes of the short videos for social posts with Playwright. Each short has one scene:
+// a tour of one topic in four to six fast steps.
 // Build the UI and the dev server first (see AGENTS.md), then:
 //   node scripts/video/shorts-record.mjs <work-dir> <out-dir> [scene ...]
 // <work-dir> gets the repository of make-shorts-repo.sh. <out-dir> gets <scene>.webm and scenes.json.
 // A scene calls d.mark(name) at each step and d.cam(...) for each place of the camera; shorts-build.mjs
 // places the captions, the music and the moves of the camera on them.
-import { writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { git, recordScenes } from "./stage.mjs";
@@ -86,72 +88,110 @@ const DIFF = ".diff .editor.modified";
 const term = (d, fn, arg) => d.page.evaluate(([f, a]) => window.__vidTerm[f](a), [fn, arg]);
 const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;");
 
+/** Clicks an item of the open menu, with the camera on it. */
+async function pick(d, label, zoom = 1.8) {
+  const item = `.menu-item:has-text("${label}")`;
+  await d.page.waitForSelector(item);
+  await d.cam(item, { zoom });
+  await d.wait(700);
+  await d.click(item);
+}
+/** Closes the toasts, so the next step shows only its own toast. */
+const closeToasts = (d) => d.page.evaluate(() => document.querySelectorAll(".toast button[title=Close]").forEach((b) => b.click()));
+const logRow = (subject) => `.log-row:has(.subject-text:text-is("${subject}"))`;
+const LOG = [".log-row >> nth=0", ".log-row >> nth=9"];
+const commit = (message, date) => execFileSync("git", ["-C", repo, "-c", "commit.gpgsign=false", "commit", "-q", "-am", message], { env: { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date } });
+
+const CALC = [
+  "pub fn total(items: &[i32]) -> i32 {", "    let mut sum = 0;", "    for i in items {", "        sum += i;", "    }", "    sum", "}", "",
+  "pub fn average(items: &[i32]) -> i32 {", "    let sum = total(items);", "    sum / items.len() as i32", "}", "",
+].join("\n");
+const GUIDE = [
+  "# rustcalc", "", "A small calculator in Rust.", "", "## Build", "", "- [x] Install Rust", "- [ ] Build with cargo", "",
+  "## How it works", "", "```mermaid", "graph LR", "  A[Input] --> B[Tokenizer]", "  B --> C[Parser]", "```", "",
+].join("\n");
+
 const scenes = [
   {
-    // Short 1: notes on the changes of the agent, before any commit.
-    name: "notes",
+    // Tour: a tour of the basic work: the log, a diff, a checkout, a commit, and Undo.
+    name: "tour",
     prep: agentChanges,
+    // One column for the diff, so the camera shows the old line and the new line.
+    settings: () => ({ leftTab: "branches", sideBySide: false }),
+    async run(d) {
+      const row = (subject) => `.log-row:has(.subject-text:text-is("${subject}"))`;
+      await d.wait(1500);
+      d.mark("log");
+      await d.cam([".log-row >> nth=0", ".log-row >> nth=10"], { zoom: 1.7 });
+      await d.wait(900);
+      await d.click(row("Merge branch 'fix/readme'"), { after: 900 });
+      await d.click(row("Rename math to arith and use wrapping add"), { after: 600 });
+      d.mark("diff");
+      await d.cam(".diff", { zoom: 1.9, align: "top left", pad: 0 });
+      await d.wait(2300);
+      d.mark("branches");
+      const branch = ".sidebar .branch:has-text('feature/cli') >> nth=0";
+      await d.cam(branch, { zoom: 1.9, align: "left" });
+      await d.wait(700);
+      await d.click(branch, { button: "right", after: 200 });
+      await d.menu("Checkout");
+      await d.page.waitForSelector(".toast", { timeout: 15000 });
+      await d.wait(1500);
+      // Only the toast of the commit shows at the Undo step.
+      await d.page.evaluate(() => document.querySelector(".toast button[title=Close]")?.click());
+      d.mark("changes");
+      await d.click(".lp-tab:text-is('Changes')", { after: 300 });
+      await d.cam([file("arith.rs"), ".commit-button"], { zoom: 1.9, align: "left" });
+      await d.wait(900);
+      await d.click(".commit-message", { after: 150 });
+      await d.type("Add a division", 40);
+      await d.wait(400);
+      await d.click(".commit-button", { after: 0 });
+      await d.page.waitForSelector(".toast:has-text('ommit')", { timeout: 15000 });
+      d.mark("undo");
+      await d.cam(".toast:has-text('ommit')", { zoom: 2 });
+      await d.wait(1700);
+      await d.click(".toast:has-text('ommit') .toast-action:has-text('Undo')", { after: 0 });
+      await d.page.waitForSelector(file("arith.rs"), { timeout: 15000 });
+      await d.cam("full");
+      await d.wait(2300);
+    },
+  },
+  {
+    // Agent: a note on the change of the agent, the note goes to the agent, the fix clears it, then a commit.
+    name: "agent",
+    prep: () => write("arith.rs", ARITH_BAD),
     // The video starts on the diff of the agent, not on the commit that the log selects.
     async setup(d) {
+      await d.page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
       await d.page.click(file("arith.rs"));
       await showsFile(d, "arith.rs");
       await d.page.waitForSelector(`${modified} .view-line`);
       await d.wait(500);
     },
     async run(d) {
-      await d.wait(1600);
+      await d.wait(1500);
       await d.cam(DIFF, { zoom: 2 });
-      await d.wait(900);
-      d.mark("note1");
+      await d.wait(800);
+      d.mark("note");
       await addNote(d, 6, NOTE_ARITH);
-      await d.wait(1100);
-      await d.cam([file("arith.rs"), file("main.rs")], { zoom: 2 });
-      await d.wait(500);
-      await d.click(file("main.rs"), { after: 0 });
-      await showsFile(d, "main.rs");
-      await d.wait(500);
-      await d.cam(DIFF, { zoom: 2 });
       await d.wait(900);
-      d.mark("note2");
-      await addNote(d, 5, NOTE_MAIN);
-      d.mark("done");
-      await d.wait(2400);
-    },
-  },
-  {
-    // Short 2: copy the notes, paste them to the agent, and the fix clears the notes.
-    name: "paste",
-    prep: agentChanges,
-    async setup(d) {
-      for (const [path, line, text] of [["arith.rs", 6, NOTE_ARITH], ["main.rs", 5, NOTE_MAIN]]) {
-        await d.page.evaluate((body) => fetch("/api/local_note_edit", { method: "POST", body: JSON.stringify(body) }), { root: repo, action: "add", path, line, text });
-      }
-      await d.page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
-      await d.page.click(file("arith.rs"));
-      await d.page.waitForSelector(".diff .note-card:not(.draft)");
-      await d.wait(600);
-    },
-    async run(d) {
-      await d.cam(DIFF, { zoom: 2 });
-      await d.wait(1700);
-      await d.cam([".commit-copy-notes", file("main.rs")], { zoom: 2 });
-      await d.wait(700);
       d.mark("copy");
-      await d.click(".commit-copy-notes", { after: 700 });
+      await d.cam([".commit-copy-notes", file("arith.rs")], { zoom: 2 });
+      await d.wait(700);
+      await d.click(".commit-copy-notes", { after: 600 });
       const notes = await d.page.evaluate(() => navigator.clipboard.readText());
       // The terminal is over the log and above the new side of the diff, so one place of the camera
       // shows the terminal and the code that changes under it.
-      const box = await d.page.evaluate((sel) => {
-        const side = document.querySelector(sel).getBoundingClientRect();
+      const box = await d.page.evaluate(() => {
         const top = document.querySelector(".diff").getBoundingClientRect().top;
-        const h = 330;
-        return { x: innerWidth - 520, y: top - h - 10, w: 508, h, title: "agent — rustcalc" };
-      }, DIFF);
+        return { x: innerWidth - 520, y: top - 300, w: 508, h: 290, title: "agent — rustcalc" };
+      });
       d.mark("term");
       await term(d, "open", box);
       await term(d, "print", `<span class="dim">~/rustcalc</span> <span class="hi">main</span>\n<span class="you">›</span> `);
       await d.cam(".vid-term", { zoom: 1.9, align: "top", pad: 8 });
-      await d.wait(1200);
+      await d.wait(1000);
       // The badge of the keys goes into the terminal, where the camera is.
       await d.page.evaluate(() => {
         window.__vidKeys("⌘ V");
@@ -159,26 +199,29 @@ const scenes = [
         Object.assign(document.querySelector(".vid-keys").style, { left: `${r.left + r.width / 2}px`, top: `${r.top + r.height * 0.62}px` });
       });
       await d.wait(350);
-      d.mark("paste");
       await term(d, "print", esc(notes).replace(/\n/g, "\n  "));
-      await d.wait(1900);
-      await term(d, "print", `\n\n<span class="dim">● Reading 2 review notes</span>\n`);
-      await d.wait(900);
-      await term(d, "print", `● Edit <span class="hi">arith.rs</span>\n  <span class="del">- pub fn div(a: i32, b: i32) -&gt; i32 {</span>\n  <span class="add">+ pub fn div(a: i32, b: i32) -&gt; Option&lt;i32&gt; {</span>\n`);
+      await d.wait(1400);
+      await term(d, "print", `\n\n● Edit <span class="hi">arith.rs</span>\n  <span class="del">- pub fn div(a: i32, b: i32) -&gt; i32 {</span>\n  <span class="add">+ pub fn div(a: i32, b: i32) -&gt; Option&lt;i32&gt; {</span>\n`);
       write("arith.rs", ARITH_GOOD);
       d.mark("fix");
       await d.page.waitForFunction(() => !document.querySelector(".diff .note-card") && document.querySelector(".diff .editor.modified")?.textContent?.includes("checked_div"), null, { timeout: 15000 });
-      await d.wait(900);
-      await term(d, "print", `● Edit <span class="hi">main.rs</span>\n`);
-      write("main.rs", MAIN_GOOD);
-      await d.wait(900);
-      await term(d, "print", `<span class="ok">✔ Fixed 2 notes</span>\n<span class="you">›</span> `);
-      d.mark("cleared");
-      await d.wait(2800);
+      await d.wait(600);
+      await term(d, "print", `<span class="ok">✔ Fixed 1 note</span>\n<span class="you">›</span> `);
+      await d.wait(1700);
+      d.mark("commit");
+      await term(d, "close");
+      await d.cam([file("arith.rs"), ".commit-button"], { zoom: 1.9, align: "left" });
+      await d.wait(800);
+      await d.click(".commit-message", { after: 150 });
+      await d.type("Add a checked division", 35);
+      await d.wait(300);
+      await d.click(".commit-button", { after: 0 });
+      await d.page.waitForSelector(".toast:has-text('ommit')", { timeout: 15000 });
+      await d.wait(2200);
     },
   },
   {
-    // Short 3: a review of the branch of the agent, then a squash merge, all without a remote.
+    // Review: a review of the branch of the agent, then a squash merge, all without a remote.
     name: "review",
     // One column for the diff: the two sides of the review window are too narrow for the code.
     settings: () => ({ leftTab: "branches", sideBySide: false }),
@@ -243,48 +286,196 @@ const scenes = [
     },
   },
   {
-    // Short 4: a tour of the basic work: the log, a diff, a checkout, a commit, and Undo.
-    name: "tour",
-    prep: agentChanges,
-    // One column for the diff, so the camera shows the old line and the new line.
-    settings: () => ({ leftTab: "branches", sideBySide: false }),
+    // History: squash two commits, change a message, drop a commit, and Undo.
+    name: "history",
+    settings: () => ({ leftTab: "branches" }),
+    prep() {
+      write("sub.rs", "pub fn sub(a: i32, b: i32) -> i32 { a - b }\n");
+      git(repo, "add", "sub.rs");
+      commit("Add a sub function", "2026-09-12T10:00");
+      write("sub.rs", "pub fn sub(a: i32, b: i32) -> i32 { a - b }\npub fn neg(a: i32) -> i32 { -a }\n");
+      commit("Add neg", "2026-09-12T11:00");
+      write("README.md", "# Demo\n\nA demo repository for Gittor.\n\n## Build\n\n    cargo build --release\n");
+      commit("Fix teh build docs", "2026-09-12T14:00");
+      write("main.rs", "fn main() {\n    println!(\"hello, world\");\n    dbg!(1 + 1);\n}\n");
+      commit("wip: debug prints", "2026-09-12T16:00");
+    },
     async run(d) {
-      const row = (subject) => `.log-row:has(.subject-text:text-is("${subject}"))`;
-      await d.wait(1500);
-      d.mark("log");
-      await d.cam([".log-row >> nth=0", ".log-row >> nth=10"], { zoom: 1.7 });
+      await d.wait(1200);
+      await d.cam(LOG, { zoom: 1.7 });
+      await d.wait(800);
+      d.mark("squash");
+      await d.click(logRow("Add neg"), { after: 350 });
+      await d.click(logRow("Add a sub function"), { modifiers: ["Control"], after: 350 });
+      await d.click(logRow("Add neg"), { button: "right", after: 200 });
+      await pick(d, "Squash 2 Commits");
+      await d.page.waitForSelector(".dialog textarea");
+      await d.cam(".dialog");
+      await d.wait(500);
+      await d.click(".dialog textarea", { after: 100 });
+      await d.page.keyboard.press("Control+A");
+      await d.type("Add sub and neg", 35);
+      await d.wait(300);
+      await d.click(".dialog-buttons button:has-text('Squash')", { after: 0 });
+      await d.page.waitForSelector(logRow("Add sub and neg"), { timeout: 15000 });
+      await d.cam(LOG, { zoom: 1.7 });
       await d.wait(900);
-      await d.click(row("Merge branch 'fix/readme'"), { after: 900 });
-      await d.click(row("Rename math to arith and use wrapping add"), { after: 600 });
-      d.mark("diff");
-      await d.cam(".diff", { zoom: 1.9, align: "top left", pad: 0 });
-      await d.wait(2300);
-      d.mark("branches");
-      const branch = ".sidebar .branch:has-text('feature/cli') >> nth=0";
-      await d.cam(branch, { zoom: 1.9, align: "left" });
+      await closeToasts(d);
+      d.mark("reword");
+      await d.click(logRow("Fix teh build docs"), { button: "right", after: 200 });
+      await pick(d, "Edit Commit Message");
+      await d.page.waitForSelector(".dialog textarea");
+      await d.cam(".dialog");
+      await d.wait(500);
+      await d.click(".dialog textarea", { after: 100 });
+      await d.page.keyboard.press("Control+A");
+      await d.type("Fix the build docs", 35);
+      await d.wait(300);
+      await d.click(".dialog-buttons button >> nth=-1", { after: 0 });
+      await d.page.waitForSelector(logRow("Fix the build docs"), { timeout: 15000 });
+      await d.cam(LOG, { zoom: 1.7 });
+      await d.wait(900);
+      await closeToasts(d);
+      d.mark("drop");
+      await d.click(logRow("wip: debug prints"), { button: "right", after: 200 });
+      await pick(d, "Drop Commit");
+      await d.page.waitForSelector(".dialog-buttons button:has-text('Drop')");
+      await d.cam(".dialog");
       await d.wait(700);
-      await d.click(branch, { button: "right", after: 200 });
-      await d.menu("Checkout");
-      await d.page.waitForSelector(".toast", { timeout: 15000 });
-      await d.wait(1500);
-      // Only the toast of the commit shows at the Undo step.
-      await d.page.evaluate(() => document.querySelector(".toast button[title=Close]")?.click());
-      d.mark("changes");
-      await d.click(".lp-tab:text-is('Changes')", { after: 300 });
-      await d.cam([file("arith.rs"), ".commit-button"], { zoom: 1.9, align: "left" });
-      await d.wait(900);
+      await d.click(".dialog-buttons button:has-text('Drop')", { after: 0 });
+      await d.page.waitForSelector(logRow("wip: debug prints"), { state: "detached", timeout: 15000 });
+      d.mark("undo");
+      await d.cam(".toast", { zoom: 2 });
+      await d.wait(1200);
+      await d.click(".toast .toast-action:has-text('Undo')", { after: 0 });
+      await d.page.waitForSelector(logRow("wip: debug prints"), { timeout: 15000 });
+      await d.cam(LOG, { zoom: 1.7 });
+      await d.wait(2000);
+    },
+  },
+  {
+    // Changes: a changelist, one change of a file left out, a commit, and the rest stays.
+    name: "changes",
+    prep() {
+      write("calc.rs", CALC);
+      git(repo, "add", "calc.rs");
+      commit("Add calc", "2026-09-12T10:00");
+      write("calc.rs", CALC.replace("        sum += i;", "        sum = sum.saturating_add(*i);").replace("    let sum = total(items);", "    let sum = total(items);\n    println!(\"debug: {sum}\");"));
+      write("README.md", "# Demo\n\nA demo repository for Gittor.\n\n## Build\n\n    cargo build\n\n## Use\n\n    rustcalc 6 3\n");
+    },
+    async run(d) {
+      const panel = [".cl-header >> nth=0", ".commit-button"];
+      await d.wait(1400);
+      await d.cam(panel, { zoom: 1.9, align: "left" });
+      await d.wait(800);
+      d.mark("lists");
+      await d.click(file("README.md"), { button: "right", after: 200 });
+      await pick(d, "New Changelist");
+      await d.page.waitForSelector(".dialog-field:has-text('Name') input");
+      await d.cam(".dialog");
+      await d.click(".dialog-field:has-text('Name') input", { after: 150 });
+      await d.type("Docs", 60);
+      await d.click(".dialog-buttons button:has-text('Create')", { after: 300 });
+      await d.cam(panel, { zoom: 1.9, align: "left" });
+      await d.wait(700);
+      if (await d.page.isChecked(".cl-header:has-text('Docs') .cl-check")) await d.click(".cl-header:has-text('Docs') .cl-check", { after: 300 });
+      await d.wait(800);
+      d.mark("hunks");
+      await d.click(file("calc.rs"), { after: 0 });
+      await d.page.waitForSelector(".workspace .hunk-on >> nth=1");
+      await d.cam(DIFF, { zoom: 1.9, align: "top" });
+      await d.wait(1200);
+      await d.click(".workspace .hunk-on >> nth=1", { after: 1400 });
+      d.mark("commit");
+      await d.cam(panel, { zoom: 1.9, align: "left" });
+      await d.wait(700);
       await d.click(".commit-message", { after: 150 });
-      await d.type("Add a division", 40);
-      await d.wait(400);
+      await d.type("Use saturating add", 35);
+      await d.wait(300);
       await d.click(".commit-button", { after: 0 });
       await d.page.waitForSelector(".toast:has-text('ommit')", { timeout: 15000 });
-      d.mark("undo");
-      await d.cam(".toast:has-text('ommit')", { zoom: 2 });
-      await d.wait(1700);
-      await d.click(".toast:has-text('ommit') .toast-action:has-text('Undo')", { after: 0 });
-      await d.page.waitForSelector(file("arith.rs"), { timeout: 15000 });
+      d.mark("rest");
+      await d.wait(1200);
+      await d.click(file("calc.rs"), { after: 400 });
+      await d.cam(DIFF, { zoom: 1.9, align: "top" });
+      await d.wait(2400);
+    },
+  },
+  {
+    // Worktrees: add a worktree, open it in a tab, and drag the tab out to a new window.
+    name: "worktrees",
+    settings: () => ({ leftTab: "branches" }),
+    async run(d) {
+      const folder = join(work, "rustcalc-wt/parser");
+      const item = ".sidebar .worktree:has(.branch-name:text-is('parser'))";
+      await d.wait(1400);
+      d.mark("add");
+      await d.cam(".group-action[title='Add a worktree']", { zoom: 1.9, align: "left" });
+      await d.wait(700);
+      await d.click(".group-action[title='Add a worktree']", { after: 300 });
+      await d.page.waitForSelector(".dialog-field:has-text('Branch') input");
+      await d.cam(".dialog");
+      await d.click(".dialog-field:has-text('Branch') input", { after: 150 });
+      await d.type("agent/parser", 45);
+      await d.click(".dialog-field:has-text('Folder') input", { after: 150 });
+      await d.page.fill(".dialog-field:has-text('Folder') input", "");
+      await d.type(folder, 18);
+      await d.wait(400);
+      await d.click(".dialog-buttons button:has-text('Create')", { after: 0 });
+      await d.page.waitForSelector(item, { timeout: 15000 });
+      await d.cam(item, { zoom: 1.9, align: "left" });
+      await d.wait(1300);
+      d.mark("tab");
+      await d.click(item, { double: true, after: 0 });
+      const tab = ".tab.worktree:has-text('parser')";
+      await d.page.waitForSelector(tab, { timeout: 15000 });
+      await d.cam([".tab >> nth=0", tab], { zoom: 1.8, align: "top left" });
+      await d.wait(2200);
+      d.mark("window");
+      await d.drag(tab, { x: 300, y: 330 }, { ms: 1100 });
+      await d.cam(".vid-window", { pad: 30 });
+      await d.wait(3200);
+    },
+  },
+  {
+    // Inspect: the history of a file, Annotate, and the preview of a Markdown file with a diagram.
+    name: "inspect",
+    // One column for the diff: the camera shows all of the width of the preview.
+    settings: () => ({ leftTab: "branches", sideBySide: false }),
+    prep() {
+      mkdirSync(join(repo, "docs"), { recursive: true });
+      write("docs/GUIDE.md", GUIDE);
+      git(repo, "add", "docs");
+      commit("Add the guide", "2026-09-12T10:00");
+      write("docs/GUIDE.md", GUIDE.replace("- [ ] Build with cargo", "- [x] Build with `cargo build --release`").replace("  B --> C[Parser]", "  B --> C[Parser]\n  C --> D[Evaluate]"));
+    },
+    async run(d) {
+      await d.wait(1400);
+      await d.click(logRow("Rename math to arith and use wrapping add"), { after: 0 });
+      await d.page.waitForSelector(".change:has-text('arith.rs')");
+      d.mark("history");
+      await d.cam(".change:has-text('arith.rs')", { zoom: 1.9 });
+      await d.wait(700);
+      await d.click(".change:has-text('arith.rs')", { button: "right", after: 200 });
+      await pick(d, "Show History");
+      await d.page.waitForSelector(".history-row");
+      await d.cam([".history-row >> nth=0", ".history-row >> nth=1"], { zoom: 1.7, align: "top left" });
+      await d.wait(2400);
+      d.mark("annotate");
+      await d.click(".history-window .diff-option:has-text('Annotate') input", { after: 0 });
+      await d.page.waitForSelector(".history-window .blame-first");
+      await d.cam([".history-window .diff-option:has-text('Annotate')", ".history-window .blame-first >> nth=0"], { zoom: 1.6 });
+      await d.wait(3000);
+      await d.page.keyboard.press("Escape");
+      d.mark("preview");
       await d.cam("full");
-      await d.wait(2300);
+      await d.click(".lp-tab:text-is('Changes')", { after: 400 });
+      await d.click(file("GUIDE.md"), { after: 0 });
+      await d.page.waitForSelector(".diff-preview-toggle:not([hidden])", { timeout: 15000 });
+      await d.cam(".diff", { zoom: 1.5, align: "top left", pad: 0 });
+      await d.wait(3200);
+      d.mark("source");
+      await d.click(".diff-preview-toggle", { after: 2600 });
     },
   },
 ];

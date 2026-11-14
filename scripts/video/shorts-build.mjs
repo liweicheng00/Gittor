@@ -26,10 +26,13 @@ const meta = JSON.parse(readFileSync(join(rec, "scenes.json"), "utf8"));
 /** The shorts: the scene, and the captions. A caption starts at a mark of the scene (or at the start) and
  * stays until the next caption. */
 const shorts = [
-  { scene: "notes", captions: [[null, "Your agent wrote it.<br>You review it."], ["note1", "Notes on any line,<br>before any commit"], ["done", "No branch. No push.<br>No pull request."]] },
-  { scene: "paste", captions: [[null, "Review notes<br>for your agent"], ["copy", "Copy them all"], ["term", "Paste them<br>to your agent"], ["fix", "The fix lands.<br>The notes clear."]] },
-  { scene: "review", captions: [[null, "A pull request that never<br>leaves your machine"], ["note", "Notes on lines"], ["viewed", "Mark files as viewed"], ["merge", "Squash and merge"], ["merged", "No remote.<br>Undo is one click."]] },
   { scene: "tour", captions: [[null, "A light git client.<br>The basics, fast."], ["log", "All the history,<br>as a graph"], ["diff", "One click<br>to the diff"], ["branches", "Switch branches"], ["changes", "Check, write, commit"], ["undo", "Changed your mind?<br>Undo."]] },
+  { scene: "agent", captions: [[null, "Your agent wrote it.<br>Now review it."], ["note", "Leave a note<br>on the line"], ["copy", "Copy the notes"], ["term", "Paste them<br>to your agent"], ["fix", "The fix lands.<br>The note clears."], ["commit", "Then commit"]] },
+  { scene: "review", captions: [[null, "A pull request that never<br>leaves your machine"], ["note", "Notes on lines"], ["viewed", "Mark files as viewed"], ["merge", "Squash and merge"], ["merged", "No remote.<br>Undo is one click."]] },
+  { scene: "history", captions: [[null, "Rewrite history.<br>Break nothing."], ["squash", "Squash commits"], ["reword", "Fix a message"], ["drop", "Drop a commit"], ["undo", "Undo any of it"]] },
+  { scene: "changes", captions: [[null, "Commit exactly<br>what you mean"], ["lists", "Group files<br>in changelists"], ["hunks", "Pick single changes"], ["commit", "Commit only<br>what is checked"], ["rest", "The rest waits<br>for later"]] },
+  { scene: "worktrees", captions: [[null, "One repository.<br>Many worktrees."], ["add", "Add a worktree"], ["tab", "It opens<br>in its own tab"], ["window", "Drag a tab out<br>for a new window"]] },
+  { scene: "inspect", captions: [[null, "Every line<br>has a story"], ["history", "File history,<br>across renames"], ["annotate", "Who changed<br>each line"], ["preview", "Markdown and<br>diagrams, rendered"], ["source", "The source is<br>one click away"]] },
 ];
 const SPEED = 1.15; // The scenes play a little faster than they were recorded.
 const END = 2.8; // The end card.

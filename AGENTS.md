@@ -124,8 +124,10 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   the captions and soft notes of the music on the marks. `music.py` computes the music with numpy
   (styles `pulse`, `lofi`, `drive`), with no samples and no service. An agent cannot hear it: check the
   loudness with the `ebur128` filter of ffmpeg, and let the owner listen. The owner wants slow, low
-  music, and no effect sound at the end. The theme of the shorts is the review of the work of a coding
-  agent.
+  music, and no effect sound at the end. Each short is a tour of one topic in four to six fast steps
+  (`tour`, `agent`, `review`, `history`, `changes`, `worktrees`, `inspect`): the owner likes this
+  rhythm. Give `shorts.sh` a work dir with a short path (`SHORTS_WORK`), because the worktree dialog
+  shows it. Do not use a symbolic link: the tab then shows `work/rustcalc`, not `rustcalc`.
 - CI: `.github/workflows/ci.yml` runs the tests, clippy, the types, the unit tests and all UI
   scenarios on each push to main, the scenarios in 4 parts on 4 machines. Failed scenarios run once
   more alone.

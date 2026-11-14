@@ -9,6 +9,7 @@ root=$(cd "$here/../.." && pwd)
 mkdir -p "$work"
 work=$(cd "$work" && pwd)
 repo=$work/rustcalc
+rm -rf "$work/rustcalc-wt"
 "$root/ui/e2e/make-demo-repo.sh" "$repo" > /dev/null
 cd "$repo"
 git config commit.gpgsign false
