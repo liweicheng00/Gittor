@@ -33,6 +33,7 @@ const shorts = [
   { scene: "changes", captions: [[null, "Commit exactly<br>what you mean"], ["lists", "Group files<br>in changelists"], ["hunks", "Pick single changes"], ["commit", "Commit only<br>what is checked"], ["rest", "The rest waits<br>for later"]] },
   { scene: "worktrees", captions: [[null, "One repository.<br>Many worktrees."], ["add", "Add a worktree"], ["tab", "It opens<br>in its own tab"], ["window", "Drag a tab out<br>for a new window"]] },
   { scene: "inspect", captions: [[null, "Every line<br>has a story"], ["history", "File history,<br>across renames"], ["annotate", "Who changed<br>each line"], ["preview", "Markdown and<br>diagrams, rendered"], ["source", "The source is<br>one click away"]] },
+  { scene: "filter", captions: [[null, "Find any commit<br>in the graph"], ["copy", "Click a label:<br>the branch name is copied"], ["branch", "Double-click:<br>only that branch"], ["text", "Filter by text"], ["user", "And by user"], ["clear", "One click<br>to clear"]] },
 ];
 const SPEED = 1.15; // The scenes play a little faster than they were recorded.
 const END = 2.8; // The end card.

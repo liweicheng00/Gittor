@@ -478,6 +478,48 @@ const scenes = [
       await d.click(".diff-preview-toggle", { after: 2600 });
     },
   },
+  {
+    // Filter: a click on a label copies the branch name, a double click shows only that branch, then the
+    // filters of the text and the user, and Clear.
+    name: "filter",
+    settings: () => ({ leftTab: "branches" }),
+    async setup(d) {
+      await d.page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    },
+    async run(d) {
+      const view = [".filter-text", ".log-row >> nth=9"];
+      const label = ".log-row .ref[data-ref='feature/cli']";
+      await d.wait(1400);
+      await d.cam(view, { zoom: 1.7, align: "top" });
+      await d.wait(900);
+      d.mark("copy");
+      await d.click(label, { after: 500 });
+      const name = await d.page.evaluate(() => navigator.clipboard.readText());
+      await d.page.evaluate((t) => {
+        window.__vidClipboard(t);
+        const r = document.querySelector(".log-row .ref[data-ref='feature/cli']").getBoundingClientRect();
+        Object.assign(document.querySelector(".vid-clipboard").style, { left: `${r.right + 60}px`, top: `${r.top - 22}px`, right: "auto", bottom: "auto", width: "150px", font: "14px ui-monospace, monospace" });
+      }, name);
+      await d.wait(2200);
+      await d.page.evaluate(() => document.querySelector(".vid-clipboard")?.remove());
+      d.mark("branch");
+      await d.click(label, { double: true, after: 0 });
+      await d.page.waitForFunction(() => document.querySelector(".filter-label")?.textContent?.includes("feature/cli"));
+      await d.wait(2600);
+      d.mark("text");
+      await d.click(".filter-x", { after: 500 });
+      await d.click(".filter-text", { after: 150 });
+      await d.type("parser", 70);
+      await d.wait(2400);
+      d.mark("user");
+      await d.click(".filter-author", { after: 150 });
+      await d.type("Grace", 70);
+      await d.page.keyboard.press("Enter");
+      await d.wait(2400);
+      d.mark("clear");
+      await d.click(".filter-clear", { after: 2400 });
+    },
+  },
 ];
 
 await recordScenes({ scenes, work, out, only, makeRepos: join(here, "make-shorts-repo.sh"), settings: presetSettings, css: HIDE_PATH, view: VIEW });
