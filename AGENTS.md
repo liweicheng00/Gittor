@@ -127,8 +127,9 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   music, and no effect sound at the end. Each short is a tour of one topic in four to six fast steps
   (`tour`, `agent`, `review`, `history`, `changes`, `worktrees`, `inspect`, `filter`): the owner likes
   this rhythm. `shorts-fit.mjs` makes copies under a size limit: the Google Drive connector of a cloud
-  session takes files up to about 3.1 MB. Give `shorts.sh` a work dir with a short path (`SHORTS_WORK`), because the worktree dialog
-  shows it. Do not use a symbolic link: the tab then shows `work/rustcalc`, not `rustcalc`.
+  session takes files up to about 3.1 MB. Do not commit the videos of the shorts: the owner keeps them
+  in Google Drive (the folder "Gittor shorts"), because they take too much space in the repository.
+  Give `shorts.sh` a work dir with a short path (`SHORTS_WORK`), because the worktree dialog shows it. Do not use a symbolic link: the tab then shows `work/rustcalc`, not `rustcalc`.
 - CI: `.github/workflows/ci.yml` runs the tests, clippy, the types, the unit tests and all UI
   scenarios on each push to main, the scenarios in 4 parts on 4 machines. Failed scenarios run once
   more alone.
