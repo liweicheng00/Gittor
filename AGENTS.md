@@ -115,6 +115,14 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   identifier and calls `config::use_dev_dir`: the settings folder `gittor-dev`, a copy of `gittor` at
   the first start. The UI keeps a copy of its settings in `ui-settings.json` (`startSettingsCopy` in
   `main.ts`, only in the app); a first start with empty storage takes them from there and loads again.
+- Videos: `scripts/video`. `stage.mjs` has the overlay (cursor, click rings, a fake window, a fake
+  terminal), the `Director` and the loop that records a scene with Playwright. `run.sh` makes the intro
+  video (`record.mjs`, `build.mjs`). `shorts.sh` makes the short videos for social posts
+  (`shorts-record.mjs`, `shorts-build.mjs`): the page is 1280x720, so the text is large on a phone. A
+  scene calls `d.mark(name)`; the build puts the captions and the bells of the music on the marks.
+  `music.py` computes the music with numpy (styles `pulse`, `lofi`, `drive`), with no samples and no
+  service. An agent cannot hear it: check the loudness with the `ebur128` filter of ffmpeg, and let the
+  owner listen. The theme of the shorts is the review of the work of a coding agent.
 - CI: `.github/workflows/ci.yml` runs the tests, clippy, the types, the unit tests and all UI
   scenarios on each push to main, the scenarios in 4 parts on 4 machines. Failed scenarios run once
   more alone.
