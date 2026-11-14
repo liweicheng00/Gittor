@@ -76,6 +76,10 @@ html.titlebar-tabs .tab { border-top: 2px solid transparent; }
 .tab:hover { background: var(--hover); }
 /* A linked worktree: its icon and the name of its main repository. */
 .tab .tab-icon { color: var(--accent); }
+/* The number of Alt+<n> on each project tab, while Alt is down. */
+.tab-num { display: none; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 4px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 600; line-height: 16px; text-align: center; }
+.tab-num::before { content: attr(data-num); }
+.tabbar.show-numbers .tab-num { display: inline-block; }
 .tab.on { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
 .tab-add { flex: none; }
 .tab-close, .tab-add { border: none; background: none; color: var(--muted); cursor: pointer; border-radius: 4px; padding: 0 4px; font: inherit; }

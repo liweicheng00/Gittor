@@ -63,8 +63,10 @@ export function renderTabs() {
   const names = new Map(settings.tabs.map((r, i) => [r, pathLabels(settings.tabs)[i]]));
   const scroll = tabScroll.scrollLeft;
   tabScroll.replaceChildren(
-    ...settings.tabs.map((root) => {
+    ...settings.tabs.map((root, index) => {
       const name = names.get(root) ?? baseName(root);
+      // The number of Alt+<n>: the first eight tabs, and 9 for the last one. It shows while Alt is down.
+      const num = index < 8 ? index + 1 : index === settings.tabs.length - 1 ? 9 : 0;
       const info = tabInfo.get(root);
       // A linked worktree shows the worktree icon. Its tooltip names the main repository.
       const worktree = info?.mainRoot ?? null;
@@ -77,7 +79,9 @@ export function renderTabs() {
         e.stopPropagation();
         void closeTab(root);
       });
-      const tab = h("div", { class: "tab" + (root === settings.activeTab ? " on" : "") + (worktree ? " worktree" : ""), title, role: "tab", "data-root": root }, ...label, close);
+      // CSS draws the number from data-num, so the text of the tab stays its name.
+      const badge = num ? h("span", { class: "tab-num", "aria-hidden": "true", "data-num": String(num) }) : "";
+      const tab = h("div", { class: "tab" + (root === settings.activeTab ? " on" : "") + (worktree ? " worktree" : ""), title, role: "tab", "data-root": root }, badge, ...label, close);
       tab.addEventListener("contextmenu", (e) => {
         e.preventDefault();
         showMenu(e.clientX, e.clientY, [{ label: "Close Tab", action: () => void closeTab(root) }]);

@@ -85,6 +85,25 @@ await page.keyboard.press("Alt+3");
 await page.waitForTimeout(500);
 check("Alt+3 without a third tab does nothing", (await page.textContent(".tab.on")).includes("-second"));
 
+// While Alt is down, each tab shows its number; the numbers go when Alt goes up.
+const numbers = () => page.$$eval(".tab .tab-num", (els) => els.filter((e) => getComputedStyle(e).display !== "none").map((e) => e.dataset.num));
+check("no numbers without Alt", (await numbers()).length === 0);
+await page.keyboard.down("Alt");
+await within("Alt shows the number of each tab", async () => JSON.stringify(await numbers()) === JSON.stringify(["1", "2"]));
+await shot("tab2-numbers");
+await page.keyboard.press("1");
+await within("Alt+1 with the numbers shows the first repository", async () => !(await page.textContent(".tab.on")).includes("-second"));
+check("the numbers stay while Alt is down", (await numbers()).length === 2);
+await page.keyboard.up("Alt");
+await within("the numbers go when Alt goes up", async () => (await numbers()).length === 0);
+// Alt with another key, for example Alt+Down, hides the numbers.
+await page.keyboard.down("Alt");
+await page.keyboard.press("ArrowDown");
+await within("Alt with another key hides the numbers", async () => (await numbers()).length === 0);
+await page.keyboard.up("Alt");
+await page.keyboard.press("Alt+2");
+await within("Alt+2 shows the second repository again", async () => (await page.textContent(".tab.on")).includes("-second"));
+
 // A reload opens the same tabs, with the second one active.
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/`);
 await within("the tabs come back", async () => (await page.$$(".tab")).length === 2);
