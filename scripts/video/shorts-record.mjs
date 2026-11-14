@@ -242,6 +242,51 @@ const scenes = [
       await d.click(".log-row >> nth=0", { after: 2400 });
     },
   },
+  {
+    // Short 4: a tour of the basic work: the log, a diff, a checkout, a commit, and Undo.
+    name: "tour",
+    prep: agentChanges,
+    // One column for the diff, so the camera shows the old line and the new line.
+    settings: () => ({ leftTab: "branches", sideBySide: false }),
+    async run(d) {
+      const row = (subject) => `.log-row:has(.subject-text:text-is("${subject}"))`;
+      await d.wait(1500);
+      d.mark("log");
+      await d.cam([".log-row >> nth=0", ".log-row >> nth=10"], { zoom: 1.7 });
+      await d.wait(900);
+      await d.click(row("Merge branch 'fix/readme'"), { after: 900 });
+      await d.click(row("Rename math to arith and use wrapping add"), { after: 600 });
+      d.mark("diff");
+      await d.cam(".diff", { zoom: 1.9, align: "top left", pad: 0 });
+      await d.wait(2300);
+      d.mark("branches");
+      const branch = ".sidebar .branch:has-text('feature/cli') >> nth=0";
+      await d.cam(branch, { zoom: 1.9, align: "left" });
+      await d.wait(700);
+      await d.click(branch, { button: "right", after: 200 });
+      await d.menu("Checkout");
+      await d.page.waitForSelector(".toast", { timeout: 15000 });
+      await d.wait(1500);
+      // Only the toast of the commit shows at the Undo step.
+      await d.page.evaluate(() => document.querySelector(".toast button[title=Close]")?.click());
+      d.mark("changes");
+      await d.click(".lp-tab:text-is('Changes')", { after: 300 });
+      await d.cam([file("arith.rs"), ".commit-button"], { zoom: 1.9, align: "left" });
+      await d.wait(900);
+      await d.click(".commit-message", { after: 150 });
+      await d.type("Add a division", 40);
+      await d.wait(400);
+      await d.click(".commit-button", { after: 0 });
+      await d.page.waitForSelector(".toast:has-text('ommit')", { timeout: 15000 });
+      d.mark("undo");
+      await d.cam(".toast:has-text('ommit')", { zoom: 2 });
+      await d.wait(1700);
+      await d.click(".toast:has-text('ommit') .toast-action:has-text('Undo')", { after: 0 });
+      await d.page.waitForSelector(file("arith.rs"), { timeout: 15000 });
+      await d.cam("full");
+      await d.wait(2300);
+    },
+  },
 ];
 
 await recordScenes({ scenes, work, out, only, makeRepos: join(here, "make-shorts-repo.sh"), settings: presetSettings, css: HIDE_PATH, view: VIEW });

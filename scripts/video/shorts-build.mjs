@@ -1,7 +1,7 @@
 // Makes the short videos for social posts from the scenes of shorts-record.mjs. Each short is an MP4 for
 // a phone (1080x1920) with sound: the name of the app, a caption, the app in a frame, and an end card.
 // A camera shows all of the page or a part of it and moves between the places that the scene set.
-//   node scripts/video/shorts-build.mjs <rec-dir> <out-dir> [style]
+//   node scripts/video/shorts-build.mjs <rec-dir> <out-dir> [style] [scene ...]
 // <rec-dir> has the <scene>.webm files and scenes.json. The style of the music is pulse (the default),
 // lofi or drive; another style than pulse goes into the file name. ffmpeg and python3 with numpy must be
 // on the PATH. Set CHROMIUM to a Chromium binary when Playwright has no downloaded browser.
@@ -14,8 +14,8 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "../..");
 const { chromium } = createRequire(join(root, "ui/package.json"))("playwright");
-const [, , recArg, outArg, style = "pulse"] = process.argv;
-if (!recArg || !outArg) throw new Error("usage: shorts-build.mjs <rec-dir> <out-dir> [style]");
+const [, , recArg, outArg, style = "pulse", ...only] = process.argv;
+if (!recArg || !outArg) throw new Error("usage: shorts-build.mjs <rec-dir> <out-dir> [style] [scene ...]");
 const rec = resolve(recArg);
 const out = resolve(outArg);
 const tmp = join(rec, "build");
@@ -29,6 +29,7 @@ const shorts = [
   { scene: "notes", captions: [[null, "Your agent wrote it.<br>You review it."], ["note1", "Notes on any line,<br>before any commit"], ["done", "No branch. No push.<br>No pull request."]] },
   { scene: "paste", captions: [[null, "Review notes<br>for your agent"], ["copy", "Copy them all"], ["term", "Paste them<br>to your agent"], ["fix", "The fix lands.<br>The notes clear."]] },
   { scene: "review", captions: [[null, "A pull request that never<br>leaves your machine"], ["note", "Notes on lines"], ["viewed", "Mark files as viewed"], ["merge", "Squash and merge"], ["merged", "No remote.<br>Undo is one click."]] },
+  { scene: "tour", captions: [[null, "A light git client.<br>The basics, fast."], ["log", "All the history,<br>as a graph"], ["diff", "One click<br>to the diff"], ["branches", "Switch branches"], ["changes", "Check, write, commit"], ["undo", "Changed your mind?<br>Undo."]] },
 ];
 const SPEED = 1.15; // The scenes play a little faster than they were recorded.
 const END = 2.8; // The end card.
@@ -94,6 +95,7 @@ function eased(keys, pick, time) {
 
 const enc = ["-c:v", "libx264", "-preset", "slow", "-crf", "19", "-pix_fmt", "yuv420p", "-r", String(FPS)];
 for (const [n, s] of shorts.entries()) {
+  if (only.length && !only.includes(s.scene)) continue;
   const { start, duration, marks, cams, view } = meta[s.scene];
   const len = duration / SPEED;
   const total = len + END - FADE;
