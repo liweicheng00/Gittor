@@ -154,7 +154,7 @@ export function openSettingsDialog(ctx: SettingsContext): Promise<Settings | nul
     };
 
     const general = () => [
-      row("Theme", select<Theme>([["system", "Same as the system"], ["light", "Light"], ["dark", "Dark"]], () => draft.theme, (v) => (draft.theme = v))),
+      row("Theme", select<Theme>([["system", "Same as the system"], ["light", "Light"], ["dark", "Dark"], ["plasma", "Plasma"], ["ember", "Ember"]], () => draft.theme, (v) => (draft.theme = v))),
       row("Update", select<"merge" | "rebase">([["merge", "Merge the tracked branch"], ["rebase", "Rebase onto the tracked branch"]], () => draft.updateMode, (v) => (draft.updateMode = v)), "The default choice when the branch has commits of its own and cannot fast-forward."),
       row("Refresh", check("Refresh when files or refs change outside the app", () => draft.autoRefresh, (v) => (draft.autoRefresh = v))),
       row("Auto fetch", h("span", { class: "settings-inline" }, "Every ", number(() => draft.autoFetchMinutes, (v) => (draft.autoFetchMinutes = v), 0, 1440), " minutes"), "0 turns it off. Fetch asks for a password when a remote needs one."),

@@ -2,7 +2,7 @@
 
 import { trimRecent } from "./recent-groups";
 
-export type Theme = "system" | "light" | "dark";
+export type Theme = "system" | "light" | "dark" | "plasma" | "ember";
 
 export interface Settings {
   intelliSort: boolean;

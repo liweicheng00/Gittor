@@ -13,11 +13,16 @@ import { markBlocks, removedAnchors } from "./markdown-model";
 import { blocksOf, renderMarkdown, updateDoc } from "./markdown-preview";
 import { NoteLayer, type NoteHandlers, type NoteItem } from "./note-layer";
 import { save, settings } from "./settings";
+import { GLOW_MONACO, glowMonacoThemes } from "./glow-monaco";
 
 (self as unknown as { MonacoEnvironment: object }).MonacoEnvironment = { getWorker: () => new EditorWorker() };
 
-export function setMonacoTheme(dark: boolean) {
-  monaco.editor.setTheme(dark ? "vs-dark" : "vs");
+for (const name of ["plasma", "ember"] as const) monaco.editor.defineTheme(GLOW_MONACO[name], glowMonacoThemes[name]);
+
+export type MonacoTheme = "vs" | "vs-dark" | (typeof GLOW_MONACO)[keyof typeof GLOW_MONACO];
+
+export function setMonacoTheme(name: MonacoTheme) {
+  monaco.editor.setTheme(name);
   // The Mermaid diagrams of a preview have the colors of the theme.
   for (const v of views) v.refreshPreview();
 }

@@ -7,6 +7,7 @@ import { CommitPanel } from "./commit-panel";
 import { menuBelow } from "./context-menu";
 import { DetailsPanel } from "./details-panel";
 import { DiffView, setMonacoTheme } from "./diff-view";
+import { GLOW_MONACO } from "./glow-monaco";
 import { dragResize, h, icon } from "./dom";
 import { FilterBar } from "./filter-bar";
 import { LogView } from "./log-view";
@@ -152,16 +153,28 @@ export function applyLayout() {
 }
 
 const darkQuery = matchMedia("(prefers-color-scheme: dark)");
+/** A glow theme (Plasma, Ember) is a skin on Dark: `data-theme="dark"`, `data-style="glow"` and
+ * `data-glow="<name>"`. The other themes have no `data-style` and no `data-glow`. */
 export function applyTheme() {
-  const dark = settings.theme === "dark" || (settings.theme === "system" && darkQuery.matches);
-  document.documentElement.dataset.theme = dark ? "dark" : "light";
-  setMonacoTheme(dark);
+  const t = settings.theme;
+  const glow = t === "plasma" || t === "ember" ? t : undefined;
+  const dark = glow !== undefined || t === "dark" || (t === "system" && darkQuery.matches);
+  const root = document.documentElement;
+  root.dataset.theme = dark ? "dark" : "light";
+  if (glow) {
+    root.dataset.style = "glow";
+    root.dataset.glow = glow;
+  } else {
+    delete root.dataset.style;
+    delete root.dataset.glow;
+  }
+  setMonacoTheme(glow ? GLOW_MONACO[glow] : dark ? "vs-dark" : "vs");
   log.render();
 }
 darkQuery.addEventListener("change", applyTheme);
 themeBtn.addEventListener("click", () =>
-  menuBelow(themeBtn, (["system", "light", "dark"] as const).map((t) => ({
-    label: { system: "Follow system", light: "Light", dark: "Dark" }[t],
+  menuBelow(themeBtn, (["system", "light", "dark", "plasma", "ember"] as const).map((t) => ({
+    label: { system: "Follow system", light: "Light", dark: "Dark", plasma: "Plasma", ember: "Ember" }[t],
     checked: settings.theme === t,
     action: () => {
       settings.theme = t;
