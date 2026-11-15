@@ -165,6 +165,22 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   The log marks that selection as `auto`, and `showSelection` drops it when the diff shows a local change
   (`app.diffSource === "local"`), so the choice of the user stays.
 - Back and Forward: `nav.ts`. Call `visit({ key, label, open, window })` when a file shows.
+- The glass themes Plasma and Ember: a skin on Dark. `applyTheme` in `shell.ts` sets `data-theme="dark"`,
+  `data-style="glow"` and `data-glow="plasma"` or `"ember"`; the other themes have neither attribute.
+  `glow.css` holds all the CSS, and `glow-flow.ts` loads it. The app draws its own "nebula" (four radial
+  lights) on a fixed `:root::before` layer. A fixed background image makes WebKit paint the whole page on
+  each scroll. The page tint is `--bg` at `--glass` (65 %); bars, lists, the log and the diff are
+  translucent over it. Only overlays (menus, dialogs, toasts, windows, hints) have `backdrop-filter`, on
+  82 % of `--bg`, so text stays clear where the blur does not draw (WebKitGTK without a GPU). The skin
+  sets colors, gradients and shadows only: no layout property, no animation, no blurred shadow on a row.
+  `glow-contrast.test.ts` checks these rules and 4.5:1 for each text color over the brightest place of
+  the nebula (one light, or two lights that overlap). The Monaco themes are in `glow-monaco.ts`; the
+  editor has a 40 % tint of `--bg`, because a clear editor fails that contrast. The graph reads
+  `--graph-s`, `--graph-v` and `--graph-glow` (0.45, 1, 4). The glow is on plain nodes only: each row has
+  its own canvas, which cuts a glow at its edge. A theme label must not contain "Dark", "Light" or
+  "System", because scenarios click `.menu-item:has-text('Dark')`. The look follows the idea of the KDE
+  theme Colorful-Dark-Plasma, which is GPL-3.0: no file of it may go into the repository. The scenario
+  is `glow-theme.mjs`.
 - Settings: `ui/src/settings.ts` (web view storage) for UI options; `crates/service/src/config.rs`
   (`settings.json`) for what the backend needs before the window opens (git program, editor,
   Local History limits).
@@ -273,6 +289,15 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
   default font of Ubuntu, all left tab labels are cut.
 - The left tabs share about 280 px at the default width. A new tab needs a short label; measure the
   `scrollWidth` of each `.lp-tab` against its `clientWidth`.
+- On macOS, many scenarios fail as written. They press `Control+...` for Mod, which is Cmd on a Mac, and
+  `/tmp` is `/private/tmp`, so a check of a path fails. To run them on a Mac, give node a preload with
+  `NODE_OPTIONS="--import <file>"`, outside `ui/e2e`. The preload wraps `chromium.launch` and
+  `browser.newContext`, and adds an init script that makes `navigator.platform` return "Linux x86_64".
+  Put the work dir under `/private/tmp`. Some scenarios still fail on a Mac; compare with a run of the
+  base commit before you look for a bug.
+- `screencapture` needs the Screen Recording permission. Without it, a scratch build of the macOS app
+  can take a picture of its own window (`CGWindowListCreateImage`) and run steps with
+  `WebviewWindow::eval`. Do not commit such code.
 
 ## Environment of the cloud sessions
 
