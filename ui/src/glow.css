@@ -126,8 +126,7 @@
 :root[data-style="glow"] .toast-success { border-left-color: var(--added); }
 :root[data-style="glow"] .toast-error { border-left-color: var(--deleted); }
 
-/* The active tab: the accent line stays; a soft light comes up from it. */
-:root[data-style="glow"] .tab.on,
+/* The active left tab: the accent line stays; a soft light comes up from it. */
 :root[data-style="glow"] .lp-tab.on { background: linear-gradient(to top, color-mix(in srgb, var(--accent) 16%, transparent), transparent 75%); }
 
 /* Buttons. */
