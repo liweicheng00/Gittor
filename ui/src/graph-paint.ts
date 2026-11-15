@@ -14,7 +14,17 @@ const HEAD_RADIUS = 6.5;
 const ARROW_ANGLE_COS2 = 0.7;
 const ARROW_LENGTH = 0.3;
 
-const colorCache = new Map<number, string>();
+/** The saturation and the brightness of the graph colors, and the blur in px of the glow of a plain node
+ * (0: no glow). The log reads them from the CSS variables `--graph-s`, `--graph-v` and `--graph-glow`. */
+export interface GraphTone {
+  s: number;
+  v: number;
+  glow: number;
+}
+
+export const DEFAULT_TONE: GraphTone = { s: 0.4, v: 0.65, glow: 0 };
+
+const colorCache = new Map<string, string>();
 
 function rangeFix(n: number): number {
   return Math.abs(n % 100) + 70;
@@ -55,15 +65,16 @@ function hsbToRgb(h: number, s: number, v: number): string {
 }
 
 /** Color for a color id. Id 0 is the default branch color; it follows the text color. */
-export function graphColor(id: number, foreground: string): string {
+export function graphColor(id: number, foreground: string, tone: GraphTone = DEFAULT_TONE): string {
   if (id === 0) return foreground;
-  let c = colorCache.get(id);
+  const key = `${id}|${tone.s}|${tone.v}`;
+  let c = colorCache.get(key);
   if (!c) {
     const r = Math.imul(id, 200) + 30;
     const g = Math.imul(id, 130) + 50;
     const b = Math.imul(id, 90) + 100;
-    c = hsbToRgb(hue(rangeFix(r), rangeFix(g), rangeFix(b)), 0.4, 0.65);
-    colorCache.set(id, c);
+    c = hsbToRgb(hue(rangeFix(r), rangeFix(g), rangeFix(b)), tone.s, tone.v);
+    colorCache.set(key, c);
   }
   return c;
 }
@@ -132,7 +143,7 @@ export function foldAt(marks: FoldMark[], x: number, y: number): FoldMark | unde
 }
 
 /** A ring with a plus: hidden commits that a click shows. The ring clears the edge under it. */
-function paintFold(g: CanvasRenderingContext2D, m: FoldMark, foreground: string) {
+function paintFold(g: CanvasRenderingContext2D, m: FoldMark, foreground: string, tone: GraphTone) {
   g.save();
   g.globalCompositeOperation = "destination-out";
   g.beginPath();
@@ -140,7 +151,7 @@ function paintFold(g: CanvasRenderingContext2D, m: FoldMark, foreground: string)
   g.fill();
   g.restore();
   g.setLineDash([]);
-  g.strokeStyle = graphColor(m.color, foreground);
+  g.strokeStyle = graphColor(m.color, foreground, tone);
   g.lineWidth = 1.3;
   g.beginPath();
   g.arc(m.x, m.y, FOLD_RADIUS, 0, Math.PI * 2);
@@ -153,13 +164,13 @@ function paintFold(g: CanvasRenderingContext2D, m: FoldMark, foreground: string)
 }
 
 /** Paints the elements of one row with its top at y = 0. `head`: the node is the commit that is checked
- * out, drawn as a ring with an "H". */
-export function paintRow(g: CanvasRenderingContext2D, elements: El[], foreground: string, selected: boolean, folds: FoldMark[] = [], head = false) {
+ * out, drawn as a ring with an "H". `tone.glow` gives a glow to plain nodes only. */
+export function paintRow(g: CanvasRenderingContext2D, elements: El[], foreground: string, selected: boolean, folds: FoldMark[] = [], head = false, tone: GraphTone = DEFAULT_TONE) {
   g.lineWidth = LINE_THICKNESS;
   g.lineCap = "round";
   for (const e of elements) {
     if (e.k !== "e") continue;
-    g.strokeStyle = graphColor(e.c, foreground);
+    g.strokeStyle = graphColor(e.c, foreground, tone);
     const down = e.d === "d";
     const x1 = ELEMENT_WIDTH * e.p + ELEMENT_CENTER;
     if (e.p === e.o) {
@@ -174,10 +185,10 @@ export function paintRow(g: CanvasRenderingContext2D, elements: El[], foreground
     }
   }
   g.setLineDash([]);
-  for (const m of folds) paintFold(g, m, foreground);
+  for (const m of folds) paintFold(g, m, foreground, tone);
   for (const e of elements) {
     if (e.k !== "n") continue;
-    const color = graphColor(e.c, foreground);
+    const color = graphColor(e.c, foreground, tone);
     const cx = ELEMENT_WIDTH * e.p + ELEMENT_CENTER;
     if (head) {
       paintHead(g, cx, color, selected);
@@ -185,9 +196,14 @@ export function paintRow(g: CanvasRenderingContext2D, elements: El[], foreground
     }
     const r = selected ? CIRCLE_RADIUS + 1 : CIRCLE_RADIUS;
     g.fillStyle = color;
+    if (tone.glow > 0) {
+      g.shadowColor = color;
+      g.shadowBlur = tone.glow;
+    }
     g.beginPath();
     g.arc(cx, ROW_CENTER, r, 0, Math.PI * 2);
     g.fill();
+    g.shadowBlur = 0;
   }
 }
 

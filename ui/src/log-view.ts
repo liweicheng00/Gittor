@@ -3,7 +3,7 @@
 import { api, type Row } from "./api";
 import { reconcile } from "./keyed";
 import { dragResize, formatDate, h, icon } from "./dom";
-import { ELEMENT_WIDTH, ROW_HEIGHT, foldAt, foldMarks, maxPosition, paintRow } from "./graph-paint";
+import { DEFAULT_TONE, ELEMENT_WIDTH, ROW_HEIGHT, foldAt, foldMarks, maxPosition, paintRow, type GraphTone } from "./graph-paint";
 import { refLabel } from "./ref-label";
 import { save, settings } from "./settings";
 
@@ -221,8 +221,17 @@ export class LogView {
     return c ? (c[index % CHUNK] ?? null) : null;
   }
 
-  private foreground(): string {
-    return getComputedStyle(this.el).getPropertyValue("--fg").trim() || "#000";
+  /** The text color and the graph tone of the theme, from one style computation. */
+  private colors(): { fg: string; tone: GraphTone } {
+    const style = getComputedStyle(this.el);
+    const num = (name: string, fallback: number) => {
+      const v = parseFloat(style.getPropertyValue(name));
+      return Number.isFinite(v) ? v : fallback;
+    };
+    return {
+      fg: style.getPropertyValue("--fg").trim() || "#000",
+      tone: { s: num("--graph-s", DEFAULT_TONE.s), v: num("--graph-v", DEFAULT_TONE.v), glow: num("--graph-glow", DEFAULT_TONE.glow) },
+    };
   }
 
   render() {
@@ -238,12 +247,12 @@ export class LogView {
     }
     let lanes = this.graphLanes;
     for (const r of rows) lanes = Math.max(lanes, Math.min(maxPosition(r.elements) + 1, MAX_GRAPH_LANES));
-    const fg = this.foreground();
+    const { fg, tone } = this.colors();
     const dpr = window.devicePixelRatio || 1;
     this.graphFull = lanes * ELEMENT_WIDTH + 6;
     this.graphCol = settings.graphWidth ? Math.max(MIN_GRAPH_WIDTH, Math.min(settings.graphWidth, this.graphFull)) : Math.max(MIN_GRAPH_WIDTH, this.graphFull);
     this.header.querySelector<HTMLElement>(".graph-tools")?.style.setProperty("flex-basis", `${this.graphCol}px`);
-    const key = `${lanes}|${this.graphCol}|${fg}|${dpr}|${this.epoch}|${settings.showAuthor}${settings.showDate}${settings.showHash}`;
+    const key = `${lanes}|${this.graphCol}|${fg}|${tone.s}|${tone.v}|${tone.glow}|${dpr}|${this.epoch}|${settings.showAuthor}${settings.showDate}${settings.showHash}`;
     if (key !== this.paintKey) {
       this.paintKey = key;
       this.graphLanes = lanes;
@@ -263,7 +272,7 @@ export class LogView {
           sig: (isSel ? "s" : "-") + this.sigOf(r),
           build: () => {
             const live = { row: r };
-            const div = this.buildRow(live, graphFull, graphCol, fg, dpr, isSel);
+            const div = this.buildRow(live, graphFull, graphCol, fg, tone, dpr, isSel);
             this.live.set(div, live);
             return div;
           },
@@ -295,7 +304,7 @@ export class LogView {
     return s;
   }
 
-  private buildRow(live: { row: Row }, graphWidth: number, colWidth: number, fg: string, dpr: number, selected: boolean): HTMLElement {
+  private buildRow(live: { row: Row }, graphWidth: number, colWidth: number, fg: string, tone: GraphTone, dpr: number, selected: boolean): HTMLElement {
     const r = live.row;
     const canvas = h("canvas", { width: graphWidth * dpr, height: ROW_HEIGHT * dpr });
     canvas.style.width = `${graphWidth}px`;
@@ -303,7 +312,7 @@ export class LogView {
     const g = canvas.getContext("2d")!;
     g.scale(dpr, dpr);
     const folds = foldMarks(r.row, r.elements);
-    paintRow(g, r.elements, fg, selected, folds, r.isHead);
+    paintRow(g, r.elements, fg, selected, folds, r.isHead, tone);
     // The node of HEAD has an "H" in a ring. The lane is for the UI tests.
     if (r.isHead) {
       const node = r.elements.find((e) => e.k === "n");
