@@ -159,17 +159,33 @@ export function setRepoRoot(root: string | null) {
   repoRoot = root;
 }
 
+/** The commands that have not answered yet, for each repository. A close waits for them. */
+const pending = new Map<string, Set<Promise<unknown>>>();
+
 async function call<T>(cmd: string, args?: unknown): Promise<T> {
   if (repoRoot && (args === undefined || (typeof args === "object" && args !== null && !Array.isArray(args)))) {
     args = { root: repoRoot, ...(args as object | undefined) };
   }
   // A command that does not answer leaves a part of the window empty; the warning names it.
   const slow = setTimeout(() => console.error(`The command ${cmd} has not answered after 10 s`), 10000);
+  const root = (args as { root?: unknown } | undefined)?.root;
+  const answer = callNow<T>(cmd, args);
+  const set = typeof root === "string" ? (pending.get(root) ?? pending.set(root, new Set()).get(root)!) : null;
+  set?.add(answer);
   try {
-    return await callNow<T>(cmd, args);
+    return await answer;
   } finally {
     clearTimeout(slow);
+    set?.delete(answer);
   }
+}
+
+/** Waits until the commands for a repository have answered, 5 s at most. An answer can start a
+ * new command (a selection loads its diff), so it waits again until none is left. */
+async function settled(root: string) {
+  const end = Date.now() + 5000;
+  for (let set = pending.get(root); set?.size && Date.now() < end; set = pending.get(root)) await Promise.allSettled([...set]);
+  pending.delete(root);
 }
 
 /** A failed command, with the kind of the failure from the backend. */
@@ -286,7 +302,11 @@ export const api = {
   open: (path: string, view: ViewSettings) => call<ViewResult>("open", { path, ...view }),
   /** Makes an open repository active, for a tab switch; opens it when it is not open. */
   activate: (path: string, view: ViewSettings) => call<ViewResult>("activate", { path, ...view }),
-  close: (path: string) => call<null>("close", { path }),
+  close: async (path: string) => {
+    // A command that arrives after the close fails, because the repository is no longer open.
+    await settled(path);
+    return call<null>("close", { path });
+  },
   /** The version of a git program; it changes nothing. Empty means git from PATH. */
   gitVersion: (path: string) => call<string>("git_version", { path }),
   /** A linked worktree and its main repository, and the branch, for the tab of a repository. */
