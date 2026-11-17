@@ -832,7 +832,7 @@ export class DiffView {
     this.single.setModel(model);
     old?.dispose();
     const lines = text.endsWith("\n") ? model.getLineCount() - 1 : model.getLineCount();
-    if (kind === "view") return void this.stats.replaceChildren(h("span", { class: "muted-inline" }, "no local changes"));
+    if (kind === "view") return void this.stats.replaceChildren();
     this.single.createDecorationsCollection([
       {
         range: new monaco.Range(1, 1, Math.max(1, lines), 1),

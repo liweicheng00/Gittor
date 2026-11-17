@@ -27,7 +27,7 @@ const within = async (what, fn, ms = 8000) => {
 };
 const row = (path) => `.files-file[data-path='${path}']`;
 const nameClass = (sel) => page.$eval(`${sel} .files-name`, (e) => e.className).catch(() => "");
-const diffTitle = async () => ((await page.textContent(".diff .diff-title").catch(() => "")) ?? "").replace(/\s+/g, " ").trim();
+const diffTitle = async () => ((await page.textContent(".workspace > .diff .diff-title").catch(() => "")) ?? "").replace(/\s+/g, " ").trim();
 
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
@@ -53,16 +53,31 @@ await page.click(".files-dir[data-dir='docs/']");
 await page.click(".files-dir[data-dir='docs/guide/']");
 await within("the folders open", async () => (await page.$(row("docs/guide/start.md"))) !== null);
 
-// A file without a change shows its text, without colors.
+// A click opens the file in the center panel, in place of the log, as in an IDE: its text, without colors.
+const pane = ".file-host > .diff";
+const paneTitle = async () => ((await page.textContent(`${pane} .diff-title`).catch(() => "")) ?? "").replace(/\s+/g, " ").trim();
+const tabs = () => page.$$eval(".center-tab .center-tab-name", (els) => els.map((e) => e.textContent));
 await page.click(row("arith.rs"));
-await within("the diff panel shows the file", async () => (await diffTitle()).endsWith("arith.rs") && !(await page.isVisible(".diff .diff-title .status")));
-check("the file shows without changes", ((await page.textContent(".diff .diff-stats").catch(() => "")) ?? "").includes("no local changes"));
+await within("the center panel shows the file", async () => (await paneTitle()).endsWith("arith.rs") && !(await page.isVisible(`${pane} .diff-title .status`)));
+check("the log hides", !(await page.isVisible(".log-row >> nth=0")));
+check("the tabs are Log and the file", JSON.stringify(await tabs()) === JSON.stringify(["Log", "arith.rs"]));
 await shot("ft1-file");
 
-// A changed file shows its local diff.
+// A changed file opens as text too, in a second tab. Show Diff in its menu shows the diff in the diff panel.
 await page.click(row("main.rs"));
-await within("a changed file shows its diff", async () => (await diffTitle()).includes("main.rs") && (await page.isVisible(".diff .diff-title .status")));
+await within("a changed file opens as text in a new tab", async () => (await paneTitle()).endsWith("main.rs") && JSON.stringify(await tabs()) === JSON.stringify(["Log", "arith.rs", "main.rs"]));
+await page.click(row("main.rs"), { button: "right" });
+await page.waitForTimeout(400);
+await page.click(".menu-item:has-text('Show Diff')");
+await within("Show Diff shows the diff of the change in the diff panel", async () => (await diffTitle()).includes("main.rs") && (await page.isVisible(".workspace > .diff .diff-title .status")));
 await shot("ft2-changed");
+// The tab Log shows the log again, and a tab of a file shows the file again.
+await page.click(".center-tab:has-text('Log')");
+await within("the tab Log shows the log", async () => await page.isVisible(".log-row >> nth=0"));
+await page.click(".center-tab:has-text('main.rs')");
+await within("the tab of a file shows it again", async () => (await paneTitle()).endsWith("main.rs"));
+await page.click(".center-tab:has-text('main.rs') .center-tab-close");
+await within("closing the tab shows the next file", async () => (await paneTitle()).endsWith("arith.rs") && JSON.stringify(await tabs()) === JSON.stringify(["Log", "arith.rs"]));
 
 // A new file on disk comes into the list, with the color of an unversioned file.
 writeFileSync(`${repo}/added-later.txt`, "new\n");
@@ -73,28 +88,27 @@ await page.fill(".files-search", "start");
 await within("the search finds the file in its folder", async () => (await page.$$(".files-file")).length === 1 && (await page.$(row("docs/guide/start.md"))) !== null);
 await page.fill(".files-search", "");
 
-// A double click opens the viewer of Gittor, not the editor: the text, notes, and Copy All.
-const viewer = ".history-window.file-viewer";
+// The open file has notes: on a line, on the whole file, and Copy All. No window and no editor opens.
 await page.dblclick(row("arith.rs"));
-await page.waitForSelector(`${viewer} .view-line:visible`);
-check("the viewer shows the path", ((await page.textContent(`${viewer} .file-viewer-path`)) ?? "") === "arith.rs");
+check("no window opens", (await page.$(".merge-overlay")) === null);
 check("no editor error shows", (await page.$(".toast-error")) === null);
-const vLine = (n) => page.locator(`${viewer} .line-numbers:visible`).filter({ hasText: new RegExp(`^${n}$`) }).first();
+const vLine = (n) => page.locator(`${pane} .line-numbers:visible`).filter({ hasText: new RegExp(`^${n}$`) }).first();
 await vLine(1).hover();
-await within("the note icon shows in the viewer", async () => (await page.$$(`${viewer} .note-add-icon`)).length === 1);
-await page.click(`${viewer} .note-add-icon`);
-await page.fill(`${viewer} .note-card.draft textarea`, "Check this add");
-await page.press(`${viewer} .note-card.draft textarea`, "Control+Enter");
-await within("the note shows as a card", async () => ((await page.textContent(`${viewer} .note-card:not(.draft)`).catch(() => "")) ?? "").includes("Check this add"));
-await page.fill(`${viewer} .review-file-note-input`, "Rename this file");
-await page.press(`${viewer} .review-file-note-input`, "Enter");
-await within("the note on the whole file shows in the list", async () => ((await page.textContent(`${viewer} .review-notes-list`)) ?? "").includes("Rename this file"));
+await within("the note icon shows on the file", async () => (await page.$$(`${pane} .note-add-icon`)).length === 1);
+await page.click(`${pane} .note-add-icon`);
+await page.fill(`${pane} .note-card.draft textarea`, "Check this add");
+await page.press(`${pane} .note-card.draft textarea`, "Control+Enter");
+await within("the note shows as a card", async () => ((await page.textContent(`${pane} .note-card:not(.draft)`).catch(() => "")) ?? "").includes("Check this add"));
+await page.fill(".file-host .review-file-note-input", "Rename this file");
+await page.press(".file-host .review-file-note-input", "Enter");
+await within("the note on the whole file shows in the list", async () => ((await page.textContent(".file-host .review-notes-list")) ?? "").includes("Rename this file"));
 await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
-await page.click(`${viewer} .review-notes-copy`);
+await page.click(".file-host .review-notes-copy");
 await within("Copy All copies the notes of the file", async () => (await page.evaluate(() => navigator.clipboard.readText())) === "arith.rs\nRename this file\n\narith.rs:1\nCheck this add");
-await shot("ft3-viewer");
-await page.keyboard.press("Escape");
-await page.waitForSelector(viewer, { state: "detached" });
+await shot("ft3-file-notes");
+// The last tab of a file closes: the log shows again, and the tabs hide.
+await page.click(".center-tab:has-text('arith.rs') .center-tab-close");
+await within("the log shows when no file is open", async () => (await page.isVisible(".log-row >> nth=0")) && !(await page.isVisible(".center-tabs")));
 
 // Mod+1 shows the Branches tab, and a second press stays there.
 await page.click(".log-row >> nth=0");

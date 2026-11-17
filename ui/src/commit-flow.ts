@@ -28,8 +28,14 @@ commitPanel.onCopyNotes = async () => {
   void copyText(paths.map((p) => formatNotes(p, open.filter((n) => n.path === p))).join("\n\n"));
 };
 
-/** Loads the diff of the local file that shows again, after a change outside the app. */
+/** Loads a file of the Files tab again; files-flow.ts sets it. */
+let reloadFileView: () => Promise<void> = async () => {};
+export const setFileViewReload = (fn: () => Promise<void>) => (reloadFileView = fn);
+
+/** Loads the diff of the local file that shows again, after a change outside the app, and the file that
+ * the center panel shows. */
 export async function refreshLocalDiff() {
+  await reloadFileView();
   const f = commitPanel.activeFile();
   if (app.diffSource === "local" && f) await showLocalDiff(f, true);
 }

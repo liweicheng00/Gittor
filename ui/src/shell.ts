@@ -80,7 +80,13 @@ const sideGrip = h("div", { class: "vgrip" });
 const rightGrip = h("div", { class: "vgrip" });
 const diffGrip = h("div", { class: "hgrip-row" });
 const detailsGrip = h("div", { class: "hgrip-row" });
-const center = h("section", { class: "center" }, banner.el, filterBar.el, log.el);
+/** The tabs of the center panel: Log and the files that the Files tab opened. They hide without a file. */
+export const centerTabs = h("div", { class: "center-tabs", role: "tablist", hidden: true });
+/** The place of the open file, in place of the log. */
+export const fileHost = h("div", { class: "file-host", hidden: true });
+/** Called when another repository shows: its files are not open. */
+export const centerHooks = { reset: () => {} };
+const center = h("section", { class: "center" }, centerTabs, banner.el, filterBar.el, log.el, fileHost);
 const right = h("section", { class: "right" }, changes.el, detailsGrip, details.el);
 export const tabBranches = h("button", { class: "lp-tab", title: `Branches (${mod}1)` }, "Branches");
 export const tabCommit = h("button", { class: "lp-tab", title: `Local changes and commit (${mod}2)` }, "Changes");
