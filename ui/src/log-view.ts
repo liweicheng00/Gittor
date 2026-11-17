@@ -16,7 +16,6 @@ const MIN_GRAPH_WIDTH = 44;
 
 export class LogView {
   /** user.email of the repository, in lower case, for the My Commits highlight. */
-  myEmail = "";
   readonly el: HTMLElement;
   private header: HTMLElement;
   private scroller: HTMLElement;
@@ -366,10 +365,7 @@ export class LogView {
         class:
           "log-row" +
           (selected ? " selected" : "") +
-          (r.isHead ? " head" : "") +
-          (settings.highlightMine && this.myEmail && r.authorEmail.toLowerCase() === this.myEmail ? " hl-mine" : "") +
-          (settings.highlightMerges && r.merge ? " hl-merge" : "") +
-          (settings.highlightCurrent && !r.onHead ? " hl-other" : ""),
+          (r.isHead ? " head" : ""),
         "data-row": r.row,
       },
       h("span", { class: "graph-cell", style: { width: `${colWidth}px` } }, canvas),

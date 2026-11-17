@@ -873,10 +873,6 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .branch.selected { background: var(--select); }
 .branch.selected:hover { background: var(--select); }
 
-/* The highlighters of the log (View > Highlight). */
-.log-row.hl-mine .subject-text { font-weight: 600; }
-.log-row.hl-merge .subject-text, .log-row.hl-merge .author, .log-row.hl-merge .date { color: var(--muted); }
-.log-row.hl-other:not(.selected) .subject, .log-row.hl-other:not(.selected) .author, .log-row.hl-other:not(.selected) .date, .log-row.hl-other:not(.selected) .hash { opacity: 0.45; }
 
 /* Show Repository at Revision. */
 .repo-browser-search { margin: 6px 8px; width: auto; }

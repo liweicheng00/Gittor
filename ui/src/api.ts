@@ -343,8 +343,6 @@ export const api = {
   localChanges: () => call<LocalChanges>("local_changes"),
   changeListOp: (op: ChangeListOp) => call<LocalChanges>("changelist_op", op),
   headMessage: () => call<string>("head_message"),
-  /** user.email of the active repository; empty when it is not set. */
-  userEmail: () => call<string>("user_email"),
   /** The commits whose parent is `oid`. */
   children: (oid: string) => call<string[]>("children", { oid }),
   /** The remote branches that contain a commit, as "origin/main". */

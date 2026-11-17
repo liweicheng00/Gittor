@@ -131,12 +131,6 @@ impl Service {
         self.with_repo(|r| r.submodule_range(&args.path).map_err(err))
     }
 
-    /// The e-mail address of the user in this repository, for the My Commits highlight. Empty when
-    /// user.email is not set.
-    pub fn user_email(&self) -> Result<String> {
-        self.with_repo(|r| Ok(r.git(&["config", "user.email"]).map(|b| String::from_utf8_lossy(&b).trim().to_string()).unwrap_or_default()))
-    }
-
     /// The remote branches that contain a commit, as "origin/main", for the protected-branch check.
     pub fn remote_containing(&self, args: OidArgs) -> Result<Vec<String>> {
         self.with_repo(|r| {

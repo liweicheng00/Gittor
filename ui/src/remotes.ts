@@ -212,7 +212,7 @@ viewBtn.addEventListener("click", () => {
     save();
     log.buildHeader();
   };
-  const mark = (key: "highlightMine" | "highlightMerges" | "highlightCurrent" | "commitTimestamp") => () => {
+  const mark = (key: "commitTimestamp") => () => {
     settings[key] = !settings[key];
     save();
     log.redraw();
@@ -228,11 +228,6 @@ viewBtn.addEventListener("click", () => {
     { label: "Date", checked: settings.showDate, action: col("showDate") },
     { label: "Hash", checked: settings.showHash, action: col("showHash") },
     { label: "Commit Timestamp", checked: settings.commitTimestamp, action: mark("commitTimestamp") },
-    { separator: true },
-    { header: "Highlight" },
-    { label: "My Commits", checked: settings.highlightMine, action: mark("highlightMine") },
-    { label: "Merge Commits", checked: settings.highlightMerges, action: mark("highlightMerges") },
-    { label: "Current Branch", checked: settings.highlightCurrent, action: mark("highlightCurrent") },
     { separator: true },
     {
       label: "Group Branches by Prefix",

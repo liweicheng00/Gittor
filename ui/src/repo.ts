@@ -312,7 +312,6 @@ export async function loadRefs(background = false) {
     await loadFavorites();
     // The tooltip of the tab names the branch; a checkout changes it.
     if (app.view) void refreshTabInfo(app.view.root);
-    log.myEmail = (await api.userEmail().catch(() => "")).toLowerCase();
     banner.update(app.repoState);
     updateStatus(background);
   } catch (e) {

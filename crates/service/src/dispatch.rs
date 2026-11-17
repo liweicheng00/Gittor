@@ -61,7 +61,6 @@ impl Service {
                 self.askpass_answer(parse(body)?);
                 Ok("null".to_string())
             }
-            "user_email" => serde_json::to_string(&self.user_email()?),
             "remote_containing" => serde_json::to_string(&self.remote_containing(parse(body)?)?),
             "tree_files" => serde_json::to_string(&self.tree_files(parse(body)?)?),
             "worktree_files" => serde_json::to_string(&self.worktree_files()?),

@@ -10,12 +10,6 @@ export interface Settings {
   groupBranchesByPrefix: boolean;
   /** Glob patterns of protected branch names, separated by spaces. */
   protectedBranches: string;
-  /** Bold subjects for the commits of the user (user.email). */
-  highlightMine: boolean;
-  /** Gray text for merge commits. */
-  highlightMerges: boolean;
-  /** Dim the commits that are not on the current branch. */
-  highlightCurrent: boolean;
   /** The Date column shows the commit time, not the author time. */
   commitTimestamp: boolean;
   showLongEdges: boolean;
@@ -107,9 +101,6 @@ const DEFAULTS: Settings = {
   intelliSort: true,
   groupBranchesByPrefix: false,
   protectedBranches: "main master",
-  highlightMine: false,
-  highlightMerges: false,
-  highlightCurrent: false,
   commitTimestamp: false,
   showLongEdges: false,
   collapseLinear: false,
