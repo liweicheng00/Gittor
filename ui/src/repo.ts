@@ -230,7 +230,9 @@ async function loadRepo(r: ViewResult, state: TabState | null) {
   authors.clear();
   app.watchSeen = null;
   app.lastUndo = null;
-  sidebar.setRemoteTags(null, null);
+  // The marks of the tags that the remote does not have: the last answer for this repository, if any.
+  const cached = remoteTagsByRoot.get(r.root);
+  showRemoteTags(cached?.remote ?? null, cached?.names ?? null);
   commitPanel.clear();
   // The new repository starts at the log; a local change of the last repository does not count.
   app.diffSource = "log";
@@ -239,6 +241,8 @@ async function loadRepo(r: ViewResult, state: TabState | null) {
   // The watcher counters now are the base: the events after this reload what changed.
   app.watchSeen = await api.watchState().catch(() => null);
   await loadRefs();
+  // The first open of a repository asks its remote in the background; it needs the network.
+  if (!cached) void loadRemoteTags();
   commitPanel.setTemplate(await api.commitTemplate().catch(() => null));
   const target = state?.selected ?? r.headOid;
   // The user can choose a commit or a local change while the repository loads; that choice stays.
@@ -413,13 +417,29 @@ export async function loadRemoteTags(remote?: string) {
     const remotes = (await api.remotes().catch(() => [])).map((r) => r.name);
     name = remotes.includes("origin") ? "origin" : remotes[0];
   }
-  if (!name) return sidebar.setRemoteTags(null, null);
+  if (!name) return showRemoteTags(null, null);
   try {
     const tags = await api.remoteTags(name);
-    if (app.view?.root === root) sidebar.setRemoteTags(name, tags);
+    if (root) remoteTagsByRoot.set(root, { remote: name, names: tags });
+    if (app.view?.root === root) showRemoteTags(name, tags);
   } catch {
-    if (app.view?.root === root) sidebar.setRemoteTags(null, null);
+    // No network, or the remote refuses: no marks, and no message.
+    if (app.view?.root === root) showRemoteTags(null, null);
   }
+}
+
+/** The answer of the last check of the remote tags of each repository, so a switch of tabs asks no remote. */
+const remoteTagsByRoot = new Map<string, { remote: string; names: string[] }>();
+
+/** Marks the tags that the remote does not have: in the Branches tab, in the log and in the details. */
+function showRemoteTags(remote: string | null, names: string[] | null) {
+  sidebar.setRemoteTags(remote, names);
+  const next = remote && names ? { remote, names: new Set(names) } : null;
+  const same = (next === null && app.remoteTags === null) || (!!next && !!app.remoteTags && next.remote === app.remoteTags.remote && next.names.size === app.remoteTags.names.size && [...next.names].every((n) => app.remoteTags!.names.has(n)));
+  if (same) return;
+  app.remoteTags = next;
+  log.refsVersion++;
+  log.redraw();
 }
 
 /** True when the user chose what the diff shows: a commit in the log, or a local change. */

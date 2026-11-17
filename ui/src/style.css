@@ -204,6 +204,9 @@ html.titlebar-tabs .tab { border-top: 2px solid transparent; }
 .ref-local { color: var(--local); border-color: var(--local); }
 .ref-remote { color: var(--remote); border-color: var(--remote); }
 .ref-tag { color: var(--tag); border-color: var(--tag); }
+/* A tag that the remote does not have: dashed, with an arrow up. */
+.ref.ref-unpushed { border-style: dashed; }
+.ref.ref-unpushed::before { content: "↑"; margin-right: 2px; }
 .ref-head, .ref-other { color: var(--head); border-color: var(--head); }
 
 /* changes */

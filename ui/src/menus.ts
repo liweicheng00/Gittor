@@ -10,7 +10,8 @@ import { openInEditor } from "./editor-flow";
 import { keymap } from "./keyboard";
 import { toast } from "./notify";
 import { addWorktree, checkoutBranch, checkoutCommit, currentBranch, deleteBranch, deleteRefs, deleteMergedBranches, interactiveRebase, mergeIntoCurrent, newBranch, newTag, rebaseCurrentOnto, renameBranch, resetTo, rewriteSelected, runOp } from "./operations";
-import { compareBranches, fetchRemote, manageRemotes, openOnRemote, remoteRefItems, toggleFavorite } from "./remotes";
+import { compareBranches, fetchRemote, manageRemotes, openOnRemote, pushTag, remoteRefItems, toggleFavorite } from "./remotes";
+import { tagNotOn } from "./ref-label";
 import { allowRewrite } from "./protected";
 import { openRepoBrowser } from "./repo-browser";
 import { startReview } from "./review-flow";
@@ -51,6 +52,8 @@ async function rowMenu(r: Row, e: MouseEvent) {
     { label: "Checkout Revision…", disabled: multi, action: () => void checkoutCommit(r.oid) },
     { label: "New Branch…", disabled: multi, action: () => void newBranch(r.oid, short(r.oid)) },
     { label: "New Tag…", disabled: multi, action: () => void newTag(r.oid, short(r.oid)) },
+    // The tags of the commit that the remote does not have.
+    ...(multi ? [] : r.refs.filter((ref) => tagNotOn(ref, app.remoteTags)).map((ref) => ({ label: `Push Tag ${ref.name} to ${app.remoteTags?.remote}`, action: () => void pushTag(ref.name, app.remoteTags?.remote ?? "") }) as MenuItem)),
     { label: "New Worktree…", disabled: multi, action: () => void addWorktree(r.oid, short(r.oid)) },
     { label: `Merge into ${cur ?? "current"}`, disabled: multi || !cur || r.isHead, action: () => void mergeIntoCurrent(r.oid, short(r.oid)) },
     { label: `Rebase ${cur ?? "current"} onto Here…`, disabled: multi || !cur || r.isHead, action: () => void rebaseCurrentOnto(r.oid, short(r.oid)) },

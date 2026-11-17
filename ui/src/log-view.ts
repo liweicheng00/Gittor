@@ -4,7 +4,8 @@ import { api, type Row } from "./api";
 import { reconcile } from "./keyed";
 import { dragResize, formatDate, h, icon } from "./dom";
 import { DEFAULT_TONE, ELEMENT_WIDTH, ROW_HEIGHT, foldAt, foldMarks, maxPosition, paintRow, type GraphTone } from "./graph-paint";
-import { refLabel } from "./ref-label";
+import { refLabel, tagNotOn } from "./ref-label";
+import { app } from "./state";
 import { save, settings } from "./settings";
 
 const CHUNK = 200;
@@ -122,6 +123,9 @@ export class LogView {
   }
 
   /** Draws the visible rows again, after a change of the highlight or the date options. */
+  /** Changes when the marks of the refs change (the tags that a remote does not have): the rows draw again. */
+  refsVersion = 0;
+
   redraw() {
     this.paintKey = "";
     this.render();
@@ -269,7 +273,7 @@ export class LogView {
         const isSel = selected.has(r.row);
         return {
           key: r.oid,
-          sig: (isSel ? "s" : "-") + this.sigOf(r),
+          sig: (isSel ? "s" : "-") + this.refsVersion + this.sigOf(r),
           build: () => {
             const live = { row: r };
             const div = this.buildRow(live, graphFull, graphCol, fg, tone, dpr, isSel);
@@ -350,7 +354,10 @@ export class LogView {
     const subject = h("span", { class: "subject", title: r.subject });
     for (const ref of r.refs) {
       const what = ref.kind === "head" ? "Detached HEAD: no branch is checked out" : ref.name;
-      subject.append(h("span", { class: `ref ref-${ref.kind}`, title: `${what}\nClick to copy the name. Double-click to show only ${ref.name} in the log`, "data-ref": ref.name }, refLabel(ref)));
+      // A tag that the remote does not have: a dashed label with an arrow up. Its row menu can push it.
+      const notOn = tagNotOn(ref, app.remoteTags);
+      const extra = notOn ? `\nNot on ${notOn}. Right-click the commit to push the tag.` : "";
+      subject.append(h("span", { class: `ref ref-${ref.kind}${notOn ? " ref-unpushed" : ""}`, title: `${what}${extra}\nClick to copy the name. Double-click to show only ${ref.name} in the log`, "data-ref": ref.name }, refLabel(ref)));
     }
     subject.append(h("span", { class: "subject-text" }, r.subject));
     const div = h(

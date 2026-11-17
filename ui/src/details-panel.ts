@@ -2,7 +2,8 @@
 
 import { api, type CommitInfo, type Row, type TagInfo } from "./api";
 import { copyText, formatDate, h, icon } from "./dom";
-import { refLabel } from "./ref-label";
+import { refLabel, tagNotOn } from "./ref-label";
+import { app } from "./state";
 
 export class DetailsPanel {
   readonly el: HTMLElement;
@@ -99,7 +100,16 @@ export class DetailsPanel {
   private render(c: CommitInfo) {
     const copy = h("button", { class: "icon-button", title: "Copy the full hash" }, icon("copy"));
     copy.addEventListener("click", () => void copyText(c.oid));
-    const refs = c.refs.length ? h("div", { class: "details-refs" }, ...c.refs.map((r) => h("span", { class: `ref ref-${r.kind}` }, refLabel(r)))) : "";
+    const refs = c.refs.length
+      ? h(
+          "div",
+          { class: "details-refs" },
+          ...c.refs.map((r) => {
+            const notOn = tagNotOn(r, app.remoteTags);
+            return h("span", { class: `ref ref-${r.kind}${notOn ? " ref-unpushed" : ""}`, title: notOn ? `Not on ${notOn}` : "" }, refLabel(r));
+          }),
+        )
+      : "";
     const sameCommitter = c.committer === c.author && c.committer_email === c.author_email;
     const tags = c.refs.filter((r) => r.kind === "tag").map((r) => r.name);
     const tagCards = h("div", { class: "tag-cards" });

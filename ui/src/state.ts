@@ -19,6 +19,8 @@ export const app = {
   request: 0,
   watchQuietUntil: 0,
   watchSeen: null as { repo: number; files: number } | null,
+  /** The tags of a remote, from the last check of it, or null when no check gave an answer. */
+  remoteTags: null as { remote: string; names: Set<string> } | null,
   /** The file that the next comparison opens first, for Back and Forward. */
   pendingPath: null as string | null,
 };

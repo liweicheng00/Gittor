@@ -25,6 +25,9 @@ export async function fetchRemote(name: string) {
   if (out?.result.ok) void loadRemoteTags(sidebar.remoteTagsOf ?? undefined);
 }
 
+/** Pushes one tag to a remote, then checks the tags of that remote again. */
+export const pushTag = (tag: string, remote: string) => tagOp({ op: "pushTag", remote, tag }, `Pushing ${tag}`, remote);
+
 /** Runs an operation that changes the tags of a remote, then checks the tags of that remote again. */
 async function tagOp(op: Op, label: string, remote: string) {
   const out = await runOp(op, label);
