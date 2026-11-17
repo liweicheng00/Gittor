@@ -12,6 +12,7 @@ import { buildTree, treeOrder, walkTree } from "./file-tree";
 import { sharedDiff } from "./history-view";
 import { formatNote } from "./note-format";
 import { NotesPanel } from "./notes-panel";
+import { showMenu } from "./context-menu";
 import { save, settings } from "./settings";
 
 export interface ReviewCallbacks {
@@ -34,6 +35,8 @@ export interface ReviewCallbacks {
   fetch: (branch: string) => Promise<void>;
   /** Starts a review of a branch: the dialog asks for its base. */
   start: (branch: string) => void;
+  /** Opens the Interactive Rebase editor for the commits of the branch from `oldest` to its tip. */
+  rebase: (branch: string, oldest: string) => void;
 }
 
 interface Row {
@@ -99,7 +102,13 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
   const notes = new NotesPanel((t) => void copyText(t));
   const side = h("div", { class: "compare-side" });
   const sideGrip = rowSplitter(side, commitsEl, () => settings.reviewCommitsHeight, (px) => (settings.reviewCommitsHeight = px), save);
-  side.append(h("div", { class: "compare-files-title" }, "Commits"), commitsEl, sideGrip, filesTitle, filesEl);
+  // Interactive Rebase of the commits of the review: all of them, or from a commit (its menu).
+  const rebaseBtn = h("button", { class: "tb-button review-rebase", title: "Interactively rebase the commits of the review" }, "Rebase…");
+  rebaseBtn.addEventListener("click", () => {
+    const oldest = detail?.commitList.at(-1)?.oid;
+    if (oldest) cb.rebase(current, oldest);
+  });
+  side.append(h("div", { class: "compare-files-title" }, "Commits", h("span", { class: "spacer" }), rebaseBtn), commitsEl, sideGrip, filesTitle, filesEl);
   const right = h("div", { class: "review-right" }, d.el, notes.el);
   const grip = h("div", { class: "vgrip" });
   const body = h("div", { class: "history-body" }, side, grip, right);
@@ -218,6 +227,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
 
   const renderCommits = () => {
     if (!detail) return;
+    rebaseBtn.disabled = !detail.commitList.length;
     const all = h("div", { class: "history-row review-commit" + (scope === "all" ? " selected" : "") }, h("b", {}, "All changes"), h("span", { class: "muted-inline" }, ` from ${detail.mergeBase.slice(0, 8)}`));
     all.addEventListener("mousedown", () => setScope("all"));
     const list = detail.commitList.map((c) => {
@@ -242,6 +252,13 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
       row.addEventListener("dblclick", () => {
         close();
         cb.showInLog(c.oid);
+      });
+      row.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        showMenu(e.clientX, e.clientY, [
+          { label: "Interactively Rebase from Here…", action: () => cb.rebase(current, c.oid) },
+          { label: "Show in the Log", action: () => { close(); cb.showInLog(c.oid); } },
+        ]);
       });
       return row;
     });

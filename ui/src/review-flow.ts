@@ -5,7 +5,7 @@ import { openProjectInEditor } from "./editor-flow";
 import { branchSections, type PickerSection } from "./branch-picker";
 import { showMenu } from "./context-menu";
 import { confirmDialog, finishReviewDialog, formDialog } from "./dialogs";
-import { runOp } from "./operations";
+import { currentBranch, interactiveRebaseFrom, runOp } from "./operations";
 import { jumpToOid, loadReviews } from "./repo";
 import { openReview } from "./review-view";
 import { toast } from "./notify";
@@ -81,6 +81,18 @@ export async function finishReview(branch: string) {
   }
 }
 
+/** Interactive Rebase of a reviewed branch. The rebase rewrites the current branch, so a branch that is
+ * not checked out is checked out first, after a question. A remote branch has no local commits to rewrite. */
+async function rebaseReviewed(branch: string, oldest: string) {
+  if (currentBranch() !== branch) {
+    if (!app.refs.some((b) => b.kind === "local" && b.name === branch)) return void toast(`${branch} is not a local branch. Only a local branch can be rebased.`, "info");
+    if (!(await confirmDialog("Interactive rebase", `The rebase rewrites ${branch}, so ${branch} must be checked out. Checkout ${branch} now?`, "Checkout"))) return;
+    const out = await runOp({ op: "checkout", target: branch, kind: "local" }, `Checking out ${branch}`);
+    if (!out?.result.ok) return;
+  }
+  await interactiveRebaseFrom(oldest);
+}
+
 export async function openReviewWindow(branch: string) {
   await openReview(branch, {
     list: () => reviewPanel.all,
@@ -98,6 +110,7 @@ export async function openReviewWindow(branch: string) {
       return branchSections().map(([title, items]): PickerSection => [title, items.filter((i) => !reviewed.has(i.value)).map((i) => ({ ...i, current: false }))]);
     },
     start: (b) => void startReview(b),
+    rebase: (b, oldest) => void rebaseReviewed(b, oldest),
     openInIde: () => void openProjectInEditor(),
     fetch: (b) => fetchRemoteBranches([b, ...reviewPanel.all.filter((r) => r.branch === b).map((r) => r.base)]),
     authorOf: (b) => app.refs.find((r) => r.name === b)?.author,

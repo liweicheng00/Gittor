@@ -233,6 +233,12 @@ export async function rewriteSelected(kind: "squash" | "drop" | "reword" | "auth
 }
 
 export async function interactiveRebase(from: Row) {
+  await interactiveRebaseFrom(from.oid);
+}
+
+/** The Interactive Rebase editor for the commits of the current branch from `oid` (the oldest) to HEAD. */
+export async function interactiveRebaseFrom(oid: string) {
+  const from = { oid };
   let range;
   try {
     range = await api.rewriteRange(`${from.oid}^`);
