@@ -111,9 +111,19 @@ await page.waitForSelector(".cl-file:has(.path:text-is('main.rs'))");
 await compareOf("main.rs");
 await within("the note stays after a reload", async () => (await chips()).length === 1);
 
+// The list of the notes under the diff: Copy All, and a note on the whole file.
+await within("the window lists the notes of the file", async () => ((await page.textContent(`${win} .review-notes-title`).catch(() => "")) ?? "").includes("Notes in main.rs"));
+check("the list has the resolved note on line 2", (await page.$$(`${win} .review-note.resolved`)).length === 1);
+await page.fill(`${win} .review-file-note-input`, "Split this file");
+await page.press(`${win} .review-file-note-input`, "Enter");
+await within("a note on the whole file shows in the list", async () => ((await page.textContent(`${win} .review-notes-list`)) ?? "").includes("FileSplit this file"));
+await page.click(`${win} .review-notes-copy`);
+await within("Copy All copies the open notes of the file", async () => (await clipboard()) === "main.rs\nSplit this file");
+await shot("ln3-file-note");
+
 // A change of the file on disk clears its notes; the window loads the file again.
 appendFileSync(`${repo}/main.rs`, "// changed by an agent\n");
-await within("a change of the file clears its notes", async () => (await chips()).length === 0 && (await cards()).length === 0, 10000);
+await within("a change of the file clears its notes", async () => (await chips()).length === 0 && (await cards()).length === 0 && (await page.$$(`${win} .review-note`)).length === 0, 10000);
 
 console.log("errors:", JSON.stringify(errors));
 await browser.close();

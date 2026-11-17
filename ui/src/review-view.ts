@@ -10,7 +10,8 @@ import { copyText, dragResize, formatDate, h, icon, rowSplitter, twisty } from "
 import { fileIcon } from "./file-icon";
 import { buildTree, treeOrder, walkTree } from "./file-tree";
 import { sharedDiff } from "./history-view";
-import { formatNote, formatNotes, lineRange } from "./note-format";
+import { formatNote } from "./note-format";
+import { NotesPanel } from "./notes-panel";
 import { save, settings } from "./settings";
 
 export interface ReviewCallbacks {
@@ -94,17 +95,12 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
     renderFiles();
   });
   const filesEl = h("div", { class: "history-list review-files", tabIndex: 0 });
-  const notesTitle = h("div", { class: "review-notes-title" });
-  const notesList = h("div", { class: "review-notes-list" });
-  // The field for a note on the whole file, under the list. A note on a line has its card in the diff.
-  const fileNoteText = h("input", { class: "review-file-note-input", placeholder: "A note on the whole file (Enter adds it)", spellcheck: false });
-  const fileNoteBtn = h("button", { class: "tb-button" }, "Add");
-  const fileNoteBar = h("div", { class: "review-file-note-form" }, icon("note"), fileNoteText, fileNoteBtn);
-  const notes = h("div", { class: "review-notes" }, notesTitle, notesList, fileNoteBar);
+  // The notes of the file under the diff, with Copy All and the field for a note on the whole file.
+  const notes = new NotesPanel((t) => void copyText(t));
   const side = h("div", { class: "compare-side" });
   const sideGrip = rowSplitter(side, commitsEl, () => settings.reviewCommitsHeight, (px) => (settings.reviewCommitsHeight = px), save);
   side.append(h("div", { class: "compare-files-title" }, "Commits"), commitsEl, sideGrip, filesTitle, filesEl);
-  const right = h("div", { class: "review-right" }, d.el, notes);
+  const right = h("div", { class: "review-right" }, d.el, notes.el);
   const grip = h("div", { class: "vgrip" });
   const body = h("div", { class: "history-body" }, side, grip, right);
   const win = h(
@@ -334,83 +330,19 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
 
   const renderNotes = () => {
     const f = rows[selected];
-    const canFile = !!f;
-    fileNoteText.disabled = !canFile;
-    fileNoteBtn.disabled = !canFile;
-    if (!f) {
-      notesTitle.textContent = "Notes";
-      notesList.replaceChildren();
-      return;
-    }
+    if (!f) return notes.clear();
     const list = fileNotes(f.path);
-    // Copy All takes the open notes: a resolved note is done.
-    const open = list.filter((c) => !c.resolved);
-    const copyAll = h("button", { class: "tb-button review-notes-copy", title: "Copy the open notes of the file, with the file and the lines", disabled: !open.length }, icon("copy"), "Copy All");
-    copyAll.addEventListener("click", () => void copyText(formatNotes(f.path, open)));
-    notesTitle.replaceChildren(
-      h("span", {}, scope === "all" ? `Notes in ${f.path}` : `Notes in ${f.path} of ${scope.slice(0, 8)}`),
-      h("span", { class: "spacer" }),
-      copyAll,
-    );
-    const copy = (c: ReviewComment) => {
-      const b = h("button", { class: "icon-button review-note-copy", title: "Copy the file, the line and the note" }, icon("copy"));
-      b.addEventListener("click", (e) => {
-        e.stopPropagation();
-        void copyText(formatNote(f.path, c));
-      });
-      return b;
+    const handlers = {
+      add: addNote,
+      remove: deleteNote,
+      resolve: resolveNote,
+      copy: (n: { line: number; endLine: number; text: string }) => void copyText(formatNote(f.path, n)),
+      reveal: (line: number) => d.revealLine(line),
     };
-    const del = (id: string) => {
-      const b = h("button", { class: "icon-button", title: "Delete the note" }, icon("close"));
-      b.addEventListener("click", (e) => {
-        e.stopPropagation();
-        void deleteNote(id);
-      });
-      return b;
-    };
-    notesList.replaceChildren(
-      ...list.map((c) => {
-        const onFile = c.line === 0;
-        const row = h(
-          "div",
-          {
-            class: "review-note" + (c.outdated ? " outdated" : "") + (c.resolved ? " resolved" : ""),
-            title: c.outdated ? "The file changed after this note. The line can be another line now." : onFile ? "A note on the whole file" : "Go to the line",
-          },
-          h("span", { class: "review-note-line-no" }, onFile ? "File" : `L${lineRange(c)}`),
-          h("span", { class: "review-note-body" }, c.text),
-          c.outdated ? h("span", { class: "muted-inline" }, "outdated") : "",
-          c.resolved ? h("span", { class: "review-note-resolved", title: "Resolved" }, icon("resolved")) : "",
-          h("span", { class: "muted-inline" }, formatDate(c.time)),
-          copy(c),
-          del(c.id),
-        );
-        if (!onFile) row.addEventListener("click", () => d.revealLine(c.line));
-        return row;
-      }),
-    );
+    notes.set(f.path, list, handlers, scope === "all" ? `Notes in ${f.path}` : `Notes in ${f.path} of ${scope.slice(0, 8)}`);
     // A note on a line: only on a file that the branch has. A deleted file takes notes on the whole file.
-    const handlers = { add: addNote, remove: deleteNote, resolve: resolveNote, copy: (n: { line: number; endLine: number; text: string }) => void copyText(formatNote(f.path, n)) };
     d.setNotes(list, f.status === "D" ? null : handlers);
   };
-
-  const addFileNote = async () => {
-    const text = fileNoteText.value.trim();
-    if (!text) return;
-    fileNoteText.value = "";
-    await addNote(0, 0, text);
-  };
-  fileNoteBtn.addEventListener("click", () => void addFileNote());
-  fileNoteText.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      void addFileNote();
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      fileNoteText.value = "";
-      fileNoteText.blur();
-    }
-  });
 
   const setViewed = (f: Row, viewed: boolean) => setViewedMany([f], viewed);
   const setViewedMany = async (files: Row[], viewed: boolean) => {

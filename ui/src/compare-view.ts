@@ -9,6 +9,7 @@ import { statusName } from "./changes-panel";
 import { dragResize, formatDate, h, icon, rowSplitter, twisty } from "./dom";
 import { fileIcon } from "./file-icon";
 import type { NoteHandlers, NoteItem } from "./note-layer";
+import { NotesPanel } from "./notes-panel";
 import { buildTree, treeOrder, walkTree } from "./file-tree";
 import { showMenu } from "./context-menu";
 import { save, settings } from "./settings";
@@ -76,7 +77,11 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
   const side = h("div", { class: "compare-side" });
   const sideGrip = rowSplitter(side, commitsEl, () => settings.compareCommitsHeight, (px) => (settings.compareCommitsHeight = px), save);
   side.append(commitsEl, sideGrip, h("div", { class: "compare-files-title" }, "Changed files ", summary, h("span", { class: "spacer" }), treeBtn), filesEl);
-  const body = h("div", { class: "history-body" }, side, grip, d.el);
+  // The notes of a local change: the list, Copy All and a note on the whole file, under the diff.
+  const notesPanel = new NotesPanel((t) => cb.copyText(t));
+  notesPanel.el.hidden = true;
+  const rightPane = h("div", { class: "review-right" }, d.el, notesPanel.el);
+  const body = h("div", { class: "history-body" }, side, grip, rightPane);
   const win = h(
     "div",
     { class: "history-window", role: "dialog", "aria-label": "Compare Branches" },
@@ -178,11 +183,16 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
       d.setSource(c.status === "D" ? { path: c.old_path ?? c.path, rev: revs.l } : { path: c.path, rev: revs.r });
       d.show(c, pair.left, pair.right);
       const notes = cb.notes;
-      if (notes && r === WORKTREE && c.status !== "D" && !pair.right.missing && !pair.right.binary) {
+      const withNotes = !!notes && r === WORKTREE && c.status !== "D" && !pair.right.missing && !pair.right.binary;
+      notesPanel.el.hidden = !withNotes;
+      if (notes && withNotes) {
         // A reload after an edit shows the notes only while the same file shows.
         const reload = async () => {
           const list = await notes.list(p);
-          if (right === WORKTREE && files[selected]?.path === p && d.currentPath === p) d.setNotes(list, notes.handlers(p, reload));
+          if (right !== WORKTREE || files[selected]?.path !== p || d.currentPath !== p) return;
+          const handlers = notes.handlers(p, reload);
+          d.setNotes(list, handlers);
+          notesPanel.set(p, list, { ...handlers, reveal: (line) => d.revealLine(line) });
         };
         await reload();
       }
