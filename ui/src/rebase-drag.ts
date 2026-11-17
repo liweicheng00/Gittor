@@ -21,7 +21,7 @@ export function dragRow(down: MouseEvent, opts: DragOptions) {
   down.preventDefault();
   const rows = () => Array.from(list.querySelectorAll<HTMLElement>(".rebase-row"));
   const subject = (i: number) => {
-    const s = rows()[i]?.querySelector(".rebase-subject")?.textContent?.replace(/^↳ /, "") ?? "";
+    const s = rows()[i]?.querySelector(".rebase-subject")?.textContent?.replace(/^↴ /, "") ?? "";
     return s.length > 36 ? `${s.slice(0, 36)}…` : s;
   };
   const startY = down.clientY;

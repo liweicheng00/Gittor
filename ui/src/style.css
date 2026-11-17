@@ -352,7 +352,7 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .rebase-row.action-drop .rebase-subject, .rebase-row.action-drop .rebase-hash { text-decoration: line-through; opacity: 0.55; }
 .rebase-row.action-squash, .rebase-row.action-fixup { background: var(--panel); }
 .rebase-row.action-edit .rebase-subject::after { content: "  ⏸ stops here"; color: var(--tag); font-size: 11px; }
-.rebase-row.action-squash .rebase-subject::before, .rebase-row.action-fixup .rebase-subject::before { content: "↳ "; color: var(--muted); }
+.rebase-row.action-squash .rebase-subject::before, .rebase-row.action-fixup .rebase-subject::before { content: "↴ "; color: var(--muted); }
 
 /* toasts */
 .copy-hint { position: fixed; z-index: 120; display: flex; align-items: center; gap: 4px; max-width: 360px; padding: 3px 9px; border-radius: 12px; background: var(--fg); color: var(--bg); font-size: 12px; white-space: nowrap; pointer-events: none; box-shadow: var(--shadow); animation: copy-hint-in 0.12s ease-out; transition: opacity 0.3s; }
