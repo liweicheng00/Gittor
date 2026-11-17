@@ -73,6 +73,29 @@ await page.fill(".files-search", "start");
 await within("the search finds the file in its folder", async () => (await page.$$(".files-file")).length === 1 && (await page.$(row("docs/guide/start.md"))) !== null);
 await page.fill(".files-search", "");
 
+// A double click opens the viewer of Gittor, not the editor: the text, notes, and Copy All.
+const viewer = ".history-window.file-viewer";
+await page.dblclick(row("arith.rs"));
+await page.waitForSelector(`${viewer} .view-line:visible`);
+check("the viewer shows the path", ((await page.textContent(`${viewer} .file-viewer-path`)) ?? "") === "arith.rs");
+check("no editor error shows", (await page.$(".toast-error")) === null);
+const vLine = (n) => page.locator(`${viewer} .line-numbers:visible`).filter({ hasText: new RegExp(`^${n}$`) }).first();
+await vLine(1).hover();
+await within("the note icon shows in the viewer", async () => (await page.$$(`${viewer} .note-add-icon`)).length === 1);
+await page.click(`${viewer} .note-add-icon`);
+await page.fill(`${viewer} .note-card.draft textarea`, "Check this add");
+await page.press(`${viewer} .note-card.draft textarea`, "Control+Enter");
+await within("the note shows as a card", async () => ((await page.textContent(`${viewer} .note-card:not(.draft)`).catch(() => "")) ?? "").includes("Check this add"));
+await page.fill(`${viewer} .review-file-note-input`, "Rename this file");
+await page.press(`${viewer} .review-file-note-input`, "Enter");
+await within("the note on the whole file shows in the list", async () => ((await page.textContent(`${viewer} .review-notes-list`)) ?? "").includes("Rename this file"));
+await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+await page.click(`${viewer} .review-notes-copy`);
+await within("Copy All copies the notes of the file", async () => (await page.evaluate(() => navigator.clipboard.readText())) === "arith.rs\nRename this file\n\narith.rs:1\nCheck this add");
+await shot("ft3-viewer");
+await page.keyboard.press("Escape");
+await page.waitForSelector(viewer, { state: "detached" });
+
 // Mod+1 shows the Branches tab, and a second press stays there.
 await page.click(".log-row >> nth=0");
 await page.keyboard.press("Control+1");

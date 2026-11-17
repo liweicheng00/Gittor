@@ -1,11 +1,13 @@
 // The Files tab: loads the files of the working tree, shows the status of the local changes, and opens a
-// file. A file with a local change shows its diff; another file shows its text without colors.
+// file. A click shows the diff of a changed file, or the text of another file, in the diff panel. A double
+// click opens the file viewer, with notes.
 
 import { api } from "./api";
 import { showLocalDiff } from "./commit-flow";
 import { showMenu } from "./context-menu";
 import { copyText } from "./dom";
 import { openInEditor } from "./editor-flow";
+import { openFileViewer } from "./file-viewer";
 import { showHistory } from "./history-flow";
 import { keymap } from "./keyboard";
 import { visit } from "./nav";
@@ -64,10 +66,13 @@ async function openFile(path: string) {
 }
 
 filesPanel.onOpen = (path) => void openFile(path);
-filesPanel.onActivate = (path) => void openInEditor(path);
+// A double click or Enter opens the viewer of Gittor, with notes. The editor opens only on request.
+const view = (path: string) => openFileViewer(path, { openInEditor: (p, line) => void openInEditor(p, line), copyText: (t) => void copyText(t) });
+filesPanel.onActivate = (path) => view(path);
 filesPanel.onMenu = (path, e) => {
   const change = localChange(path);
   showMenu(e.clientX, e.clientY, [
+    { label: "Open", action: () => view(path) },
     { label: "Open in Editor", shortcut: keymap.shortcut("openInEditor"), action: () => void openInEditor(path) },
     { label: "Show History", disabled: change?.change.status === "?", action: () => showHistory(path) },
     {

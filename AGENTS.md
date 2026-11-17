@@ -197,8 +197,9 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
 - The Files tab (`files-panel.ts`, `files-flow.ts`, ``Mod+` ``, the first left tab): the files of the
   working tree from the query `worktree_files` (`git ls-files --cached --others --exclude-standard`).
   The folders are closed at first. It loads when the local changes change (`commitPanel.onLoad`), or
-  when it shows after that. A changed file opens its local diff; another file shows with
-  `DiffView.showFile`, without colors. ``Alt+` `` switches the project.
+  when it shows after that. A click on a changed file opens its local diff; another file shows with
+  `DiffView.showFile`, without colors. A double click opens the file viewer (`file-viewer.ts`), not the
+  editor: the text with the notes on local changes and `NotesPanel`. ``Alt+` `` switches the project.
 - Icons: add the Lucide file name to the glob and to `NAMES` in `ui/src/icons.ts`.
 - Trees of files: `buildTree`, `treeOrder`, `walkTree` in `file-tree.ts`.
   Unique short names of folders: `pathLabels` in `path-labels.ts`.
