@@ -67,6 +67,20 @@ await within("the diff button shows F7", async () => (await hint()) === "F7");
 await shot("kh2-next-change");
 await clearHint();
 
+// The tooltip of a button with a shortcut names its keys, as the keymap has them.
+await refresh.hover();
+await within("the tooltip of Refresh names its keys", async () => (await refresh.getAttribute("title")) === "Reload commits and branches (Ctrl+R, F5)");
+// The tab Files has a hint too.
+await page.click(".lp-tab:text-is('Files')");
+await within("the Files tab shows its key", async () => (await hint()) === "Ctrl+`");
+await clearHint();
+// A key outside the keymap: Commit names Ctrl+Enter of the message field.
+await page.click(".lp-tab:has-text('Changes')");
+await clearHint();
+await page.hover(".commit-button");
+await within("the tooltip of Commit names Ctrl+Enter", async () => ((await page.getAttribute(".commit-button", "title")) ?? "") === "Commit the checked files (Ctrl+Enter)");
+check("the tooltip of and Push names Ctrl+Alt+K", await page.$eval(".commit-push", (e) => { e.dispatchEvent(new MouseEvent("mouseover", { bubbles: true })); return e.title; }) === "Commit and Push (Ctrl+Alt+K)");
+
 // The keys that the user set show, not the default keys.
 await page.evaluate(() => {
   const s = JSON.parse(localStorage.getItem("gittor.settings.v1") ?? "{}");
@@ -80,7 +94,7 @@ await within("the hint shows the key of the keymap", async () => (await hint()) 
 await clearHint();
 
 // Settings › General turns the hints off.
-await page.click("button[title='Settings']");
+await page.click("button[title^='Settings']");
 await within("the Settings button shows its key too", async () => (await hint()) === "Ctrl+Alt+S");
 await page.waitForSelector(".settings-row:has-text('Shortcut hints')");
 check("the hints are on by default", await page.isChecked(".settings-row:has-text('Shortcut hints') input"));

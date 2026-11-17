@@ -187,7 +187,10 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
 - Keys: actions in `ui/src/keyboard.ts`; the keymap page lists them by themselves. A button that
   does the same as a keymap action gets `data-key-action="<id>"`: a mouse click on it then shows the
   keys next to the mouse (`key-hint-flow.ts`, the setting `keyHints`). `keyWorksAt` applies the rules
-  of the key handler, so no hint names a key that does nothing there.
+  of the key handler, so no hint names a key that does nothing there. A key outside the keymap (for
+  example Mod+Enter of the commit message) goes in `data-key-hint`. On hover, the tooltip of such a
+  button gets its keys as the keymap has them now; do not write a key into a tooltip by hand. A
+  scenario finds such a button by the start of its title: `[title^='Settings']`.
 - External apps: Open in Editor (`crates/service/src/editor.rs`, `editor-flow.ts`) and Open in Terminal
   (`terminal.rs`, `terminal-flow.ts`). Each runs a command of `settings.json` without a shell. The e2e
   scenarios use a small script in place of the app, and set the command back to empty at the end.

@@ -205,7 +205,7 @@ for (const [name, t] of Object.entries(THEMES)) {
   await within(`${t.label}: the menu closes`, async () => (await page.$(".menu")) === null);
 
   // The Settings dialog shows the theme.
-  await page.click(".tb-button[title='Settings']");
+  await page.click(".tb-button[title^='Settings']");
   await page.waitForSelector(".settings-dialog");
   await page.click(".settings-page:has-text('General')");
   const select = ".settings-row:has-text('Theme') select";
@@ -216,7 +216,7 @@ for (const [name, t] of Object.entries(THEMES)) {
   await page.click(".settings-dialog .dialog-buttons button:has-text('OK')");
   await within(`${t.label}: Dark by the dialog removes data-style and data-glow`, async () => { const r = await root(); return r.theme === "dark" && r.style === undefined && r.glow === undefined; });
   await within(`${t.label}: Dark by the dialog gives the editor of Dark`, () => editorsAre((e) => e.dark && e.bg === "rgb(30, 30, 30)"));
-  await page.click(".tb-button[title='Settings']");
+  await page.click(".tb-button[title^='Settings']");
   await page.waitForSelector(".settings-dialog");
   await page.click(".settings-page:has-text('General')");
   await page.selectOption(select, name);

@@ -52,7 +52,7 @@ const text = async (sel) => ((await page.textContent(sel).catch(() => "")) ?? ""
 const status = () => text(".settings-content .dialog-field-row .settings-hint");
 const unversioned = () => page.$$eval(".cl-file .path", (els) => els.map((e) => e.textContent));
 const openIgnorePage = async () => {
-  await page.click(".tb-button[title='Settings']");
+  await page.click(".tb-button[title^='Settings']");
   await page.waitForSelector(".settings-dialog");
   await page.click(".settings-page:has-text('Global Ignore')");
   await page.waitForSelector(".ignore-text:not([disabled])");

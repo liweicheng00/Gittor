@@ -7,6 +7,7 @@ import { showMenu } from "./context-menu";
 import { copyText } from "./dom";
 import { openInEditor } from "./editor-flow";
 import { showHistory } from "./history-flow";
+import { keymap } from "./keyboard";
 import { visit } from "./nav";
 import { settings } from "./settings";
 import { commitPanel, diff, filesPanel, leftTabHooks, showLeftTab } from "./shell";
@@ -67,7 +68,7 @@ filesPanel.onActivate = (path) => void openInEditor(path);
 filesPanel.onMenu = (path, e) => {
   const change = localChange(path);
   showMenu(e.clientX, e.clientY, [
-    { label: "Open in Editor", action: () => void openInEditor(path) },
+    { label: "Open in Editor", shortcut: keymap.shortcut("openInEditor"), action: () => void openInEditor(path) },
     { label: "Show History", disabled: change?.change.status === "?", action: () => showHistory(path) },
     {
       label: "Show in the Changes Tab",

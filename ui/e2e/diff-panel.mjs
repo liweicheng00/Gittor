@@ -67,7 +67,7 @@ await page.keyboard.press("Escape");
 check("Esc in the filter field keeps the panel", (await diffHeight()) > 0);
 
 // The close button.
-await page.click(".diff-toolbar button[title='Hide the diff panel']");
+await page.click(".diff-toolbar button[title^='Hide the diff panel']");
 await within("the close button hides the panel", async () => (await diffHeight()) === 0);
 
 // A double click on a changed file shows a hidden panel.

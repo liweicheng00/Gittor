@@ -1,12 +1,14 @@
 // Shortcut hints: after a mouse click on a button that has a shortcut, the shortcut shows next to the
 // mouse for a moment, so that the user can use the key the next time. Settings › General can turn it off.
-// A button names its keymap action with the attribute data-key-action.
+// A button names its keymap action with the attribute data-key-action. A key that the keymap does not
+// hold, for example Mod+Enter in the commit message, goes in data-key-hint ("|" between two keys). The
+// tooltip of such a button also names its keys, as the keymap has them now.
 
 import { h } from "./dom";
 import { keymap, keyWorksAt } from "./keyboard";
 import { formatKey } from "./keymap";
 import { settings } from "./settings";
-import { filterBar, localHistoryBtn, pushBtn, refreshBtn, settingsBtn, tabBranches, tabCommit, tabReviews, tabStash, updateBtn } from "./shell";
+import { fetchBtn, filterBar, localHistoryBtn, pushBtn, refreshBtn, settingsBtn, tabBranches, tabCommit, tabFiles, tabReviews, tabStash, updateBtn } from "./shell";
 
 /** The hint of one action shows at most once in this time. */
 const AGAIN_MS = 3000;
@@ -17,9 +19,11 @@ const lastShown = new Map<string, number>();
 for (const [el, action] of [
   [refreshBtn, "refresh"],
   [updateBtn, "update"],
+  [fetchBtn, "fetch"],
   [pushBtn, "push"],
   [localHistoryBtn, "localHistory"],
   [settingsBtn, "settings"],
+  [tabFiles, "files"],
   [tabBranches, "branches"],
   [tabCommit, "commit"],
   [tabStash, "stash"],
@@ -50,15 +54,46 @@ window.addEventListener(
   (e) => {
     // detail is 0 for a click from the keyboard (Enter or Space on a button): no hint then.
     if (!settings.keyHints || e.detail === 0) return;
-    const el = (e.target as HTMLElement | null)?.closest<HTMLElement>("[data-key-action]");
-    const id = el?.dataset.keyAction;
-    if (!el || !id) return;
-    const keys = keymap.keysOf(id);
-    if (!keys.length || !keyWorksAt(id, el)) return;
+    const el = (e.target as HTMLElement | null)?.closest<HTMLElement>("[data-key-action], [data-key-hint]");
+    if (!el) return;
+    const keys = keysAt(el);
+    const id = el.dataset.keyAction ?? `hint:${el.dataset.keyHint}`;
+    if (!keys.length) return;
     const now = Date.now();
     if (now - (lastShown.get(id) ?? 0) < AGAIN_MS) return;
     lastShown.set(id, now);
     showHint(keys, e.clientX, e.clientY);
+  },
+  true,
+);
+
+/** The keys that work for a button now: of its keymap action, or of its data-key-hint. */
+function keysAt(el: HTMLElement): string[] {
+  const id = el.dataset.keyAction;
+  if (id) return keyWorksAt(id, el) ? keymap.keysOf(id) : [];
+  return el.dataset.keyHint ? el.dataset.keyHint.split("|") : [];
+}
+
+/** A key in parentheses at the end of a tooltip, as the code wrote it, for example "(Ctrl+Enter)". */
+const WRITTEN_KEY = /\s*\((?:Ctrl|Cmd|Alt|Shift|Option|F\d+|[⌘⌃⌥⇧])[^()]*\)\s*$/;
+
+// The tooltip names the keys as the keymap has them now. The suffix of the last hover goes first, so a
+// tooltip that the code changes later keeps its new text.
+window.addEventListener(
+  "mouseover",
+  (e) => {
+    const el = (e.target as HTMLElement | null)?.closest<HTMLElement>("[data-key-action], [data-key-hint]");
+    if (!el) return;
+    let base = el.title;
+    const old = el.dataset.keySuffix;
+    if (old && base.endsWith(old)) base = base.slice(0, -old.length);
+    base = base.replace(WRITTEN_KEY, "");
+    const keys = keysAt(el);
+    const suffix = keys.length ? ` (${keys.map(formatKey).join(", ")})` : "";
+    const label = base || el.getAttribute("aria-label") || "";
+    el.dataset.keySuffix = suffix;
+    const title = label + suffix;
+    if (title && el.title !== title) el.title = title;
   },
   true,
 );

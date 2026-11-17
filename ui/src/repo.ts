@@ -74,7 +74,8 @@ export function renderTabs() {
         ? [icon("worktree", "tab-icon"), h("span", { class: "tab-name" }, name)]
         : [h("span", { class: "tab-name" }, name)];
       const title = [worktree ? `Worktree of ${worktree}` : "", info?.branch ? `Branch: ${info.branch}` : info ? "Detached HEAD" : "", root].filter(Boolean).join("\n");
-      const close = h("button", { class: "tab-close", title: "Close the tab" }, icon("close"));
+      // Mod+W closes the active tab: its close button names the key.
+      const close = h("button", { class: "tab-close", title: "Close the tab", "data-key-action": root === settings.activeTab ? "closeProject" : undefined }, icon("close"));
       close.addEventListener("click", (e) => {
         e.stopPropagation();
         void closeTab(root);

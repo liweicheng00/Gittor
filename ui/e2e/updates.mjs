@@ -67,7 +67,7 @@ await (await card.$(".toast-action:has-text('Restart')")).click();
 check("Restart starts the app again", await page.evaluate(() => window.__GITTOR_FAKE_UPDATE__.restarted === true));
 
 // Settings › General: the version, Check Now, and the switch for the automatic check.
-await page.click("button[title='Settings']");
+await page.click("button[title^='Settings']");
 await page.waitForSelector(".settings-update");
 await within(page, "Settings shows the version", async () => ((await page.textContent(".settings-update-version")) ?? "").startsWith("Version "));
 check("the automatic check is on by default", await page.isChecked(".settings-update input[type=checkbox]"));
@@ -77,7 +77,7 @@ await shot(page, "up3-settings");
 
 // A build without updates (a local build): no notification, and Check Now is off.
 const local = await open(null);
-await local.click("button[title='Settings']");
+await local.click("button[title^='Settings']");
 await local.waitForSelector(".settings-update");
 await within(local, "Check Now is off in a build without updates", async () => await local.isDisabled(".settings-update-check"));
 check("Settings says why", ((await local.textContent(".settings-update")) ?? "").includes("only a release build"));

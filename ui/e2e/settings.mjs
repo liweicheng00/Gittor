@@ -24,7 +24,7 @@ const within = async (what, fn, ms = 6000) => {
   check(what, false);
 };
 const openSettings = async () => {
-  await page.click(".tb-button[title='Settings']");
+  await page.click(".tb-button[title^='Settings']");
   await page.waitForSelector(".settings-dialog");
 };
 const pageOf = (name) => page.click(`.settings-page:has-text('${name}')`);

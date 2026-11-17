@@ -35,7 +35,7 @@ const savedSetting = (key, value) =>
   within(`the backend keeps the ${key} command`, async () =>
     page.evaluate(async ([k, v]) => (await (await fetch("/api/backend_settings", { method: "POST", body: "{}" })).json())[k] === v, [key, value]));
 const setEditor = async (command) => {
-  await page.click(".tb-button[title='Settings']");
+  await page.click(".tb-button[title^='Settings']");
   await page.waitForSelector(".settings-dialog");
   await page.click(".settings-page:has-text('Editor')");
   if (command === null) return;

@@ -75,7 +75,7 @@ await page.click(".log-row:has(.subject-text:text-is('Add a binary logo'))", { b
 await menu("Edit Commit Message");
 await within("the reword stops on the protected branch", async () => (await toasts()).includes("protected branch origin/main"));
 await shot("bt2-protected");
-await page.click(".tb-button[title='Settings']");
+await page.click(".tb-button[title^='Settings']");
 await page.click(".settings-page:has-text('Git')");
 check("the Git page has the protected branches", (await page.inputValue(".settings-row:has-text('Protected branches') input")) === "main master");
 await page.click(".dialog-buttons button:has-text('Cancel')");

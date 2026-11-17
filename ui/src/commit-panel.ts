@@ -173,9 +173,9 @@ export class CommitPanel {
     });
     this.amend = h("input", { type: "checkbox" });
     this.amend.addEventListener("change", () => void this.toggleAmend());
-    this.commitBtn = h("button", { class: "primary commit-button", title: "Commit the checked files (Ctrl+Enter)" }, "Commit");
+    this.commitBtn = h("button", { class: "primary commit-button", title: "Commit the checked files", "data-key-hint": "Mod+Enter" }, "Commit");
     this.commitBtn.addEventListener("click", () => this.commit(false));
-    this.pushBtn = h("button", { class: "commit-push", title: "Commit and Push (Ctrl+Alt+K)" }, "and Push…");
+    this.pushBtn = h("button", { class: "commit-push", title: "Commit and Push", "data-key-hint": "Mod+Alt+K" }, "and Push…");
     this.pushBtn.addEventListener("click", () => this.commit(true));
     this.summary = h("span", { class: "commit-summary" });
     this.el = h(
