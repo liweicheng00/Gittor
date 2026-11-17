@@ -16,6 +16,9 @@ class RowList {
   }
 }
 
+
+/** A local branch without a commit for this many days is stale. */
+const STALE_DAYS = 90;
 export class Sidebar {
   readonly el: HTMLElement;
   private list: HTMLElement;
@@ -23,7 +26,7 @@ export class Sidebar {
   private refs: BranchInfo[] = [];
   private recent: RecentBranch[] = [];
   private worktrees: Worktree[] = [];
-  private collapsed = new Set<string>(["Tags"]);
+  private collapsed = new Set<string>(["Stale", "Tags"]);
   private filterSet = new Set<string>();
   /** Favorite branches and tags, by full ref name. */
   private favorites = new Set<string>();
@@ -172,6 +175,8 @@ export class Sidebar {
     if (recent.length) groups.push(["Recent", recent]);
     const locals = this.refs.filter((b) => b.kind === "local" && match(b));
     groups.push(["Local", locals]);
+    const old = Date.now() / 1000 - STALE_DAYS * 24 * 60 * 60;
+    groups.push(["Stale", locals.filter((b) => !b.current && (b.gone || (b.time > 0 && b.time < old)))]);
     const remotes = new Map<string, BranchInfo[]>();
     for (const b of this.refs.filter((b) => b.kind === "remote" && match(b))) {
       const remote = b.name.split("/")[0];
@@ -215,6 +220,7 @@ export class Sidebar {
           this.onTagsMenu(e);
         });
       }
+      if (title === "Stale") header.title = `Local branches without a commit for ${STALE_DAYS} days, or with a tracked branch that is gone from the remote`;
       if (title === "Local") {
         header.addEventListener("contextmenu", (e) => {
           e.preventDefault();
@@ -342,6 +348,7 @@ export class Sidebar {
     const badges = h("span", { class: "badges" });
     if (b.ahead) badges.append(h("span", { class: "ahead", title: `${b.ahead} commits ahead of ${b.upstream}` }, `↑${b.ahead}`));
     if (b.behind) badges.append(h("span", { class: "behind", title: `${b.behind} commits behind ${b.upstream}` }, `↓${b.behind}`));
+    if (b.gone) badges.append(h("span", { class: "tag-local branch-gone", title: `${b.upstream ?? "The tracked branch"} is gone from the remote` }, "gone"));
     if (b.kind === "tag" && this.remoteTags && !this.remoteTags.names.has(b.name)) {
       badges.append(h("span", { class: "tag-local", title: `Not on ${this.remoteTags.remote}. Push it from the context menu.` }, "local"));
     }

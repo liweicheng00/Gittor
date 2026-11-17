@@ -236,3 +236,24 @@ fn update_fetches_the_default_branch_too() {
     // The local main does not move: only the remote branch is fetched.
     assert_eq!(git(&mine, &["log", "-1", "--format=%s", "main"]), "Initial");
 }
+
+#[test]
+fn a_branch_whose_tracked_branch_is_gone() {
+    let (_origin, seed, mine) = setup("gone");
+    let repo = Repo::open(&mine).unwrap();
+    git(&seed, &["checkout", "-q", "-b", "old"]);
+    commit(&seed, "o.txt", "o\n", "Old");
+    git(&seed, &["push", "-q", "-u", "origin", "old"]);
+    git(&mine, &["fetch", "-q"]);
+    git(&mine, &["branch", "-q", "--track", "old", "origin/old"]);
+    let refs = repo.list_refs().unwrap();
+    let old = refs.iter().find(|b| b.full == "refs/heads/old").unwrap();
+    assert!(!old.gone);
+    assert!(old.time > 1_600_000_000, "the time of the last commit: {}", old.time);
+    // The remote branch goes, for example after a merge of its pull request.
+    git(&seed, &["push", "-q", "origin", "--delete", "old"]);
+    git(&mine, &["fetch", "-q", "--prune"]);
+    let refs = repo.list_refs().unwrap();
+    assert!(refs.iter().find(|b| b.full == "refs/heads/old").unwrap().gone);
+    assert!(!refs.iter().find(|b| b.full == "refs/heads/main").unwrap().gone);
+}

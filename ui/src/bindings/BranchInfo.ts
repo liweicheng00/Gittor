@@ -8,4 +8,12 @@ kind: "local" | "remote" | "tag", oid: string, current: boolean, upstream: strin
 /**
  * The author of the last commit. A tag gives the author of its commit.
  */
-author: string, };
+author: string, 
+/**
+ * The committer time of the last commit, in seconds since 1970.
+ */
+time: number, 
+/**
+ * The tracked branch is gone from the remote, for example after a merge of its pull request.
+ */
+gone: boolean, };
