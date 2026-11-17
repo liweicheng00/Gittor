@@ -37,10 +37,17 @@ fn tags() {
     assert!(repo.tag_info("nope").is_err());
 
     // The remote has no tags; Push All Tags sends both.
-    assert!(repo.remote_tags("origin").unwrap().is_empty());
+    assert!(repo.remote_tags("origin", false).unwrap().is_empty());
     let r = repo.push_all_tags("origin").unwrap();
     assert!(r.ok, "{}", r.message);
-    let mut on_remote = repo.remote_tags("origin").unwrap();
+    let mut on_remote = repo.remote_tags("origin", false).unwrap();
     on_remote.sort();
     assert_eq!(on_remote, ["light", "v1.0.0"]);
+    // The quiet check of the background gives the same answer, and asks no question.
+    let mut quiet = repo.remote_tags("origin", true).unwrap();
+    quiet.sort();
+    assert_eq!(quiet, on_remote);
+    // A remote that cannot answer gives an error at once, not a question.
+    repo.git(&["remote", "add", "gone", "https://127.0.0.1:1/none.git"]).unwrap();
+    assert!(repo.remote_tags("gone", true).is_err());
 }

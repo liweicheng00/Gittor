@@ -258,7 +258,7 @@ impl Service {
 
     /// The tags of a remote. It needs the network, so the front end asks only after a fetch or on request.
     pub fn remote_tags(&self, args: RemoteArgs) -> Result<Vec<String>> {
-        self.with_repo(|r| r.remote_tags(&args.remote).map_err(err))
+        self.with_repo(|r| r.remote_tags(&args.remote, args.quiet).map_err(err))
     }
 
     /// Opens a web page in the default browser. Only http and https URLs open, so a remote URL can

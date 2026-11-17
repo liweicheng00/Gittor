@@ -386,7 +386,8 @@ export const api = {
   openProjectInEditor: (file?: { path: string; line: number; column: number }) => call<null>("open_project_in_editor", file ?? {}),
   openUrl: (url: string) => (inTauri ? call<null>("open_url", { url }) : Promise.resolve(void window.open(url, "_blank", "noopener")).then(() => null)),
   tagInfo: (name: string) => call<TagInfo>("tag_info", { name }),
-  remoteTags: (remote: string) => call<string[]>("remote_tags", { remote }),
+  /** The tags of a remote. `quiet` asks the user no question: a remote that needs a password fails. */
+  remoteTags: (remote: string, quiet = false) => call<string[]>("remote_tags", { remote, quiet }),
   mergedInto: (target: string) => call<MergedBranches>("merged_into", { target }),
   mergedBranches: (upstreams: string[]) => call<MergedBranches>("merged_branches", { upstreams }),
   compareRefs: (left: string, right: string) =>

@@ -388,9 +388,15 @@ impl Repo {
         self.write(&["push", safe(remote)?, "--tags"], format!("Pushed the tags to {remote}"))
     }
 
-    /// The tags of a remote, from `git ls-remote`. It needs the network, like Fetch.
-    pub fn remote_tags(&self, remote: &str) -> Result<Vec<String>> {
-        let out = self.git_write(&["ls-remote", "--tags", "--refs", safe(remote)?], &[]).map_err(|(_, e)| GitError(e))?;
+    /// The tags of a remote, from `git ls-remote`. It needs the network, like Fetch. With `quiet`, git and
+    /// ssh ask no question: a remote that needs a password gives an error. A stored credential still works.
+    pub fn remote_tags(&self, remote: &str, quiet: bool) -> Result<Vec<String>> {
+        let quiet_env: &[(&str, &str)] = &[("GIT_ASKPASS", ""), ("SSH_ASKPASS", ""), ("SSH_ASKPASS_REQUIRE", "never")];
+        let mut args = vec!["ls-remote", "--tags", "--refs", safe(remote)?];
+        if quiet {
+            args.splice(0..0, ["-c", "core.askPass="]);
+        }
+        let out = self.git_write(&args, if quiet { quiet_env } else { &[] }).map_err(|(_, e)| GitError(e))?;
         Ok(out.lines().filter_map(|l| l.split_once('\t')?.1.strip_prefix("refs/tags/").map(String::from)).collect())
     }
 

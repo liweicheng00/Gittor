@@ -242,7 +242,7 @@ async function loadRepo(r: ViewResult, state: TabState | null) {
   app.watchSeen = await api.watchState().catch(() => null);
   await loadRefs();
   // The first open of a repository asks its remote in the background; it needs the network.
-  if (!cached) void loadRemoteTags();
+  if (!cached) void loadRemoteTags(undefined, true);
   commitPanel.setTemplate(await api.commitTemplate().catch(() => null));
   const target = state?.selected ?? r.headOid;
   // The user can choose a commit or a local change while the repository loads; that choice stays.
@@ -409,7 +409,7 @@ export async function fetchAll() {
 /** Asks a remote for its tags, so the Tags group marks the tags that are only local. It needs the network,
  * so it runs after a fetch, after a push of tags, and on request. Without `remote`: the remote of the
  * current branch, else origin, else the first remote. */
-export async function loadRemoteTags(remote?: string) {
+export async function loadRemoteTags(remote?: string, quiet = false) {
   const root = app.view?.root;
   const cur = app.refs.find((b) => b.current);
   let name = remote ?? cur?.upstream?.split("/")[0];
@@ -419,7 +419,7 @@ export async function loadRemoteTags(remote?: string) {
   }
   if (!name) return showRemoteTags(null, null);
   try {
-    const tags = await api.remoteTags(name);
+    const tags = await api.remoteTags(name, quiet);
     if (root) remoteTagsByRoot.set(root, { remote: name, names: tags });
     if (app.view?.root === root) showRemoteTags(name, tags);
   } catch {

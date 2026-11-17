@@ -153,6 +153,9 @@ pub struct TagArgs {
 #[derive(Deserialize)]
 pub struct RemoteArgs {
     pub remote: String,
+    /// Remote tags only: ask the user no question (a check in the background).
+    #[serde(default)]
+    pub quiet: bool,
 }
 
 /// Clone Repository: the URL, the folder to put the clone in, and the name of the new folder. An empty
