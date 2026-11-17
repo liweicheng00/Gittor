@@ -136,7 +136,7 @@
 :root[data-style="glow"] .tb-split:hover .tb-button { box-shadow: none; }
 :root[data-style="glow"] .primary,
 :root[data-style="glow"] .dialog-buttons .primary,
-:root[data-style="glow"] .op-row .primary { background: var(--glow-fill); border-color: transparent; color: var(--on-accent); }
+:root[data-style="glow"] .op-row .primary { background: var(--glow-fill); background-origin: border-box; border-color: transparent; color: var(--on-accent); }
 :root[data-style="glow"] .primary:hover:not(:disabled),
 :root[data-style="glow"] .primary:focus-visible { box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 50%, transparent); }
 :root[data-style="glow"] .danger,
