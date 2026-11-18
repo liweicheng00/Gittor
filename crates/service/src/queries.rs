@@ -1,10 +1,10 @@
 //! The read commands.
 
-use crate::{err, history, watch, BlameArgs, BlobArgs, CompareArgs, CompareRefsArgs, MergedBranchesArgs, MergedIntoArgs, UrlArgs, TagArgs, RemoteArgs, ReviewArgs, ReviewEdit, CompareResult, FilePair, FilePairArgs, IndexArgs, ImageArgs, MermaidArgs, MermaidSvg, OidArgs, PathArgs, PushInfoArgs, Result, RevSpec, Service};
+use crate::{err, history, watch, BlameArgs, BlobArgs, CompareArgs, CompareRefsArgs, MergedBranchesArgs, MergedIntoArgs, UrlArgs, TagArgs, RemoteArgs, ReviewArgs, ReviewEdit, CompareResult, FilePair, FilePairArgs, IndexArgs, ImageArgs, MermaidArgs, MermaidSvg, OidArgs, PathArgs, PushInfoArgs, Result, RevSpec, RewriteCheckArgs, Service};
 use gittor_git::changelist::{ChangeListOp, LocalChanges};
 use gittor_git::history::{Blame, HistoryEntry};
 use gittor_git::merge::MergeSides;
-use gittor_git::ops::{RepoState, RewriteRange};
+use gittor_git::ops::{RepoState, RewriteCheck, RewriteRange};
 use gittor_git::remote::PushInfo;
 use gittor_git::stash::{Stash, StashDetail};
 use gittor_git::worktree::{RecentBranch, Worktree};
@@ -95,17 +95,36 @@ impl Service {
     /// The favorite branches and tags of the repository, as full ref names. None until the user chooses
     /// favorites. They are in the common git dir, so all worktrees share them.
     pub fn favorites(&self) -> Result<Option<Vec<String>>> {
+        self.ref_list("favorites.json")
+    }
+
+    pub fn set_favorites(&self, refs: Vec<String>) -> Result<()> {
+        self.set_ref_list("favorites.json", refs)
+    }
+
+    /// The branches that the user marked as stale, as full ref names. They are in the common git dir, so
+    /// all worktrees share them.
+    pub fn stale_branches(&self) -> Result<Vec<String>> {
+        Ok(self.ref_list("stale-branches.json")?.unwrap_or_default())
+    }
+
+    pub fn set_stale_branches(&self, refs: Vec<String>) -> Result<()> {
+        self.set_ref_list("stale-branches.json", refs)
+    }
+
+    /// Reads a list of refs from a file of the app in the common git dir. None when the file is missing.
+    fn ref_list(&self, file: &str) -> Result<Option<Vec<String>>> {
         self.with_repo(|r| {
-            let path = gittor_git::app_dir(&r.common_dir()).join("favorites.json");
+            let path = gittor_git::app_dir(&r.common_dir()).join(file);
             Ok(std::fs::read(path).ok().and_then(|b| serde_json::from_slice(&b).ok()))
         })
     }
 
-    pub fn set_favorites(&self, refs: Vec<String>) -> Result<()> {
+    fn set_ref_list(&self, file: &str, refs: Vec<String>) -> Result<()> {
         self.with_repo(|r| {
             let dir = gittor_git::app_dir(&r.common_dir());
             std::fs::create_dir_all(&dir).map_err(err)?;
-            std::fs::write(dir.join("favorites.json"), serde_json::to_vec_pretty(&refs).map_err(err)?).map_err(err)
+            std::fs::write(dir.join(file), serde_json::to_vec_pretty(&refs).map_err(err)?).map_err(err)
         })
     }
 
@@ -131,12 +150,6 @@ impl Service {
         self.with_repo(|r| r.submodule_range(&args.path).map_err(err))
     }
 
-    /// The e-mail address of the user in this repository, for the My Commits highlight. Empty when
-    /// user.email is not set.
-    pub fn user_email(&self) -> Result<String> {
-        self.with_repo(|r| Ok(r.git(&["config", "user.email"]).map(|b| String::from_utf8_lossy(&b).trim().to_string()).unwrap_or_default()))
-    }
-
     /// The remote branches that contain a commit, as "origin/main", for the protected-branch check.
     pub fn remote_containing(&self, args: OidArgs) -> Result<Vec<String>> {
         self.with_repo(|r| {
@@ -145,6 +158,18 @@ impl Service {
             }
             let out = r.git(&["for-each-ref", "--contains", &args.oid, "--format=%(refname:lstrip=2)", "refs/remotes"]).map_err(err)?;
             Ok(String::from_utf8_lossy(&out).lines().filter(|l| !l.ends_with("/HEAD")).map(String::from).collect())
+        })
+    }
+
+    /// The paths of the files of the working tree, for the Files tab: the tracked files and the files that
+    /// git does not ignore. Each path shows once, also with a conflict.
+    pub fn worktree_files(&self) -> Result<Vec<String>> {
+        self.with_repo(|r| {
+            let out = r.git(&["ls-files", "--cached", "--others", "--exclude-standard", "-z"]).map_err(err)?;
+            let mut files: Vec<String> = out.split(|&b| b == 0).filter(|p| !p.is_empty()).map(|p| String::from_utf8_lossy(p).into_owned()).collect();
+            files.sort();
+            files.dedup();
+            Ok(files)
         })
     }
 
@@ -183,6 +208,11 @@ impl Service {
 
     pub fn rewrite_range(&self, args: OidArgs) -> Result<RewriteRange> {
         self.with_repo(|r| r.rewrite_range(&args.oid).map_err(err))
+    }
+
+    /// Replays a plan in memory, without a change of the repository, and gives the result of each step.
+    pub fn rewrite_check(&self, args: RewriteCheckArgs) -> Result<RewriteCheck> {
+        self.with_repo(|r| r.rewrite_check(&args.base, &args.plan).map_err(err))
     }
 
     pub(crate) fn rev(repo: &Repo, spec: &RevSpec) -> Result<Rev> {
@@ -241,7 +271,7 @@ impl Service {
 
     /// The tags of a remote. It needs the network, so the front end asks only after a fetch or on request.
     pub fn remote_tags(&self, args: RemoteArgs) -> Result<Vec<String>> {
-        self.with_repo(|r| r.remote_tags(&args.remote).map_err(err))
+        self.with_repo(|r| r.remote_tags(&args.remote, args.quiet).map_err(err))
     }
 
     /// Opens a web page in the default browser. Only http and https URLs open, so a remote URL can

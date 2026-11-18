@@ -18,6 +18,8 @@ const longLines = Array.from({ length: 300 }, (_, i) => `line ${i + 1}`);
 writeFileSync(`${repo}/long.txt`, longLines.join("\n") + "\n");
 execFileSync("git", ["-C", repo, "add", "long.txt"]);
 execFileSync("git", ["-C", repo, "-c", "commit.gpgsign=false", "commit", "-q", "-m", "Long file"]);
+// The compare window lists the changelist of parser.rs only. git add puts NOTES.txt in it.
+execFileSync("git", ["-C", repo, "add", "NOTES.txt"]);
 const longAtHead = read("long.txt");
 writeFileSync(`${repo}/long.txt`, longAtHead.replace("line 5\n", "LINE 5\n").replace("line 280\n", "LINE 280\n"));
 
@@ -137,7 +139,7 @@ await within("the Changes diff rolls back the change", async () => read("main.rs
 const arithAtHead = read("arith.rs");
 writeFileSync(`${repo}/arith.rs`, arithAtHead + "// more\n");
 await page.click(".diff-option:has-text('Side by side') input");
-await page.click(".tb-button:has-text('Refresh')");
+await page.click(".tb-button[aria-label='Refresh']");
 await page.click(".cl-file:has(.path:text-is('arith.rs'))");
 await page.waitForSelector(".diff .editor.modified .view-line:has-text('// more')");
 await within("in one column, the button and the check box show", async () =>

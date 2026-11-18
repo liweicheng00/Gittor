@@ -71,6 +71,26 @@ fn focus_window(app: tauri::AppHandle, label: String) -> Result<(), String> {
     w.set_focus().map_err(|e| e.to_string())
 }
 
+/// Starts the app again, for example after an update. On macOS, `open` starts it through Launch Services,
+/// so the new window comes to the front. The command waits for `open`, while this app is still in front.
+#[tauri::command]
+fn restart_app(app: tauri::AppHandle) {
+    #[cfg(target_os = "macos")]
+    if let Some(bundle) = std::env::current_exe().ok().and_then(|exe| exe.ancestors().find(|p| p.extension().is_some_and(|e| e == "app")).map(|p| p.to_path_buf())) {
+        let args: Vec<_> = std::env::args_os().skip(1).collect();
+        let mut open = std::process::Command::new("/usr/bin/open");
+        open.arg("-n").arg(&bundle);
+        if !args.is_empty() {
+            open.arg("--args").args(args);
+        }
+        if open.status().is_ok_and(|s| s.success()) {
+            app.exit(0);
+            return;
+        }
+    }
+    app.restart();
+}
+
 /// WebKitGTK draws with OpenGL. Without a GPU render node, Mesa runs OpenGL on the CPU (llvmpipe), and the
 /// GL buffers live in normal memory: about 280 MB more on git/git, and more CPU time. The software path of
 /// WebKit is cheaper then. A user setting of the variable wins.
@@ -164,7 +184,6 @@ fn main() {
             }
         })
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_process::init())
         .manage(Service::with_askpass(&std::env::current_exe().expect("current executable")))
         .setup(|app| {
             let pubkey = app.config().plugins.0.get("updater").and_then(|u| u.get("pubkey")).and_then(|k| k.as_str()).unwrap_or("");
@@ -183,7 +202,7 @@ fn main() {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![initial_path, call, set_zoom, open_window, focus_window, updates_enabled])
+        .invoke_handler(tauri::generate_handler![initial_path, call, set_zoom, open_window, focus_window, restart_app, updates_enabled])
         .run(context)
         .expect("error while running Gittor");
 }

@@ -10,7 +10,8 @@ import { openInEditor } from "./editor-flow";
 import { keymap } from "./keyboard";
 import { toast } from "./notify";
 import { addWorktree, checkoutBranch, checkoutCommit, currentBranch, deleteBranch, deleteRefs, deleteMergedBranches, interactiveRebase, mergeIntoCurrent, newBranch, newTag, rebaseCurrentOnto, renameBranch, resetTo, rewriteSelected, runOp } from "./operations";
-import { compareBranches, fetchRemote, manageRemotes, openOnRemote, remoteRefItems, toggleFavorite } from "./remotes";
+import { compareBranches, fetchRemote, manageRemotes, openOnRemote, pushTag, remoteRefItems, setStale, toggleFavorite } from "./remotes";
+import { tagNotOn } from "./ref-label";
 import { allowRewrite } from "./protected";
 import { openRepoBrowser } from "./repo-browser";
 import { startReview } from "./review-flow";
@@ -51,6 +52,8 @@ async function rowMenu(r: Row, e: MouseEvent) {
     { label: "Checkout Revision…", disabled: multi, action: () => void checkoutCommit(r.oid) },
     { label: "New Branch…", disabled: multi, action: () => void newBranch(r.oid, short(r.oid)) },
     { label: "New Tag…", disabled: multi, action: () => void newTag(r.oid, short(r.oid)) },
+    // The tags of the commit that the remote does not have.
+    ...(multi ? [] : r.refs.filter((ref) => tagNotOn(ref, app.remoteTags)).map((ref) => ({ label: `Push Tag ${ref.name} to ${app.remoteTags?.remote}`, action: () => void pushTag(ref.name, app.remoteTags?.remote ?? "") }) as MenuItem)),
     { label: "New Worktree…", disabled: multi, action: () => void addWorktree(r.oid, short(r.oid)) },
     { label: `Merge into ${cur ?? "current"}`, disabled: multi || !cur || r.isHead, action: () => void mergeIntoCurrent(r.oid, short(r.oid)) },
     { label: `Rebase ${cur ?? "current"} onto Here…`, disabled: multi || !cur || r.isHead, action: () => void rebaseCurrentOnto(r.oid, short(r.oid)) },
@@ -193,6 +196,7 @@ sidebar.onContextMenu = (b, e) => {
           },
         ]),
     { label: sidebar.isFavorite(b) ? "Remove from Favorites" : "Add to Favorites", action: () => toggleFavorite(b) },
+    ...(b.kind === "local" ? [{ label: sidebar.isStale(b) ? "Remove from Stale" : "Mark as Stale", action: () => setStale([b], !sidebar.isStale(b)) }] : []),
     { label: "Copy Name", action: () => void copyText(b.name) },
     { label: "Copy Revision Number", action: () => void copyText(b.oid) },
   ]);
@@ -224,6 +228,14 @@ sidebar.onMultiMenu = (refs, e) => {
         for (const b of refs) if (sidebar.isFavorite(b) === allFavorite) toggleFavorite(b);
       },
     },
+    ...(locals.length
+      ? [
+          {
+            label: locals.every((b) => sidebar.isStale(b)) ? "Remove from Stale" : "Mark as Stale",
+            action: () => setStale(locals, !locals.every((b) => sidebar.isStale(b))),
+          },
+        ]
+      : []),
     { label: "Copy Names", action: () => void copyText(names.join("\n")) },
   );
   showMenu(e.clientX, e.clientY, items);

@@ -53,7 +53,8 @@ await page.keyboard.press("Enter");
 await within("the second repository shows", async () => (await firstSubject()).includes("Second in second"));
 check("two tabs", (await page.$$(".tab")).length === 2);
 check("the new tab is active", (await page.textContent(".tab.on")).includes("-second"));
-await page.click(".lp-tab:has-text('Changes')");
+check("with tabs, the toolbar does not name the repository again", !(await page.isVisible(".tb-repo")));
+await page.click(".lp-tab[aria-label^='Changes']");
 await within("the local change of the second repository", async () => (await page.$(".cl-file:has-text('s.txt')")) !== null);
 await shot("tab1-second-repo");
 
@@ -67,11 +68,11 @@ await within("the local changes of the first repository", async () => (await pag
 await page.click(".log-row >> nth=0");
 await page.keyboard.press("Control+PageDown");
 await within("Ctrl+PageDown shows the second repository", async () => (await firstSubject()).includes("Second in second"));
-// Mod+` switches the project, and Mod+Shift+` goes back.
-await page.keyboard.press("Control+Backquote");
-await within("Mod+` shows the first repository", async () => !(await page.textContent(".tab.on")).includes("-second"));
-await page.keyboard.press("Control+Shift+Backquote");
-await within("Mod+Shift+` shows the second repository again", async () => (await page.textContent(".tab.on")).includes("-second"));
+// Alt+` switches the project, and Alt+Shift+` goes back.
+await page.keyboard.press("Alt+Backquote");
+await within("Alt+` shows the first repository", async () => !(await page.textContent(".tab.on")).includes("-second"));
+await page.keyboard.press("Alt+Shift+Backquote");
+await within("Alt+Shift+` shows the second repository again", async () => (await page.textContent(".tab.on")).includes("-second"));
 // Alt+<n> shows the project tab at place n; Alt+9 shows the last one.
 await page.keyboard.press("Alt+1");
 await within("Alt+1 shows the first repository", async () => !(await page.textContent(".tab.on")).includes("-second"));
@@ -84,6 +85,25 @@ await within("Alt+9 shows the last repository", async () => (await page.textCont
 await page.keyboard.press("Alt+3");
 await page.waitForTimeout(500);
 check("Alt+3 without a third tab does nothing", (await page.textContent(".tab.on")).includes("-second"));
+
+// While Alt is down, each tab shows its number; the numbers go when Alt goes up.
+const numbers = () => page.$$eval(".tab .tab-num", (els) => els.filter((e) => getComputedStyle(e).display !== "none").map((e) => e.dataset.num));
+check("no numbers without Alt", (await numbers()).length === 0);
+await page.keyboard.down("Alt");
+await within("Alt shows the number of each tab", async () => JSON.stringify(await numbers()) === JSON.stringify(["1", "2"]));
+await shot("tab2-numbers");
+await page.keyboard.press("1");
+await within("Alt+1 with the numbers shows the first repository", async () => !(await page.textContent(".tab.on")).includes("-second"));
+check("the numbers stay while Alt is down", (await numbers()).length === 2);
+await page.keyboard.up("Alt");
+await within("the numbers go when Alt goes up", async () => (await numbers()).length === 0);
+// Alt with another key, for example Alt+Down, hides the numbers.
+await page.keyboard.down("Alt");
+await page.keyboard.press("ArrowDown");
+await within("Alt with another key hides the numbers", async () => (await numbers()).length === 0);
+await page.keyboard.up("Alt");
+await page.keyboard.press("Alt+2");
+await within("Alt+2 shows the second repository again", async () => (await page.textContent(".tab.on")).includes("-second"));
 
 // A reload opens the same tabs, with the second one active.
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/`);

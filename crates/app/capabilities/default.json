@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Permissions for the main window and the windows of one repository",
   "windows": ["main", "repo-*"],
-  "permissions": ["core:default", "core:window:allow-start-dragging", "core:window:allow-internal-toggle-maximize", "dialog:allow-open", "process:allow-restart", "updater:default"]
+  "permissions": ["core:default", "core:window:allow-start-dragging", "core:window:allow-internal-toggle-maximize", "dialog:allow-open", "updater:default"]
 }

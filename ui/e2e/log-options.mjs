@@ -90,20 +90,12 @@ await page.click(pickerRow("All branches"));
 await within("All branches shows all commits again", async () => (await branchLabel()) === "Branch: All" && (await count()) === all);
 await page.keyboard.press("Escape");
 
-// The highlighters.
-await viewOption("My Commits");
-await within("My Commits marks the commits of grace@example.com", async () => {
-  const mine = await page.$$eval(".log-row.hl-mine .subject-text", (els) => els.map((e) => e.textContent));
-  return mine.length > 0 && mine.every((s) => /parser|CLI|commas/i.test(s));
-});
-await viewOption("Merge Commits");
-await within("Merge Commits marks the merges", async () => (await page.$$(".log-row.hl-merge")).length === Number(merges));
-await viewOption("Current Branch");
-await within("Current Branch dims the commits that HEAD does not reach", async () => {
-  const other = await page.$$eval(".log-row.hl-other .subject-text", (els) => els.map((e) => e.textContent));
-  return other.includes("Add a CLI entry point") && !other.includes("Initial commit");
-});
-await shot("lo1-highlight");
+// View has no highlighters: the owner removed them.
+await page.click(".tb-button:has-text('View')");
+await page.waitForTimeout(400);
+const viewMenu = (await page.textContent(".menu")) ?? "";
+check("View has no Highlight group", !viewMenu.includes("Highlight") && !viewMenu.includes("My Commits"));
+await page.keyboard.press("Escape");
 
 // Commit Timestamp: the Date column shows the commit time.
 const authorDate = await page.textContent(".log-row:has-text('Add a local README note') .date");

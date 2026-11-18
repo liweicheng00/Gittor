@@ -3,10 +3,13 @@
 
 import { visit } from "./nav";
 import { onRepoChange, registerWindow } from "./windows";
+import { type KeyedItem, reconcile } from "./keyed";
 import type { Change, FileContent, OutgoingCommit, RevSpec } from "./api";
 import { statusName } from "./changes-panel";
 import { dragResize, formatDate, h, icon, rowSplitter, twisty } from "./dom";
 import { fileIcon } from "./file-icon";
+import type { NoteHandlers, NoteItem } from "./note-layer";
+import { NotesPanel } from "./notes-panel";
 import { buildTree, treeOrder, walkTree } from "./file-tree";
 import { showMenu } from "./context-menu";
 import { save, settings } from "./settings";
@@ -30,6 +33,12 @@ export interface CompareCallbacks {
   writeFile: (path: string, text: string, expected: string) => Promise<boolean>;
   openInEditor: (path: string) => void;
   copyText: (text: string) => void;
+  /** One changelist of the local changes. With the working tree on the right, the window lists only the
+   * files of this changelist. `paths` reads them again at each load. */
+  scope?: { name: string; paths: () => Promise<Set<string>> };
+  /** The notes on the working tree. The window shows them, and the user can add notes, while the right
+   * side is the working tree. */
+  notes?: { list: (path: string) => Promise<NoteItem[]>; handlers: (path: string, reload: () => Promise<void>) => NoteHandlers };
 }
 
 /** Opens the window. `path` is the file to show first; without it, the first file. */
@@ -42,6 +51,12 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
   let revs: { l: RevSpec; r: RevSpec } | null = null;
   let selected = -1;
   let request = 0;
+  /** The files of the comparison, without the files of other changelists. */
+  const inScope = async (list: Change[]) => {
+    if (!cb.scope || right !== WORKTREE) return list;
+    const paths = await cb.scope.paths();
+    return list.filter((c) => paths.has(c.path));
+  };
 
   const option = (name: string, value = name) => h("option", { value }, name);
   const leftSel = h("select", { class: "dialog-input compare-select", title: "The left side" }, ...cb.refs.map((r) => option(r)));
@@ -62,7 +77,11 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
   const side = h("div", { class: "compare-side" });
   const sideGrip = rowSplitter(side, commitsEl, () => settings.compareCommitsHeight, (px) => (settings.compareCommitsHeight = px), save);
   side.append(commitsEl, sideGrip, h("div", { class: "compare-files-title" }, "Changed files ", summary, h("span", { class: "spacer" }), treeBtn), filesEl);
-  const body = h("div", { class: "history-body" }, side, grip, d.el);
+  // The notes of a local change: the list, Copy All and a note on the whole file, under the diff.
+  const notesPanel = new NotesPanel((t) => cb.copyText(t));
+  notesPanel.el.hidden = true;
+  const rightPane = h("div", { class: "review-right" }, d.el, notesPanel.el);
+  const body = h("div", { class: "history-body" }, side, grip, rightPane);
   const win = h(
     "div",
     { class: "history-window", role: "dialog", "aria-label": "Compare Branches" },
@@ -134,30 +153,49 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
     );
   };
 
-  const select = async (i: number) => {
+  /** Shows a file. `quiet` is a reload after a change outside the app: the list does not scroll, and a
+   * diff that is the same stays as it is. */
+  const select = async (i: number, quiet = false) => {
     if (i < 0 || i >= files.length || !revs) return;
     selected = i;
     const c = files[i];
     const [l, r, p] = [left, right, c.path];
-    visit({
-      key: `compare\0${l}\0${r}\0${p}`,
-      label: `Compare ${l} and ${r === WORKTREE ? "the working tree" : r}: ${p}`,
-      open: () => openCompare(l, r, cb, p),
-      window: "compare",
-    });
+    if (!quiet) {
+      visit({
+        key: `compare\0${l}\0${r}\0${p}`,
+        label: `Compare ${l} and ${r === WORKTREE ? "the working tree" : r}: ${p}`,
+        open: () => openCompare(l, r, cb, p),
+        window: "compare",
+      });
+    }
     // A file in a closed folder opens its folders.
     if (settings.compareAsTree && [...collapsed].some((dir) => c.path.startsWith(dir))) {
       for (const dir of [...collapsed]) if (c.path.startsWith(dir)) collapsed.delete(dir);
       renderFiles();
     }
     for (const el of filesEl.querySelectorAll<HTMLElement>(".compare-file")) el.classList.toggle("selected", Number(el.dataset.index) === i);
-    filesEl.querySelector(`.compare-file[data-index="${i}"]`)?.scrollIntoView({ block: "nearest" });
+    if (!quiet) filesEl.querySelector(`.compare-file[data-index="${i}"]`)?.scrollIntoView({ block: "nearest" });
     const req = ++request;
     try {
       const pair = await cb.pair(revs.l, revs.r, c.path, c.old_path);
       if (req !== request) return;
+      if (quiet && d.currentPath === c.path && d.shows(c, pair.left, pair.right)) return;
       d.setSource(c.status === "D" ? { path: c.old_path ?? c.path, rev: revs.l } : { path: c.path, rev: revs.r });
       d.show(c, pair.left, pair.right);
+      const notes = cb.notes;
+      const withNotes = !!notes && r === WORKTREE && c.status !== "D" && !pair.right.missing && !pair.right.binary;
+      notesPanel.el.hidden = !withNotes;
+      if (notes && withNotes) {
+        // A reload after an edit shows the notes only while the same file shows.
+        const reload = async () => {
+          const list = await notes.list(p);
+          if (right !== WORKTREE || files[selected]?.path !== p || d.currentPath !== p) return;
+          const handlers = notes.handlers(p, reload);
+          d.setNotes(list, handlers);
+          notesPanel.set(p, list, { ...handlers, reveal: (line) => d.revealLine(line) });
+        };
+        await reload();
+      }
     } catch (err) {
       if (req === request) d.message(String(err));
     }
@@ -205,17 +243,27 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
     return row;
   };
 
+  // The list draws in place: a row that did not change keeps its element.
   const renderFiles = () => {
-    summary.textContent = `${files.length} file${files.length === 1 ? "" : "s"}`;
-    treeBtn.replaceChildren(icon(settings.compareAsTree ? "list" : "tree"));
-    treeBtn.title = settings.compareAsTree ? "Show as a flat list" : "Group by folder";
-    if (!settings.compareAsTree) {
-      filesEl.replaceChildren(...files.map((c, i) => fileRow(c, i, 0, true)));
-      return;
+    const text = `${files.length} file${files.length === 1 ? "" : "s"}${cb.scope && right === WORKTREE ? ` in ${cb.scope.name}` : ""}`;
+    if (summary.textContent !== text) summary.textContent = text;
+    if (treeBtn.dataset.tree !== String(settings.compareAsTree)) {
+      treeBtn.dataset.tree = String(settings.compareAsTree);
+      treeBtn.replaceChildren(icon(settings.compareAsTree ? "list" : "tree"));
+      treeBtn.title = settings.compareAsTree ? "Show as a flat list" : "Group by folder";
     }
-    const out: HTMLElement[] = [];
+    const out: KeyedItem<HTMLElement>[] = [];
+    const file = (c: Change, i: number, depth: number, withDir: boolean) => out.push({ key: `f:${c.path}`, sig: JSON.stringify([c, i, depth, withDir]), build: () => fileRow(c, i, depth, withDir) });
+    const paint = () => {
+      reconcile(filesEl, out);
+      for (const el of filesEl.querySelectorAll<HTMLElement>(".compare-file")) el.classList.toggle("selected", Number(el.dataset.index) === selected);
+    };
+    if (!settings.compareAsTree) {
+      files.forEach((c, i) => file(c, i, 0, true));
+      return paint();
+    }
     walkTree(buildTree(files.map((c, index) => ({ path: c.path, index }))), collapsed, {
-      dir: (label, full, depth, open, count) => {
+      dir: (label, full, depth, open, count) => out.push({ key: `d:${full}`, sig: JSON.stringify([label, depth, open, count]), build: () => {
         const row = h(
           "div",
           { class: "history-row compare-dir", style: { paddingLeft: `${8 + depth * 14}px` }, title: full },
@@ -229,22 +277,22 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
           else collapsed.delete(full);
           renderFiles();
         });
-        out.push(row);
-      },
-      file: (index, depth) => out.push(fileRow(files[index], index, depth, false)),
+        return row;
+      } }),
+      file: (index, depth) => file(files[index], index, depth, false),
     });
-    filesEl.replaceChildren(...out);
+    paint();
   };
 
   /**
    * After a revert only the files load again, not the commits. The diff stays on the same file, with its
    * scroll position, while the file still differs; else the next file at that place shows.
    */
-  const refreshFiles = async (p: string) => {
+  const refreshFiles = async (p: string, quiet = false) => {
     if (!revs) return;
     const at = selected;
     try {
-      files = await cb.changes(revs.l, revs.r);
+      files = await inScope(await cb.changes(revs.l, revs.r));
       files.sort(order);
     } catch (e) {
       return d.message(String(e));
@@ -252,17 +300,24 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
     const same = files.findIndex((f) => f.path === p);
     selected = same >= 0 ? same : Math.min(at, files.length - 1);
     renderFiles();
-    if (selected >= 0) await select(selected);
+    if (selected >= 0) await select(selected, quiet);
     else d.message(sameText);
   };
 
-  const load = async () => {
+  /** The commits that the window shows, to skip a draw of the same commits. */
+  let commitsKey = "";
+  /** Loads the commits and the files. `quiet` is a reload after a change outside the app: what shows
+   * stays until the new data is there, and only what changed draws again. */
+  const load = async (quiet = false) => {
     leftSel.value = left;
     rightSel.value = right;
     const req = ++request;
-    commitsEl.replaceChildren(h("div", { class: "muted-inline" }, "Loading…"));
-    filesEl.replaceChildren();
-    d.message("Loading…");
+    if (!quiet) {
+      commitsKey = "";
+      commitsEl.replaceChildren(h("div", { class: "muted-inline" }, "Loading…"));
+      filesEl.replaceChildren();
+      d.message("Loading…");
+    }
     const worktree = right === WORKTREE;
     const rightName = worktree ? "the working tree" : right;
     try {
@@ -270,13 +325,15 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
       if (req !== request) return;
       // The commits of the working tree are the commits of HEAD.
       const rightCommits = worktree ? `${cb.head} (HEAD of the working tree)` : right;
-      commitsEl.replaceChildren(
+      const key = JSON.stringify([cmp, left, rightCommits]);
+      if (key !== commitsKey) commitsEl.replaceChildren(
         ...(worktree && cmp.left === cmp.right
           ? [h("div", { class: "muted-inline compare-none" }, `The working tree is on ${cb.head}, at the same commit as ${left}. The files below are its local changes.`)]
           : [commitList(`In ${left}, not in ${rightCommits}`, cmp.onlyLeft), commitList(`In ${rightCommits}, not in ${left}`, cmp.onlyRight)]),
       );
       const l: RevSpec = { commit: fromBase && cmp.base ? cmp.base : cmp.left };
       const r: RevSpec = worktree ? "worktree" : { commit: cmp.right };
+      commitsKey = key;
       revs = { l, r };
       const leftName = fromBase ? `the common ancestor ${cmp.base?.slice(0, 8) ?? ""}` : left;
       const leftRev = fromBase && cmp.base ? cmp.base : cmp.left;
@@ -304,16 +361,16 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
           { label: "Copy Path", action: () => cb.copyText(c.path) },
         ]);
       };
-      files = await cb.changes(l, r);
+      files = await inScope(await cb.changes(l, r));
       files.sort(order);
       if (req !== request) return;
       d.setSides(fromBase ? `common ancestor ${cmp.base?.slice(0, 8) ?? "(none)"}` : left, rightName);
       sameText = fromBase ? `${rightName} has no file changes since the common ancestor.` : "The two sides have the same files.";
-      selected = -1;
-      renderFiles();
       const first = path ? files.findIndex((f) => f.path === path) : -1;
+      selected = quiet ? Math.max(0, first) : -1;
+      renderFiles();
       path = undefined;
-      if (files.length) void select(Math.max(0, first));
+      if (files.length) void select(Math.max(0, first), quiet);
       else d.message(sameText);
     } catch (e) {
       if (req === request) {
@@ -328,9 +385,9 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
   const stopWatching = onRepoChange((change) => {
     const keep = files[selected]?.path;
     if (change === "files" && right !== WORKTREE && left !== WORKTREE) return;
-    if (change === "files" && keep) return void refreshFiles(keep);
+    if (change === "files" && keep) return void refreshFiles(keep, true);
     path = keep;
-    void load();
+    void load(true);
   });
 
   leftSel.addEventListener("change", () => {

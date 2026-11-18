@@ -31,7 +31,7 @@ const warnings = () => page.$$eval(".commit-warnings:not([hidden]) > div", (e) =
 
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
-await page.click(".lp-tab:has-text('Changes')");
+await page.click(".lp-tab[aria-label^='Changes']");
 await page.waitForSelector(".cl-file:has-text('main.rs')");
 await within("the empty message gets the template", async () => (await page.inputValue(".commit-message")) === template);
 

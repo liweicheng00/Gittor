@@ -210,3 +210,50 @@ fn checkout_of_a_remote_branch_fetches_it_first() {
     assert!(r.ok && r.message.contains("last fetched state"), "{}", r.message);
     assert_eq!(git(&mine, &["rev-parse", "HEAD"]), newest);
 }
+
+#[test]
+fn update_fetches_the_default_branch_too() {
+    let (_origin, seed, mine) = setup("default");
+    let repo = Repo::open(&mine).unwrap();
+    assert_eq!(repo.remote_default_branch("origin").as_deref(), Some("main"));
+    // A feature branch that tracks origin/feature.
+    git(&seed, &["checkout", "-q", "-b", "feature"]);
+    commit(&seed, "f.txt", "f\n", "Feature");
+    git(&seed, &["push", "-q", "-u", "origin", "feature"]);
+    git(&mine, &["fetch", "-q"]);
+    git(&mine, &["checkout", "-q", "-b", "feature", "--track", "origin/feature"]);
+    // Both branches get new commits on the remote.
+    commit(&seed, "g.txt", "g\n", "Feature 2");
+    git(&seed, &["push", "-q"]);
+    git(&seed, &["checkout", "-q", "main"]);
+    commit(&seed, "m.txt", "m\n", "Main 2");
+    git(&seed, &["push", "-q", "origin", "main"]);
+    // Update of feature brings feature, and origin/main moves too.
+    let r = repo.update(UpdateMode::Merge).unwrap();
+    assert!(r.ok, "{}", r.message);
+    assert_eq!(git(&mine, &["log", "-1", "--format=%s", "HEAD"]), "Feature 2");
+    assert_eq!(git(&mine, &["log", "-1", "--format=%s", "origin/main"]), "Main 2");
+    // The local main does not move: only the remote branch is fetched.
+    assert_eq!(git(&mine, &["log", "-1", "--format=%s", "main"]), "Initial");
+}
+
+#[test]
+fn a_branch_whose_tracked_branch_is_gone() {
+    let (_origin, seed, mine) = setup("gone");
+    let repo = Repo::open(&mine).unwrap();
+    git(&seed, &["checkout", "-q", "-b", "old"]);
+    commit(&seed, "o.txt", "o\n", "Old");
+    git(&seed, &["push", "-q", "-u", "origin", "old"]);
+    git(&mine, &["fetch", "-q"]);
+    git(&mine, &["branch", "-q", "--track", "old", "origin/old"]);
+    let refs = repo.list_refs().unwrap();
+    let old = refs.iter().find(|b| b.full == "refs/heads/old").unwrap();
+    assert!(!old.gone);
+    assert!(old.time > 1_600_000_000, "the time of the last commit: {}", old.time);
+    // The remote branch goes, for example after a merge of its pull request.
+    git(&seed, &["push", "-q", "origin", "--delete", "old"]);
+    git(&mine, &["fetch", "-q", "--prune"]);
+    let refs = repo.list_refs().unwrap();
+    assert!(refs.iter().find(|b| b.full == "refs/heads/old").unwrap().gone);
+    assert!(!refs.iter().find(|b| b.full == "refs/heads/main").unwrap().gone);
+}

@@ -154,10 +154,11 @@ export function openSettingsDialog(ctx: SettingsContext): Promise<Settings | nul
     };
 
     const general = () => [
-      row("Theme", select<Theme>([["system", "Same as the system"], ["light", "Light"], ["dark", "Dark"]], () => draft.theme, (v) => (draft.theme = v))),
+      row("Theme", select<Theme>([["system", "Same as the system"], ["light", "Light"], ["dark", "Dark"], ["plasma", "Plasma"], ["ember", "Ember"]], () => draft.theme, (v) => (draft.theme = v))),
       row("Update", select<"merge" | "rebase">([["merge", "Merge the tracked branch"], ["rebase", "Rebase onto the tracked branch"]], () => draft.updateMode, (v) => (draft.updateMode = v)), "The default choice when the branch has commits of its own and cannot fast-forward."),
       row("Refresh", check("Refresh when files or refs change outside the app", () => draft.autoRefresh, (v) => (draft.autoRefresh = v))),
       row("Auto fetch", h("span", { class: "settings-inline" }, "Every ", number(() => draft.autoFetchMinutes, (v) => (draft.autoFetchMinutes = v), 0, 1440), " minutes"), "0 turns it off. Fetch asks for a password when a remote needs one."),
+      row("Stale branches", h("span", { class: "settings-inline" }, "After ", number(() => draft.staleDays, (v) => (draft.staleDays = v), 0, 3650), " days without a commit"), "A local branch then shows in the Stale group of the Branches tab. The days count back from the newest commit of the repository. 0 turns it off."),
       row("Shortcut hints", check("After a click on a button that has a shortcut, show the shortcut next to the mouse", () => draft.keyHints, (v) => (draft.keyHints = v))),
       row("Updates", updatesControl()),
     ];

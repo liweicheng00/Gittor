@@ -3,9 +3,10 @@
 import { api } from "./api";
 import type { DiffView } from "./diff-view";
 import { sharedDiff } from "./history-view";
+import * as monaco from "./monaco";
 import { toast } from "./notify";
 import { settings } from "./settings";
-import { commitPanel, diff, ideBtn, statusActivity } from "./shell";
+import { commitPanel, diff, filesPanel, ideBtn, statusActivity } from "./shell";
 
 export async function openInEditor(path: string, line = 1, column = 1) {
   try {
@@ -41,18 +42,21 @@ export function openInEditorHere(target: HTMLElement) {
 }
 
 /** The file that Open in IDE shows, at the cursor: the file of a window over the main view (for example a
- * review), else the file of the diff panel when it shows. */
-function ideFile(): { path: string; line: number; column: number } | undefined {
+ * review), the selected file of the Files tab or the Changes tab when the key comes from there, else the
+ * file of the diff panel when it shows. */
+function ideFile(target?: HTMLElement): { path: string; line: number; column: number } | undefined {
   const at = (view: DiffView) => (view.currentPath ? { path: view.currentPath, ...view.editorPosition() } : undefined);
   const windows = document.querySelectorAll(".merge-overlay");
   if (windows.length) return windows[windows.length - 1].contains(sharedDiff().el) ? at(sharedDiff()) : undefined;
+  const listed = target?.closest(".files-list") ? filesPanel.selectedPath : target?.closest(".commit-tree") ? commitPanel.selectedFiles()[0]?.change.path : "";
+  if (listed) return diff.currentPath === listed ? at(diff) : { path: listed, line: 1, column: 1 };
   return settings.showDiff ? at(diff) : undefined;
 }
 
 /** Opens the working tree of the repository in the editor, as a project, and shows the file in view at
  * the cursor. A file that is not in the working tree opens the project only. */
-export async function openProjectInEditor() {
-  const file = ideFile();
+export async function openProjectInEditor(target?: HTMLElement) {
+  const file = ideFile(target);
   try {
     await api.openProjectInEditor(file);
     statusActivity.textContent = file ? `Opened the repository in the editor at ${file.path.split("/").pop()}:${file.line}` : "Opened the repository in the editor";
@@ -60,6 +64,9 @@ export async function openProjectInEditor() {
     toast(String(e).replace(/^Error: /, ""), "error");
   }
 }
+
+// On macOS, Monaco takes Cmd+E for Find With Selection. Mod+E opens the editor in Gittor.
+monaco.editor.addKeybindingRule({ keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyE, command: "-actions.findWithSelection" });
 
 ideBtn.dataset.keyAction = "openProjectInEditor";
 ideBtn.addEventListener("click", () => void openProjectInEditor());

@@ -171,6 +171,6 @@ export class FilterBar {
   }
 
   setInfo(text: string) {
-    this.info.textContent = text;
+    if (this.info.textContent !== text) this.info.textContent = text;
   }
 }

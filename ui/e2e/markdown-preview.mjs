@@ -79,7 +79,7 @@ await page.waitForSelector(".log-row", { timeout: 30000 });
 await page.click(".tb-button[title='Theme']");
 await page.waitForTimeout(400);
 await page.click(".menu-item:has-text('Dark')");
-await page.click(".lp-tab:text-is('Changes')");
+await page.click(".lp-tab[aria-label^='Changes']");
 await page.click(".cl-file:has(.path:text-is('guide.md'))");
 // The repository selects its head commit when it has loaded. That must not take the diff panel from
 // the local change that the user opened in the meantime.

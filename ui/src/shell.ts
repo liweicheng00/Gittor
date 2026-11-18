@@ -7,13 +7,17 @@ import { CommitPanel } from "./commit-panel";
 import { menuBelow } from "./context-menu";
 import { DetailsPanel } from "./details-panel";
 import { DiffView, setMonacoTheme } from "./diff-view";
+import { GLOW_MONACO } from "./glow-monaco";
 import { dragResize, h, icon } from "./dom";
+import type { IconName } from "./icons";
 import { FilterBar } from "./filter-bar";
 import { LogView } from "./log-view";
 import { toast } from "./notify";
 import { OpBanner } from "./op-banner";
 import { save, settings } from "./settings";
 import { Sidebar } from "./sidebar";
+import { FilesPanel } from "./files-panel";
+import { WorktreePanel } from "./worktree-panel";
 import { ReviewPanel } from "./review-panel";
 import { StashPanel } from "./stash-panel";
 import { SubmodulePanel } from "./submodule-panel";
@@ -31,13 +35,16 @@ export const diff = new DiffView();
 export const commitPanel = new CommitPanel();
 export const stashPanel = new StashPanel();
 export const reviewPanel = new ReviewPanel();
+export const filesPanel = new FilesPanel();
+export const worktreePanel = new WorktreePanel();
 export const submodulePanel = new SubmodulePanel();
 
 export const banner = new OpBanner();
 export const authors = new Set<string>();
 
-export const openBtn = h("button", { class: "tb-button", title: `Open a repository (${mod}O)` }, icon("open"), "Open", icon("chevron-down", "icon-caret"));
-export const refreshBtn = h("button", { class: "tb-button", title: `Reload commits and branches (${mod}R)`, disabled: true }, icon("refresh"), "Refresh");
+// Open and Refresh show their icon only; the name is in the tooltip, and out of view for screen readers.
+export const openBtn = h("button", { class: "tb-button tb-icon-only", title: "Open a repository", "aria-label": "Open" }, icon("open"), h("span", { class: "sr-label" }, "Open"), icon("chevron-down", "icon-caret"));
+export const refreshBtn = h("button", { class: "tb-button tb-icon-only", title: "Reload commits and branches", "aria-label": "Refresh", disabled: true }, icon("refresh"), h("span", { class: "sr-label" }, "Refresh"));
 /** The menu part of the Update button: Fetch of all remotes or of one remote. */
 export const fetchBtn = h("button", { class: "tb-button tb-split-menu", title: "Fetch all remotes, or one remote", "aria-label": "Fetch", disabled: true }, icon("chevron-down", "icon-caret"));
 export const updateBtn = h("button", { class: "tb-button", title: `Update the current branch: fetch, then fast-forward. A branch with commits of its own asks for Merge or Rebase (${mod}T)`, disabled: true }, icon("update"), "Update");
@@ -46,12 +53,13 @@ export const remoteBtn = h("button", { class: "tb-button tb-icon tb-remote", tit
 export const localHistoryBtn = h("button", { class: "tb-button", title: "Local History: the recent versions of changed files", disabled: true }, icon("history"), "Local History");
 export const ideBtn = h("button", { class: "tb-button tb-icon tb-ide", title: "Open the repository in the editor of Settings › Editor", "aria-label": "IDE", disabled: true }, icon("ide"));
 export const terminalBtn = h("button", { class: "tb-button tb-icon tb-terminal", title: "Open a terminal in the folder of the repository", "aria-label": "Terminal", disabled: true }, icon("terminal"));
-const repoLabel = h("span", { class: "tb-repo" });
+/** The name of the repository. It hides while the tab bar shows, because the tab names it. */
+export const repoLabel = h("span", { class: "tb-repo" });
 export const branchBtn = h("button", { class: "tb-button tb-branch-button", title: "Switch branch (recent branches first)", hidden: true }, icon("branch"), icon("chevron-down", "icon-caret"));
 export const viewBtn = h("button", { class: "tb-button", title: "View options" }, "View", icon("chevron-down", "icon-caret"));
 const themeBtn = h("button", { class: "tb-button tb-icon", title: "Theme" }, icon("theme"));
 export const settingsBtn = h("button", { class: "tb-button tb-icon", title: "Settings" }, icon("settings"));
-const toolbar = h("header", { class: "toolbar" }, openBtn, refreshBtn, h("span", { class: "tb-split" }, updateBtn, fetchBtn), pushBtn, localHistoryBtn, repoLabel, branchBtn, h("span", { class: "spacer" }), remoteBtn, ideBtn, terminalBtn, viewBtn, themeBtn, settingsBtn);
+export const toolbar = h("header", { class: "toolbar" }, openBtn, refreshBtn, h("span", { class: "tb-split" }, updateBtn, fetchBtn), pushBtn, localHistoryBtn, repoLabel, branchBtn, h("span", { class: "spacer" }), remoteBtn, ideBtn, terminalBtn, viewBtn, themeBtn, settingsBtn);
 
 export const tabBar = h("nav", { class: "tabbar", hidden: true });
 /** The tabs, in a part of the tab bar that scrolls without a scroll bar. The + button stays outside it. */
@@ -71,22 +79,36 @@ const statusLeft = h("span", { class: "sb-left" });
 const statusMid = h("span", { class: "sb-mid" });
 /** The running or the last operation. It is at the left end, where the eye looks first. */
 export const statusActivity = h("span", { class: "sb-activity" });
-const statusBar = h("footer", { class: "statusbar" }, statusActivity, statusLeft, statusMid);
+export const statusBar = h("footer", { class: "statusbar" }, statusActivity, statusLeft, statusMid);
 
 const sideGrip = h("div", { class: "vgrip" });
 const rightGrip = h("div", { class: "vgrip" });
 const diffGrip = h("div", { class: "hgrip-row" });
 const detailsGrip = h("div", { class: "hgrip-row" });
-const center = h("section", { class: "center" }, banner.el, filterBar.el, log.el);
+/** The tabs of the center panel: Log and the files that the Files tab opened. They hide without a file. */
+export const centerTabs = h("div", { class: "center-tabs", role: "tablist", hidden: true });
+/** The place of the open file, in place of the log. */
+export const fileHost = h("div", { class: "file-host", hidden: true });
+/** Called when another repository shows: its files are not open. */
+export const centerHooks = { reset: () => {} };
+const center = h("section", { class: "center" }, centerTabs, banner.el, filterBar.el, log.el, fileHost);
 const right = h("section", { class: "right" }, changes.el, detailsGrip, details.el);
-export const tabBranches = h("button", { class: "lp-tab", title: `Branches (${mod}1)` }, "Branches");
-export const tabCommit = h("button", { class: "lp-tab", title: `Local changes and commit (${mod}2)` }, "Changes");
-export const tabStash = h("button", { class: "lp-tab", title: `Stashes (${mod}3)` }, "Stash");
-export const tabReviews = h("button", { class: "lp-tab", title: `Reviews (${mod}4)` }, "Reviews");
+/** A left tab: an icon, and a tooltip with its name. The name also stays in the tab for screen readers, out
+ * of view. The tooltip gets the key of the tab on hover (key-hint-flow.ts). */
+const lpTab = (name: IconName, label: string, title: string) =>
+  h("button", { class: "lp-tab", title, "aria-label": label }, icon(name, "lp-icon"), h("span", { class: "sr-label" }, label));
+export const tabBranches = lpTab("branch", "Branches", "Branches");
+export const tabCommit = lpTab("changes", "Changes", "Changes: the local changes and the commit");
+export const tabStash = lpTab("stash", "Stash", "Stash: the stashes");
+export const tabReviews = lpTab("review", "Reviews", "Reviews: the reviews of branches");
+export const tabFiles = lpTab("files", "Files", "Files: the files of the working tree");
+export const tabWorktrees = lpTab("worktree", "Worktrees", "Worktrees: the worktrees of the repository");
 // The submodules show under the commit message, so that their changes show together with the files.
 commitPanel.el.append(submodulePanel.el);
-const leftPane = h("aside", { class: "leftpane" }, h("div", { class: "lp-tabs" }, tabBranches, tabCommit, tabStash, tabReviews), sidebar.el, commitPanel.el, stashPanel.el, reviewPanel.el);
-export function showLeftTab(tab: "branches" | "commit" | "stash" | "reviews") {
+const leftPane = h("aside", { class: "leftpane" }, h("div", { class: "lp-tabs" }, tabFiles, tabBranches, tabCommit, tabWorktrees, tabStash, tabReviews), sidebar.el, commitPanel.el, stashPanel.el, reviewPanel.el, filesPanel.el, worktreePanel.el);
+/** Called when the Files tab shows, so that it can load its files. */
+export const leftTabHooks = { files: () => {} };
+export function showLeftTab(tab: "branches" | "commit" | "stash" | "reviews" | "files" | "worktrees") {
   settings.leftTab = tab;
   save();
   if (!settings.showSidebar) {
@@ -101,11 +123,18 @@ export function showLeftTab(tab: "branches" | "commit" | "stash" | "reviews") {
   stashPanel.el.hidden = tab !== "stash";
   tabReviews.classList.toggle("on", tab === "reviews");
   reviewPanel.el.hidden = tab !== "reviews";
+  tabFiles.classList.toggle("on", tab === "files");
+  filesPanel.el.hidden = tab !== "files";
+  tabWorktrees.classList.toggle("on", tab === "worktrees");
+  worktreePanel.el.hidden = tab !== "worktrees";
+  if (tab === "files") leftTabHooks.files();
 }
 tabBranches.addEventListener("click", () => showLeftTab("branches"));
 tabCommit.addEventListener("click", () => showLeftTab("commit"));
 tabStash.addEventListener("click", () => showLeftTab("stash"));
 tabReviews.addEventListener("click", () => showLeftTab("reviews"));
+tabFiles.addEventListener("click", () => showLeftTab("files"));
+tabWorktrees.addEventListener("click", () => showLeftTab("worktrees"));
 const top = h("div", { class: "top" }, leftPane, sideGrip, center, rightGrip, right);
 export const workspace = h("main", { class: "workspace" }, top, diffGrip, diff.el);
 export const welcome = h("main", { class: "welcome" });
@@ -143,16 +172,28 @@ export function applyLayout() {
 }
 
 const darkQuery = matchMedia("(prefers-color-scheme: dark)");
+/** A glow theme (Plasma, Ember) is a skin on Dark: `data-theme="dark"`, `data-style="glow"` and
+ * `data-glow="<name>"`. The other themes have no `data-style` and no `data-glow`. */
 export function applyTheme() {
-  const dark = settings.theme === "dark" || (settings.theme === "system" && darkQuery.matches);
-  document.documentElement.dataset.theme = dark ? "dark" : "light";
-  setMonacoTheme(dark);
+  const t = settings.theme;
+  const glow = t === "plasma" || t === "ember" ? t : undefined;
+  const dark = glow !== undefined || t === "dark" || (t === "system" && darkQuery.matches);
+  const root = document.documentElement;
+  root.dataset.theme = dark ? "dark" : "light";
+  if (glow) {
+    root.dataset.style = "glow";
+    root.dataset.glow = glow;
+  } else {
+    delete root.dataset.style;
+    delete root.dataset.glow;
+  }
+  setMonacoTheme(glow ? GLOW_MONACO[glow] : dark ? "vs-dark" : "vs");
   log.render();
 }
 darkQuery.addEventListener("change", applyTheme);
 themeBtn.addEventListener("click", () =>
-  menuBelow(themeBtn, (["system", "light", "dark"] as const).map((t) => ({
-    label: { system: "Follow system", light: "Light", dark: "Dark" }[t],
+  menuBelow(themeBtn, (["system", "light", "dark", "plasma", "ember"] as const).map((t) => ({
+    label: { system: "Follow system", light: "Light", dark: "Dark", plasma: "Plasma", ember: "Ember" }[t],
     checked: settings.theme === t,
     action: () => {
       settings.theme = t;
@@ -184,7 +225,16 @@ export async function task<T>(label: string, fn: () => Promise<T>): Promise<T | 
   }
 }
 
-export function updateStatus() {
+/** Sets a text only when it changed: the same text again makes no new node. */
+function setText(el: HTMLElement, text: string) {
+  if (el.textContent !== text) el.textContent = text;
+}
+
+let shownStatus = "";
+
+/** Shows the repository, the branch and the counts. `background` is a reload after a change outside
+ * the app: it leaves the activity text. The parts that did not change keep their elements. */
+export function updateStatus(background = false) {
   if (!app.view) return;
   const branch = app.repoState?.rebasing
     ? `rebasing ${app.repoState.rebasing}`
@@ -192,17 +242,22 @@ export function updateStatus() {
   // The same short name as the tab: folders with the same name show the folders above them.
   const root = app.view.root;
   const tabs = settings.tabs.includes(root) ? settings.tabs : [...settings.tabs, root];
-  repoLabel.replaceChildren(h("b", { title: root }, pathLabels(tabs)[tabs.indexOf(root)] ?? root));
+  const label = pathLabels(tabs)[tabs.indexOf(root)] ?? root;
+  const key = JSON.stringify([root, label, branch]);
+  if (key !== shownStatus) {
+    shownStatus = key;
+    repoLabel.replaceChildren(h("b", { title: root }, label));
+    branchBtn.replaceChildren(icon("branch"), branch, icon("chevron-down", "icon-caret"));
+  }
   branchBtn.hidden = false;
-  branchBtn.replaceChildren(icon("branch"), branch, icon("chevron-down", "icon-caret"));
   const changed = app.repoState?.changedFiles ?? 0;
-  statusLeft.textContent = app.view.root + (changed ? `  ·  ${changed} changed file${changed === 1 ? "" : "s"}` : "");
-  statusMid.textContent = app.view.filtered
+  setText(statusLeft, app.view.root + (changed ? `  ·  ${changed} changed file${changed === 1 ? "" : "s"}` : ""));
+  const commits = app.view.filtered
     ? `${app.view.rowCount.toLocaleString()} of ${app.view.totalCommits.toLocaleString()} commits match the filter`
     : `${app.view.totalCommits.toLocaleString()} commits`;
-  if (app.view.collapsed) statusMid.textContent += ` · ${app.view.rowCount.toLocaleString()} rows shown, linear branches collapsed`;
+  setText(statusMid, commits + (app.view.collapsed ? ` · ${app.view.rowCount.toLocaleString()} rows shown, linear branches collapsed` : ""));
   filterBar.setInfo(app.view.filtered ? `${app.view.rowCount.toLocaleString()} of ${app.view.totalCommits.toLocaleString()}` : "");
-  if (!app.busy) statusActivity.textContent = `loaded in ${app.view.loadMs} ms`;
+  if (!app.busy && !background) statusActivity.textContent = `loaded in ${app.view.loadMs} ms`;
 }
 
 /** Shows or hides the diff panel. The panel comes back with the size that it had. */

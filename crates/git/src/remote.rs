@@ -256,11 +256,30 @@ impl Repo {
         self.update_with(mode, &UpdateOptions::default())
     }
 
+    /// The default branch of a remote: the branch of `refs/remotes/<remote>/HEAD`, else `main` or `master`
+    /// when the remote has it.
+    pub fn remote_default_branch(&self, remote: &str) -> Option<String> {
+        let prefix = format!("refs/remotes/{remote}/");
+        if let Ok(target) = self.git(&["symbolic-ref", "-q", &format!("{prefix}HEAD")]).map(text) {
+            if let Some(b) = target.strip_prefix(&prefix).filter(|b| !b.is_empty()) {
+                return Some(b.to_string());
+            }
+        }
+        ["main", "master"].into_iter().find(|b| self.git(&["rev-parse", "-q", "--verify", &format!("{prefix}{b}")]).is_ok()).map(String::from)
+    }
+
     /// Update with the options of the Update dialog. The fast-forward options apply to a merge only.
     pub fn update_with(&self, mode: UpdateMode, o: &UpdateOptions) -> Result<OpResult> {
         let branch = self.current_branch()?;
         let (remote, remote_branch) =
             self.upstream_of(&branch).ok_or_else(|| GitError(format!("{branch} has no tracked branch. Push it with a tracked branch first")))?;
+        // The default branch of the remote comes too, so that a compare or a rebase sees its new state.
+        // An error here does not stop the update.
+        if let Some(default) = self.remote_default_branch(&remote).filter(|d| *d != remote_branch) {
+            if let (Ok(r), Ok(d)) = (safe(&remote), safe(&default)) {
+                let _ = self.git_write(&["fetch", "--no-tags", r, d], &[]);
+            }
+        }
         let before = self.resolve("HEAD");
         let mut args = vec!["pull", "--autostash", "--no-edit"];
         args.push(if mode == UpdateMode::Rebase { "--rebase" } else { "--no-rebase" });
@@ -369,9 +388,15 @@ impl Repo {
         self.write(&["push", safe(remote)?, "--tags"], format!("Pushed the tags to {remote}"))
     }
 
-    /// The tags of a remote, from `git ls-remote`. It needs the network, like Fetch.
-    pub fn remote_tags(&self, remote: &str) -> Result<Vec<String>> {
-        let out = self.git_write(&["ls-remote", "--tags", "--refs", safe(remote)?], &[]).map_err(|(_, e)| GitError(e))?;
+    /// The tags of a remote, from `git ls-remote`. It needs the network, like Fetch. With `quiet`, git and
+    /// ssh ask no question: a remote that needs a password gives an error. A stored credential still works.
+    pub fn remote_tags(&self, remote: &str, quiet: bool) -> Result<Vec<String>> {
+        let quiet_env: &[(&str, &str)] = &[("GIT_ASKPASS", ""), ("SSH_ASKPASS", ""), ("SSH_ASKPASS_REQUIRE", "never")];
+        let mut args = vec!["ls-remote", "--tags", "--refs", safe(remote)?];
+        if quiet {
+            args.splice(0..0, ["-c", "core.askPass="]);
+        }
+        let out = self.git_write(&args, if quiet { quiet_env } else { &[] }).map_err(|(_, e)| GitError(e))?;
         Ok(out.lines().filter_map(|l| l.split_once('\t')?.1.strip_prefix("refs/tags/").map(String::from)).collect())
     }
 

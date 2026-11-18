@@ -1,0 +1,209 @@
+/* The glass themes "Plasma" and "Ember": a skin on top of the Dark theme.
+   <html data-theme="dark" data-style="glow" data-glow="plasma|ember"> turns the skin on.
+   The app draws a "nebula" (soft color light) on a fixed layer behind the page. Bars, lists and the diff are
+   translucent over it. Menus, dialogs and windows are less translucent and blur what is behind them.
+   log-view.ts reads --graph-s, --graph-v and --graph-glow. glow-contrast.test.ts checks this file. */
+
+/* The palettes. */
+:root[data-theme="dark"][data-style="glow"][data-glow="plasma"] {
+  --nebula: #0d0f1a;
+  --bg: #171b27;
+  --fg: #d3dae3;
+  --muted: #aeb6ca;
+  --border: color-mix(in srgb, #343b56 70%, transparent);
+  --panel: color-mix(in srgb, #1f2434 30%, transparent);
+  --panel-2: color-mix(in srgb, #1c202f 20%, transparent);
+  --accent: #82b6ff;
+  --local: #00d4aa;
+  --remote: #c8a4ff;
+  --tag: #ffdd55;
+  --head: #ff94b4;
+  --added: #2fd8ae;
+  --deleted: #ff94b4;
+  --renamed: #4dd2ff;
+  --ok: #2fd8ae;
+  --warn: #ffb380;
+  --danger: #ff94b4;
+  --glow-a: #00ccff;
+  --glow-b: #6aa8ff;
+  --glow-c: #b07bff;
+  --glow-d: #ff73ff;
+  --graph-s: 0.45;
+  --graph-v: 1;
+  --graph-glow: 4;
+}
+
+:root[data-theme="dark"][data-style="glow"][data-glow="ember"] {
+  --nebula: #120c0e;
+  --bg: #1c1517;
+  --fg: #d3dae3;
+  --muted: #b4bbce;
+  --border: color-mix(in srgb, #45333a 70%, transparent);
+  --panel: color-mix(in srgb, #271d20 30%, transparent);
+  --panel-2: color-mix(in srgb, #22191c 20%, transparent);
+  --accent: #ffa766;
+  --local: #00d4aa;
+  --remote: #ccacff;
+  --tag: #ffdd55;
+  --head: #ff9fbc;
+  --added: #2fd8ae;
+  --deleted: #ff9fbc;
+  --renamed: #4dd2ff;
+  --ok: #2fd8ae;
+  --warn: #ffb380;
+  --danger: #ff9fbc;
+  --glow-a: #ffd25c;
+  --glow-b: #ff9a4d;
+  --glow-c: #ff5c6c;
+  --glow-d: #e04cd0;
+  --graph-s: 0.45;
+  --graph-v: 1;
+  --graph-glow: 4;
+}
+
+/* The variables that both palettes share. Hover and selection mix some --bg in, so that text stays clear
+   over the brightest part of the nebula. */
+:root[data-theme="dark"][data-style="glow"] {
+  --glass: 65%;
+  --glass-field: color-mix(in srgb, var(--bg) 45%, transparent);
+  --glass-overlay: color-mix(in srgb, var(--bg) 82%, transparent);
+  --glass-solid: color-mix(in srgb, var(--accent) 5%, var(--bg));
+  --hover: color-mix(in srgb, var(--accent) 10%, color-mix(in srgb, var(--bg) 35%, transparent));
+  --select: color-mix(in srgb, var(--accent) 16%, color-mix(in srgb, var(--bg) 55%, transparent));
+  --select-strong: color-mix(in srgb, var(--accent) 22%, color-mix(in srgb, var(--bg) 80%, transparent));
+  --on-accent: #0b0e17;
+  --glow-line: linear-gradient(90deg, var(--glow-a), var(--glow-b) 35%, var(--glow-c) 70%, var(--glow-d));
+  --glow-fill: linear-gradient(135deg, var(--glow-a), var(--glow-b) 45%, var(--glow-c));
+  --glow-ring: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent), 0 0 10px color-mix(in srgb, var(--accent) 35%, transparent);
+  --shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent), 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 28px color-mix(in srgb, var(--glow-c) 16%, transparent);
+  accent-color: var(--accent);
+  background: var(--nebula);
+}
+
+/* The nebula: a fixed layer behind the page. A fixed background image would make WebKit paint the whole
+   page on each scroll. This is the only rule with layout properties; it changes no other box. */
+:root[data-style="glow"]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 600px at 12% 18%, color-mix(in srgb, var(--glow-a) 60%, transparent), transparent 70%),
+    radial-gradient(1000px 700px at 85% 25%, color-mix(in srgb, var(--glow-c) 65%, transparent), transparent 70%),
+    radial-gradient(900px 700px at 55% 95%, color-mix(in srgb, var(--glow-d) 55%, transparent), transparent 70%),
+    radial-gradient(700px 500px at 35% 60%, color-mix(in srgb, var(--glow-b) 45%, transparent), transparent 70%),
+    var(--nebula);
+}
+
+/* The tint of the page over the nebula. --glass sets its opacity. */
+:root[data-style="glow"] body { background: color-mix(in srgb, var(--bg) var(--glass), transparent); }
+:root[data-style="glow"] ::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+
+/* Surfaces that style.css paints with the opaque --bg. */
+:root[data-style="glow"] :is(.sidebar-search, .filter-bar input, .filter-button, .commit-message, .dialog-input, .files-search, .worktree-search, .commit-push, .branch-button, .log-header, .changes-parent, .switcher-search) { background: var(--glass-field); }
+:root[data-style="glow"] .md-preview { background: transparent; }
+:root[data-style="glow"] .md-col-label { background: color-mix(in srgb, var(--bg) 88%, transparent); }
+:root[data-style="glow"] .diff-notice { background: color-mix(in srgb, var(--bg) 70%, transparent); }
+:root[data-style="glow"] .op-banner { background: color-mix(in srgb, var(--tag) 10%, color-mix(in srgb, var(--bg) 70%, transparent)); }
+:root[data-style="glow"] .op-row button:not(.primary) { background: var(--glass-field); }
+/* Cards over the text of an editor must hide that text. */
+:root[data-style="glow"] :is(.note-card, .note-chip) { background: var(--glass-solid); }
+
+/* Overlays: they blur what is behind them. 82 % of --bg keeps the text clear where the blur does not draw. */
+:root[data-style="glow"] :is(.menu, .dialog, .toast, .merge-window, .history-window, .copy-hint, .tab-detach-hint, .rebase-drag-tip) {
+  background: var(--glass-overlay);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+}
+:root[data-style="glow"] :is(.menu, .dialog, .toast, .merge-window, .history-window, .key-hint) { border-color: color-mix(in srgb, var(--accent) 26%, var(--border)); }
+/* style.css paints these hints with --fg and puts --bg on the text. */
+:root[data-style="glow"] :is(.copy-hint, .tab-detach-hint) { color: var(--fg); box-shadow: var(--shadow); }
+:root[data-style="glow"] .overlay { background: rgba(8, 10, 18, 0.55); }
+:root[data-style="glow"] .merge-overlay { background: rgba(8, 10, 18, 0.45); }
+:root[data-style="glow"] .menu-item:hover:not(:disabled) { background: linear-gradient(90deg, var(--select-strong), var(--select)); }
+:root[data-style="glow"] .toast { border-left-color: var(--accent); }
+:root[data-style="glow"] .toast-success { border-left-color: var(--added); }
+:root[data-style="glow"] .toast-error { border-left-color: var(--deleted); }
+
+/* The active left tab: the accent line stays; a soft light comes up from it. */
+:root[data-style="glow"] .lp-tab.on { background: linear-gradient(to top, color-mix(in srgb, var(--accent) 16%, transparent), transparent 75%); }
+
+/* Buttons. */
+:root[data-style="glow"] .tb-button:hover:not(:disabled),
+:root[data-style="glow"] .icon-button:hover,
+:root[data-style="glow"] .tb-split:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 18%, transparent); }
+:root[data-style="glow"] .tb-split:hover .tb-button { box-shadow: none; }
+:root[data-style="glow"] .primary,
+:root[data-style="glow"] .dialog-buttons .primary,
+:root[data-style="glow"] .op-row .primary { background: var(--glow-fill); background-origin: border-box; border-color: transparent; color: var(--on-accent); }
+:root[data-style="glow"] .primary:hover:not(:disabled),
+:root[data-style="glow"] .primary:focus-visible { box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 50%, transparent); }
+:root[data-style="glow"] .danger,
+:root[data-style="glow"] .dialog-buttons .danger { color: var(--on-accent) !important; }
+:root[data-style="glow"] .danger:hover { box-shadow: 0 0 14px color-mix(in srgb, var(--danger) 45%, transparent); }
+:root[data-style="glow"] .tab-num,
+:root[data-style="glow"] .push-new,
+:root[data-style="glow"] .settings-test-build,
+:root[data-style="glow"] .rebase-drag-ghost,
+:root[data-style="glow"] .note-add-icon::before { color: var(--on-accent); }
+:root[data-style="glow"] .diff-preview-toggle.on { background: var(--select); }
+
+/* Fields: the focus ring glows. */
+:root[data-style="glow"] .sidebar-search:focus,
+:root[data-style="glow"] .filter-bar input:focus,
+:root[data-style="glow"] .dialog-input:focus,
+:root[data-style="glow"] .files-search:focus,
+:root[data-style="glow"] .worktree-search:focus,
+:root[data-style="glow"] .switcher-search:focus,
+:root[data-style="glow"] .commit-message:focus,
+:root[data-style="glow"] select:focus { outline: none; border-color: var(--accent); box-shadow: var(--glow-ring); }
+:root[data-style="glow"] button:focus-visible { outline: none; box-shadow: var(--glow-ring); }
+
+/* Rows: an accent bar at the left shows the selection, dim without the focus and full with the focus.
+   No blur on a row. */
+:root[data-style="glow"] .log-row.selected,
+:root[data-style="glow"] .change.active,
+:root[data-style="glow"] .change.selected,
+:root[data-style="glow"] .cl-file.selected,
+:root[data-style="glow"] .files-row.selected,
+:root[data-style="glow"] .files-row.cursor,
+:root[data-style="glow"] .stash-row.selected,
+:root[data-style="glow"] .sm-row.selected,
+:root[data-style="glow"] .conflict-row.selected,
+:root[data-style="glow"] .history-row.selected,
+:root[data-style="glow"] .local-history-row.selected,
+:root[data-style="glow"] .review-commit.selected,
+:root[data-style="glow"] .review-file.selected { box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+:root[data-style="glow"] .log-scroll:focus .log-row.selected,
+:root[data-style="glow"] .changes:focus .change.active,
+:root[data-style="glow"] .commit-tree:focus .cl-file.active,
+:root[data-style="glow"] .files-list:focus .files-row.cursor,
+:root[data-style="glow"] .stash-list:focus .stash-row.selected,
+:root[data-style="glow"] .sm-list:focus .sm-row.selected,
+:root[data-style="glow"] .history-list:focus .history-row.selected,
+:root[data-style="glow"] .history-list:focus .local-history-row.selected { background: linear-gradient(90deg, var(--select-strong), var(--select) 85%); box-shadow: inset 2px 0 0 var(--accent); }
+:root[data-style="glow"] .settings-page.on,
+:root[data-style="glow"] .branch.filtered,
+:root[data-style="glow"] .branch.selected { box-shadow: inset 2px 0 0 var(--accent); }
+
+/* Ref labels: a light fill of their own color over some --bg. */
+:root[data-style="glow"] .ref { background: color-mix(in srgb, currentColor 12%, color-mix(in srgb, var(--bg) 50%, transparent)); }
+:root[data-style="glow"] .head-icon { background: color-mix(in srgb, currentColor 14%, color-mix(in srgb, var(--bg) 50%, transparent)); }
+
+/* Colors that style.css gives as fixed values. */
+:root[data-style="glow"] .commit-warnings { color: var(--warn); }
+:root[data-style="glow"] .fav-filter.on,
+:root[data-style="glow"] .fav-toggle.on { color: var(--tag); }
+:root[data-style="glow"] .md-body > .md-changed { --mark: var(--warn); }
+:root[data-style="glow"] .note-card { border-left-color: var(--warn); }
+:root[data-style="glow"] .note-card.draft { border-left-color: var(--accent); }
+:root[data-style="glow"] .note-card.resolved { border-left-color: var(--added); }
+:root[data-style="glow"] .review-note-bar { border-left-color: var(--warn); }
+
+/* Grips and small parts. */
+:root[data-style="glow"] .vgrip:hover,
+:root[data-style="glow"] .hgrip-row:hover { background: var(--accent); box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 50%, transparent); }
+:root[data-style="glow"] .sb-activity.busy::before { box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 60%, transparent); }
+:root[data-style="glow"] .welcome-logo { border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent), 0 0 36px color-mix(in srgb, var(--glow-c) 35%, transparent), 0 0 12px color-mix(in srgb, var(--glow-a) 20%, transparent); }
+:root[data-style="glow"] .welcome-card h1 { background: var(--glow-line); -webkit-background-clip: text; background-clip: text; color: transparent; }

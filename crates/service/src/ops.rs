@@ -36,7 +36,17 @@ pub enum Op {
     Continue,
     Abort,
     MarkResolved { paths: Vec<String> },
-    Rewrite { base: String, plan: Vec<PlanEntry>, what: String },
+    /// `expected_head`: the HEAD of the check; the run refuses when HEAD moved. `stop_at_conflict` runs a real
+    /// `git rebase -i`, which stops at a conflict.
+    Rewrite {
+        base: String,
+        plan: Vec<PlanEntry>,
+        what: String,
+        #[serde(default)]
+        expected_head: Option<String>,
+        #[serde(default)]
+        stop_at_conflict: bool,
+    },
     Undo { actions: Vec<UndoAction> },
     AddWorktree { path: String, branch: String, new_branch: bool, at: String },
     RemoveWorktree { path: String, force: bool, #[serde(default)] unlock: bool },
@@ -265,7 +275,9 @@ impl Service {
             Op::Continue => repo.continue_or_abort(false),
             Op::Abort => repo.continue_or_abort(true),
             Op::MarkResolved { paths } => repo.mark_resolved(&paths),
-            Op::Rewrite { base, plan, what } => repo.rewrite(&base, &plan, &what),
+            Op::Rewrite { base, plan, what, expected_head, stop_at_conflict } => {
+                repo.rewrite_with(&base, &plan, &what, expected_head.as_deref(), stop_at_conflict)
+            }
             Op::Undo { actions } => repo.apply_undo(&actions),
             Op::AddWorktree { path, branch, new_branch, at } => {
                 repo.add_worktree(&path, &branch, new_branch, &at).map(|_| OpResult::ok_msg(format!("Added worktree {path}")))

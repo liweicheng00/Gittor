@@ -2,6 +2,7 @@
 // Start the dev server first (see README). Build a fresh repository with make-demo-repo.sh, because
 // the scenario changes it. Then: node e2e/write-ops.mjs <repo> <screenshot-dir>
 // Set CHROMIUM to a Chromium binary when Playwright has no downloaded browser.
+import { execFileSync } from "node:child_process";
 import { chromium } from "playwright";
 const [,, repo, outDir] = process.argv;
 const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
@@ -28,6 +29,32 @@ await page.click(".switcher .menu-item:has-text('feature/cli')");
 await page.waitForTimeout(1500);
 console.log("after checkout:", await branchBtn(), "|", await toastText());
 await clearToasts();
+
+// Mod+B: the New Branch dialog. From starts at the current branch; the branch picker chooses another one.
+// Without Checkout, the current branch stays.
+const check = (what, ok) => { console.log(ok ? "ok  " : "FAIL", what); if (!ok) errors.push("check: " + what); };
+const rev = (r) => execFileSync("git", ["-C", repo, "rev-parse", r], { encoding: "utf8" }).trim();
+await page.click(".log-row >> nth=0");
+await page.keyboard.press("Control+b");
+await page.waitForSelector(".dialog");
+check("From starts at the current branch", ((await page.textContent(".dialog .dialog-branch")) ?? "").trim() === "feature/cli");
+await page.fill(".dialog-field:has-text('Branch name') input", "topic/from-key");
+await page.click(".dialog .dialog-branch");
+await page.waitForSelector(".branch-picker");
+await page.click(".branch-picker .menu-header:text-is('Local') ~ .menu-item:has(.menu-label:text-is('fix/readme')) >> nth=0");
+check("the picker sets From", ((await page.textContent(".dialog .dialog-branch")) ?? "").trim() === "fix/readme");
+await shot("v1b-new-branch");
+await page.click(".dialog-check:has-text('Checkout') input");
+await page.click(".dialog-buttons button:has-text('Create')");
+await page.waitForSelector(".sidebar .branch:has-text('topic/from-key')");
+check("the new branch starts at the chosen branch", rev("topic/from-key") === rev("fix/readme"));
+check("without Checkout, the current branch stays", (await branchBtn()) === "feature/cli");
+await clearToasts();
+// The steps below rewrite feature/cli: a second branch on its commits changes them. Remove it.
+execFileSync("git", ["-C", repo, "branch", "-D", "topic/from-key"]);
+await page.waitForTimeout(2000);
+await page.keyboard.press("F5");
+await page.waitForSelector(".sidebar .branch:has-text('topic/from-key')", { state: "detached" });
 
 // squash two commits
 await page.click(".log-row:has-text('Print arguments')");
@@ -88,7 +115,8 @@ console.log("abort:", await toastText(), "banner hidden:", await page.$eval(".op
 await clearToasts();
 
 // worktree
-await page.click(".group-action[title='Add a worktree']");
+await page.click(".lp-tab[aria-label^='Worktrees']");
+await page.click(".worktree-add");
 await page.waitForSelector(".dialog-field");
 await page.fill(".dialog-field:has-text('Branch') input", "wt/experiment");
 await page.fill(".dialog-field:has-text('Folder') input", repo + "-wt");
@@ -96,11 +124,12 @@ await shot("v9-worktree-dialog");
 await page.click(".dialog-buttons button:has-text('Create')");
 await page.waitForTimeout(1500);
 console.log("worktree:", await toastText());
-console.log("worktrees:", (await page.textContent(".sidebar-list")).replace(/\s+/g, " ").match(/Worktrees.*/)?.[0]);
+console.log("worktrees:", (await page.textContent(".worktree-list")).replace(/\s+/g, " "));
 await clearToasts();
 await page.click(".branch.worktree:has-text('wt/experiment')", { button: "right" });
 await shot("v10-worktree-menu");
 await page.keyboard.press("Escape");
+await page.click(".lp-tab[aria-label^='Branches']");
 
 // back to main to show recent
 await page.click(".tb-branch-button");

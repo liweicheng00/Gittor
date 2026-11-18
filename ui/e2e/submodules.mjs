@@ -53,7 +53,7 @@ check(`no left tab label is cut (${cut.join(", ")})`, cut.length === 0);
 // Control+5 opens the Changes tab at the submodules.
 await page.waitForSelector(".submodule-panel:not([hidden])", { state: "attached" });
 await page.keyboard.press("Control+5");
-await within("Control+5 shows the submodules in the Changes tab", async () => (await page.isVisible(".commit-panel .sm-row")) && (await page.getAttribute(".lp-tab:text-is('Changes')", "class")).includes("on"));
+await within("Control+5 shows the submodules in the Changes tab", async () => (await page.isVisible(".commit-panel .sm-row")) && (await page.getAttribute(".lp-tab[aria-label^='Changes']", "class")).includes("on"));
 const head = () => page.textContent(".sm-head .sm-title");
 const rowText = () => page.textContent(".sm-row");
 check("the tab lists vendor/lib on its branch", (await rowText()).includes("vendor/lib") && (await rowText()).includes("main"));
@@ -136,7 +136,7 @@ git("-c", "commit.gpgsign=false", "commit", "-q", "-am", "Use the old lib");
 git("checkout", "-q", "main");
 run(sub, "checkout", "-q", c2);
 await page.keyboard.press("F5");
-await page.click(".lp-tab:text-is('Branches')");
+await page.click(".lp-tab[aria-label^='Branches']");
 await page.waitForSelector(".branch:has-text('old-lib')");
 await page.dblclick(".branch:has-text('old-lib')");
 await within("the checkout offers Update Submodules", async () => (await page.$(".toast-action:has-text('Update Submodules')")) !== null);
@@ -150,7 +150,7 @@ writeFileSync(`${sub}/lib.rs`, "pub fn three() {}\n");
 run(sub, "-c", "user.name=Lib", "-c", "user.email=lib@example.com", "-c", "commit.gpgsign=false", "commit", "-q", "-am", "Three");
 git("checkout", "-q", "main");
 await page.keyboard.press("F5");
-await page.click(".lp-tab:text-is('Changes')");
+await page.click(".lp-tab[aria-label^='Changes']");
 await page.click(".sm-row");
 await within("the detail says one commit ahead", async () => ((await page.textContent(".sm-detail .sm-ahead").catch(() => "")) ?? "").includes("1 ahead"));
 check("no Update for a submodule with commits of its own", (await page.$(".sm-detail .sm-update")) === null);
@@ -194,12 +194,12 @@ await within("the window shows the submodule log", async () => (await popup.text
 check("the window has no tab bar", await popup.$eval(".tabbar", (e) => e.hidden));
 await within("the main window shows the parent repository", async () => (await page.textContent(".tb-repo")).includes(name));
 check("the main window has one tab now", await page.$eval(".tabbar", (e) => e.hidden));
-await popup.click(".lp-tab:text-is('Stash')");
+await popup.click(".lp-tab[aria-label^='Stash']");
 const stored = JSON.parse(await page.evaluate(() => localStorage.getItem("gittor.settings.v1")));
 check("the settings keep the tabs of the main window", stored.tabs.length === 1 && stored.tabs[0].endsWith(name));
 
 // A repository shows in one window only: the main window does not open the submodule again.
-await page.click(".lp-tab:text-is('Changes')");
+await page.click(".lp-tab[aria-label^='Changes']");
 await page.click(".sm-row .sm-open");
 await within("the main window says that another window shows it", async () => (await page.$(".toast:has-text('is open in another window')")) !== null);
 check("the main window opens no tab for it", await page.$eval(".tabbar", (e) => e.hidden));

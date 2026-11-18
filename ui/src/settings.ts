@@ -2,7 +2,7 @@
 
 import { trimRecent } from "./recent-groups";
 
-export type Theme = "system" | "light" | "dark";
+export type Theme = "system" | "light" | "dark" | "plasma" | "ember";
 
 export interface Settings {
   intelliSort: boolean;
@@ -10,12 +10,6 @@ export interface Settings {
   groupBranchesByPrefix: boolean;
   /** Glob patterns of protected branch names, separated by spaces. */
   protectedBranches: string;
-  /** Bold subjects for the commits of the user (user.email). */
-  highlightMine: boolean;
-  /** Gray text for merge commits. */
-  highlightMerges: boolean;
-  /** Dim the commits that are not on the current branch. */
-  highlightCurrent: boolean;
   /** The Date column shows the commit time, not the author time. */
   commitTimestamp: boolean;
   showLongEdges: boolean;
@@ -25,7 +19,7 @@ export interface Settings {
   showDate: boolean;
   showHash: boolean;
   showSidebar: boolean;
-  leftTab: "branches" | "commit" | "stash" | "reviews";
+  leftTab: "branches" | "commit" | "stash" | "reviews" | "files" | "worktrees";
   updateMode: "merge" | "rebase";
   autoRefresh: boolean;
   changesAsTree: boolean;
@@ -87,6 +81,10 @@ export interface Settings {
   /** Favorite branches and tags by repository root, as full ref names. A repository without an entry has
    * main and master as favorites. */
   favorites: Record<string, string[]>;
+  /** A local branch without a commit for this many days shows in the Stale group; 0 turns it off. */
+  staleDays: number;
+  /** Favorite worktrees by the path of the main worktree, as paths. */
+  favoriteWorktrees: Record<string, string[]>;
   /** The last commit messages, newest first. */
   messageHistory: string[];
   /** Add "Signed-off-by" to commits. */
@@ -107,9 +105,6 @@ const DEFAULTS: Settings = {
   intelliSort: true,
   groupBranchesByPrefix: false,
   protectedBranches: "main master",
-  highlightMine: false,
-  highlightMerges: false,
-  highlightCurrent: false,
   commitTimestamp: false,
   showLongEdges: false,
   collapseLinear: false,
@@ -159,6 +154,8 @@ const DEFAULTS: Settings = {
   historyMaxMb: 200,
   keymap: {},
   favorites: {},
+  favoriteWorktrees: {},
+  staleDays: 30,
   messageHistory: [],
   signOff: false,
   subjectLimit: 72,

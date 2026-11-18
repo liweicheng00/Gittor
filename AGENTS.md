@@ -61,6 +61,13 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
 - In-memory rewrites (`crates/git/src/rewrite.rs`): `git merge-tree --write-tree` and
   `git commit-tree`, then `update-ref` or `reset --keep`. A conflict stops before any ref changes.
   `rewrite_files` builds a tree in a temporary index (`GIT_INDEX_FILE`).
+- Interactive rebase: `rebase-flow.ts` (the editor), `rebase-plan.ts` (the pure plan, newest first),
+  `rebase-drag.ts` (the drag of rows, with a small graph of nodes), `rebase-agent-text.ts` (Copy for an
+  Agent). `Repo::replay` serves both the run and `rewrite_check`, so the check equals the run; the check
+  writes to a temporary object directory. A real rebase (Edit, Run and Stop at the Conflict) uses
+  `--empty=keep`. The owner wants the drag only in the rebase window, not on the nodes of the log graph.
+  `ui/test` runs the source with Node, which needs the `.ts` extension: a module there cannot import
+  another module of `ui/src` without it, so `rebase-plan.ts` imports nothing at run time.
 - Undo (`crates/git/src/undo.rs`): `Reset`, `Checkout`, `CreateRef`, `DeleteRef`, `MoveRef`,
   `RenameBranch`, `StashStore`, `SetConfig`. Each step checks that nothing moved since.
 - Files of the app in a git dir: always `app_dir(git_dir)`.
@@ -96,7 +103,8 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   colors come from the app; `setMonacoTheme` draws open previews again.
 - Notes on local changes: `crates/git/src/local_notes.rs` (`gittor/local-notes.json` of the worktree).
   The notes of a file keep the git hash of its content; when the file changes, they go away.
-  `showLocalDiff` in `commit-flow.ts` gives them to the same note layer.
+  They show in the Compare window only, while its right side is the working tree (`local-notes.ts`, the
+  `notes` callback of `openCompare`). The diff panel under the Changes tab has no notes.
 - Updates of the app: `update-flow.ts` (checks 10 s after the start and every 6 h, only in the main
   window). Only a build with the public key checks: `scripts/build-dmg.sh --updater` merges
   `target/tauri.build.conf.json`, and `main.rs` registers the updater plugin only then. A local
@@ -148,6 +156,16 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   `recent-groups.ts` puts them in groups by project and keeps 12 projects with 8 worktrees each, so many
   worktrees do not push other projects out. `recent.ts` gives the rows of the Open menu and the welcome
   screen, and reads the projects of old entries with `api.repoInfo`.
+- Refresh after a change outside the app (`docs/refresh.md`): the watcher sends a batch after 300 ms
+  without an event, or 1 s after its first event (`Coalescer` in `watch.rs`). `watch.ts` gives the
+  counters to `RefreshScheduler`: one load at a time, one more after it, and none while the user
+  interacts (`interaction.ts`: the mouse is down, a drag or a menu is open, a scroll; 5 s at most). A
+  load must not flash: draw a list with `reconcile()` of `keyed.ts` (a key and a signature for each
+  row; the signature holds all that the row shows and all that its handlers use), and set a text
+  only when it changed. `LogView.reload` keeps the rows until the new rows are there. `DiffView`
+  puts the changed lines into its models (`text-edit.ts`) and keeps the first line of the view in
+  its place. A `files` load does not load stashes and reviews. `window.__gittorRefresh` has the
+  counts of requests, loads and holds.
 - Conflicts: `conflicts.ts` (`resolveConflicts`: the Conflicts dialog, then the next file in the merge
   window; `offerContinue` after the last file) and `merge-view.ts` (the merge window). `runOp` opens the
   dialog when an operation stops with conflicts. A bar of actions in a Monaco view zone gets the mouse
@@ -162,16 +180,57 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   The log marks that selection as `auto`, and `showSelection` drops it when the diff shows a local change
   (`app.diffSource === "local"`), so the choice of the user stays.
 - Back and Forward: `nav.ts`. Call `visit({ key, label, open, window })` when a file shows.
+- The glass themes Plasma and Ember: a skin on Dark. `applyTheme` in `shell.ts` sets `data-theme="dark"`,
+  `data-style="glow"` and `data-glow="plasma"` or `"ember"`; the other themes have neither attribute.
+  `glow.css` holds all the CSS, and `glow-flow.ts` loads it. The app draws its own "nebula" (four radial
+  lights) on a fixed `:root::before` layer. A fixed background image makes WebKit paint the whole page on
+  each scroll. The page tint is `--bg` at `--glass` (65 %); bars, lists, the log and the diff are
+  translucent over it. Only overlays (menus, dialogs, toasts, windows, hints) have `backdrop-filter`, on
+  82 % of `--bg`, so text stays clear where the blur does not draw (WebKitGTK without a GPU). The skin
+  sets colors, gradients and shadows only: no layout property, no animation, no blurred shadow on a row.
+  `glow-contrast.test.ts` checks these rules and 4.5:1 for each text color over the brightest place of
+  the nebula (one light, or two lights that overlap). The Monaco themes are in `glow-monaco.ts`; the
+  editor has a 40 % tint of `--bg`, because a clear editor fails that contrast. The graph reads
+  `--graph-s`, `--graph-v` and `--graph-glow` (0.45, 1, 4). The glow is on plain nodes only: each row has
+  its own canvas, which cuts a glow at its edge. A theme label must not contain "Dark", "Light" or
+  "System", because scenarios click `.menu-item:has-text('Dark')`. The look follows the idea of the KDE
+  theme Colorful-Dark-Plasma, which is GPL-3.0: no file of it may go into the repository. The scenario
+  is `glow-theme.mjs`.
 - Settings: `ui/src/settings.ts` (web view storage) for UI options; `crates/service/src/config.rs`
   (`settings.json`) for what the backend needs before the window opens (git program, editor,
   Local History limits).
 - Keys: actions in `ui/src/keyboard.ts`; the keymap page lists them by themselves. A button that
   does the same as a keymap action gets `data-key-action="<id>"`: a mouse click on it then shows the
   keys next to the mouse (`key-hint-flow.ts`, the setting `keyHints`). `keyWorksAt` applies the rules
-  of the key handler, so no hint names a key that does nothing there.
+  of the key handler, so no hint names a key that does nothing there. A key outside the keymap (for
+  example Mod+Enter of the commit message) goes in `data-key-hint`. On hover, the tooltip of such a
+  button gets its keys as the keymap has them now; do not write a key into a tooltip by hand. A
+  scenario finds such a button by the start of its title: `[title^='Settings']`.
 - External apps: Open in Editor (`crates/service/src/editor.rs`, `editor-flow.ts`) and Open in Terminal
   (`terminal.rs`, `terminal-flow.ts`). Each runs a command of `settings.json` without a shell. The e2e
   scenarios use a small script in place of the app, and set the command back to empty at the end.
+- The Files tab (`files-panel.ts`, `files-flow.ts`, ``Mod+` ``, the first left tab): the files of the
+  working tree from the query `worktree_files` (`git ls-files --cached --others --exclude-standard`).
+  The folders are closed at first. It loads when the local changes change (`commitPanel.onLoad`), or
+  when it shows after that. A click opens the file in the center panel in place of the log, as an IDE
+  does: `centerTabs` (Log and a tab for each open file) and `fileHost` in `shell.ts`. The file shows in
+  its own `DiffView` with `showFile` (the text, without colors), the notes on local changes and
+  `NotesPanel`. Show Diff in the menu shows the diff in the diff panel. `centerHooks.reset` closes the
+  files when another repository shows. ``Alt+` `` switches the project.
+- The Worktrees tab (`worktree-panel.ts`, `worktree-flow.ts`, `Mod+6`, the fourth left tab, after
+  Changes): the worktrees with a search (name, path, branch; `worktree-filter.ts` has unit tests) and a
+  star for each. Favorites come first. The UI setting `favoriteWorktrees` keeps them by the path of the
+  main worktree, so each worktree of a repository shows the same favorites. The Branches tab has no
+  worktrees.
+- Stale branches (`stale.ts`, unit tests): a local branch is stale when it has no commit for
+  `settings.staleDays` days (30 by default, 0 turns the age off), or its tracked branch is gone. The days
+  count back from the newest commit of all refs (`Sidebar.staleClock`). `make-demo-repo.sh` and
+  `rebase-drag.prep.sh` date their commits in the last 14 days; with old dates, a commit of a scenario
+  at the time of the run puts the demo branches in Stale, and they leave Local. The user marks more branches in the menu of a branch (Mark
+  as Stale, also for a multiple selection), and takes branches out (Remove from Stale). The marks are
+  full ref names, and "!" before a name keeps an old branch out. The query `stale_branches` keeps them
+  in `stale-branches.json` of the common git dir, as the favorites. A stale branch shows in the Stale
+  group only, not in Local or Recent. The current branch is never stale by the rule.
 - Icons: add the Lucide file name to the glob and to `NAMES` in `ui/src/icons.ts`.
 - Trees of files: `buildTree`, `treeOrder`, `walkTree` in `file-tree.ts`.
   Unique short names of folders: `pathLabels` in `path-labels.ts`.
@@ -236,7 +295,7 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
   in a terminal right after an app operation must wait 2 s.
 - Playwright clicks only three mouse buttons. Send mouse buttons 3 and 4 with
   `window.dispatchEvent(new MouseEvent("mouseup", { button: 3 }))`.
-- `Control+1` toggles the Branches tab. Click `.lp-tab:text-is('Branches')` instead.
+- `Control+1` shows the Branches tab; a second press stays there. View › Left Panel hides the left panel.
 - Several toasts can have an Undo button. Pick the toast by its text.
 - `main` and `master` are protected by default. The demo repository has commits on origin/main, so
   a rewrite of them stops. Start rewrites above origin/main.
@@ -244,6 +303,10 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
   `receive.denyCurrentBranch ignore` on it.
 - Do not draw a whole bar or list again when nothing changed. A new element under the mouse loses
   the click (this broke the tabs scenario).
+- One wheel event of Playwright scrolls a Monaco editor by about 50 px, whatever its delta. Send many
+  events for a long scroll.
+- A test module for `node --test` cannot import another module of `ui/src` without its `.ts` ending,
+  and `tsc` refuses the ending. Give the function of the other module as a parameter (`lineHunks`).
 - Never call `monaco.editor.colorizeElement`: it sets the theme of all Monaco editors (to the light
   "vs" without a theme). Use `monaco.editor.colorize`, which only returns HTML.
 - A Monaco menu item with a condition shows only after the diff loaded. A menu that opened before
@@ -259,8 +322,18 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
 - The scenarios that measure text expect Inter for `system-ui`. This machine maps it in
   `/etc/fonts/conf.d/56-prefer-inter.conf`; the CI workflow writes the same file. With the wider
   default font of Ubuntu, all left tab labels are cut.
-- The left tabs share about 280 px at the default width. A new tab needs a short label; measure the
-  `scrollWidth` of each `.lp-tab` against its `clientWidth`.
+- The left tabs show an icon each; the name is in the tooltip and in `aria-label`, and out of view in
+  `.sr-label`. Playwright does not match text that is out of view, so find a tab with
+  `.lp-tab[aria-label^='Changes']`, not `:text-is`. The same holds for Open and Refresh of the toolbar.
+- On macOS, many scenarios fail as written. They press `Control+...` for Mod, which is Cmd on a Mac, and
+  `/tmp` is `/private/tmp`, so a check of a path fails. To run them on a Mac, give node a preload with
+  `NODE_OPTIONS="--import <file>"`, outside `ui/e2e`. The preload wraps `chromium.launch` and
+  `browser.newContext`, and adds an init script that makes `navigator.platform` return "Linux x86_64".
+  Put the work dir under `/private/tmp`. Some scenarios still fail on a Mac; compare with a run of the
+  base commit before you look for a bug.
+- `screencapture` needs the Screen Recording permission. Without it, a scratch build of the macOS app
+  can take a picture of its own window (`CGWindowListCreateImage`) and run steps with
+  `WebviewWindow::eval`. Do not commit such code.
 
 ## Environment of the cloud sessions
 

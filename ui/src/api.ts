@@ -39,6 +39,9 @@ import type { RemoteInfo } from "./bindings/RemoteInfo";
 import type { RepoState } from "./bindings/RepoState";
 import type { Revision } from "./bindings/Revision";
 import type { RewriteRange } from "./bindings/RewriteRange";
+import type { RewriteCheck } from "./bindings/RewriteCheck";
+import type { StepCheck } from "./bindings/StepCheck";
+import type { ConflictFile } from "./bindings/ConflictFile";
 import type { Row } from "./bindings/Row";
 import type { Stash } from "./bindings/Stash";
 import type { StashDetail } from "./bindings/StashDetail";
@@ -94,6 +97,9 @@ export type {
   RepoState,
   Revision,
   RewriteRange,
+  RewriteCheck,
+  StepCheck,
+  ConflictFile,
   Row,
   Stash,
   StashDetail,
@@ -153,17 +159,33 @@ export function setRepoRoot(root: string | null) {
   repoRoot = root;
 }
 
+/** The commands that have not answered yet, for each repository. A close waits for them. */
+const pending = new Map<string, Set<Promise<unknown>>>();
+
 async function call<T>(cmd: string, args?: unknown): Promise<T> {
   if (repoRoot && (args === undefined || (typeof args === "object" && args !== null && !Array.isArray(args)))) {
     args = { root: repoRoot, ...(args as object | undefined) };
   }
   // A command that does not answer leaves a part of the window empty; the warning names it.
   const slow = setTimeout(() => console.error(`The command ${cmd} has not answered after 10 s`), 10000);
+  const root = (args as { root?: unknown } | undefined)?.root;
+  const answer = callNow<T>(cmd, args);
+  const set = typeof root === "string" ? (pending.get(root) ?? pending.set(root, new Set()).get(root)!) : null;
+  set?.add(answer);
   try {
-    return await callNow<T>(cmd, args);
+    return await answer;
   } finally {
     clearTimeout(slow);
+    set?.delete(answer);
   }
+}
+
+/** Waits until the commands for a repository have answered, 5 s at most. An answer can start a
+ * new command (a selection loads its diff), so it waits again until none is left. */
+async function settled(root: string) {
+  const end = Date.now() + 5000;
+  for (let set = pending.get(root); set?.size && Date.now() < end; set = pending.get(root)) await Promise.allSettled([...set]);
+  pending.delete(root);
 }
 
 /** A failed command, with the kind of the failure from the backend. */
@@ -228,7 +250,7 @@ export type Op =
   | { op: "continue" }
   | { op: "abort" }
   | { op: "markResolved"; paths: string[] }
-  | { op: "rewrite"; base: string; plan: PlanEntry[]; what: string }
+  | { op: "rewrite"; base: string; plan: PlanEntry[]; what: string; expectedHead?: string; stopAtConflict?: boolean }
   | { op: "undo"; actions: UndoAction[] }
   | { op: "checkoutSubmoduleBranch"; path: string; branch: string; remote: boolean }
   | { op: "updateSubmodules"; paths: string[] }
@@ -280,7 +302,11 @@ export const api = {
   open: (path: string, view: ViewSettings) => call<ViewResult>("open", { path, ...view }),
   /** Makes an open repository active, for a tab switch; opens it when it is not open. */
   activate: (path: string, view: ViewSettings) => call<ViewResult>("activate", { path, ...view }),
-  close: (path: string) => call<null>("close", { path }),
+  close: async (path: string) => {
+    // A command that arrives after the close fails, because the repository is no longer open.
+    await settled(path);
+    return call<null>("close", { path });
+  },
   /** The version of a git program; it changes nothing. Empty means git from PATH. */
   gitVersion: (path: string) => call<string>("git_version", { path }),
   /** A linked worktree and its main repository, and the branch, for the tab of a repository. */
@@ -298,6 +324,8 @@ export const api = {
   setBackendSettings: (s: BackendSettings) => call<string>("set_backend_settings", s),
   favorites: () => call<string[] | null>("favorites"),
   setFavorites: (refs: string[]) => call<null>("set_favorites", { refs }),
+  staleBranches: () => call<string[]>("stale_branches"),
+  setStaleBranches: (refs: string[]) => call<null>("set_stale_branches", { refs }),
   setView: (view: ViewSettings) => call<ViewResult>("set_view", view),
   refresh: () => call<ViewResult>("refresh"),
   fetch: () => call<ViewResult>("fetch"),
@@ -309,6 +337,7 @@ export const api = {
     call<ViewResult>("collapse", { mode, row, up, down }),
   repoState: () => call<RepoState>("repo_state"),
   rewriteRange: (base: string) => call<RewriteRange>("rewrite_range", { oid: base }),
+  rewriteCheck: (base: string, plan: PlanEntry[]) => call<RewriteCheck>("rewrite_check", { base, plan }),
   runOp: (op: Op) => call<OpOutcome>("run_op", op),
   worktrees: () => call<Worktree[]>("worktrees"),
   worktreeBlockers: (path: string) => call<WorktreeBlockers>("worktree_blockers", { path }),
@@ -316,14 +345,14 @@ export const api = {
   localChanges: () => call<LocalChanges>("local_changes"),
   changeListOp: (op: ChangeListOp) => call<LocalChanges>("changelist_op", op),
   headMessage: () => call<string>("head_message"),
-  /** user.email of the active repository; empty when it is not set. */
-  userEmail: () => call<string>("user_email"),
   /** The commits whose parent is `oid`. */
   children: (oid: string) => call<string[]>("children", { oid }),
   /** The remote branches that contain a commit, as "origin/main". */
   remoteContaining: (oid: string) => call<string[]>("remote_containing", { oid }),
   /** The paths of all files of a commit. */
   treeFiles: (oid: string) => call<string[]>("tree_files", { oid }),
+  /** The paths of the files of the working tree that git tracks or does not ignore. */
+  worktreeFiles: () => call<string[]>("worktree_files"),
   fileAt: (oid: string, path: string) => call<FileContent>("file_at", { oid, path }),
   askpassAnswer: (id: number, answer: string | null, remember: boolean) => call<null>("askpass_answer", { id, answer, remember }),
   watchState: () => call<{ repo: number; files: number } | null>("watch_state"),
@@ -357,7 +386,8 @@ export const api = {
   openProjectInEditor: (file?: { path: string; line: number; column: number }) => call<null>("open_project_in_editor", file ?? {}),
   openUrl: (url: string) => (inTauri ? call<null>("open_url", { url }) : Promise.resolve(void window.open(url, "_blank", "noopener")).then(() => null)),
   tagInfo: (name: string) => call<TagInfo>("tag_info", { name }),
-  remoteTags: (remote: string) => call<string[]>("remote_tags", { remote }),
+  /** The tags of a remote. `quiet` asks the user no question: a remote that needs a password fails. */
+  remoteTags: (remote: string, quiet = false) => call<string[]>("remote_tags", { remote, quiet }),
   mergedInto: (target: string) => call<MergedBranches>("merged_into", { target }),
   mergedBranches: (upstreams: string[]) => call<MergedBranches>("merged_branches", { upstreams }),
   compareRefs: (left: string, right: string) =>
@@ -496,8 +526,8 @@ export async function restartApp(): Promise<void> {
     if (fake) fake.restarted = true;
     return;
   }
-  const { relaunch } = await import("@tauri-apps/plugin-process");
-  await relaunch();
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("restart_app");
 }
 
 /** The label of the app window, or null in a browser. */

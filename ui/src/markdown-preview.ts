@@ -7,6 +7,7 @@ import MarkdownIt from "markdown-it";
 import DOMPurify from "dompurify";
 import type { MermaidSvg } from "./api";
 import * as monaco from "./monaco";
+import { type KeyedItem, reconcile } from "./keyed";
 import { h } from "./dom";
 import { resolvePath, slug, type Block } from "./markdown-model";
 
@@ -193,4 +194,37 @@ export function blocksOf(root: HTMLElement): { el: HTMLElement; block: Block }[]
     const [s, e] = (el.dataset.src ?? "0-0").split("-").map(Number);
     return { el, block: [s, e] as Block };
   });
+}
+
+/** The rows of a rendered document for `reconcile`: each top-level element, with its source text as the key. */
+function docItems(rendered: HTMLElement, source: string): KeyedItem<HTMLElement>[] {
+  const lines = source.split("\n");
+  const seen = new Map<string, number>();
+  return [...rendered.children].map((child) => {
+    const el = child as HTMLElement;
+    const src = el.dataset.src;
+    const [s, e] = (src ?? "0-0").split("-").map(Number);
+    // A block without source lines, for example a rule: its HTML is its identity.
+    const text = src ? `${el.tagName}\0${lines.slice(s - 1, e).join("\n")}` : `html\0${el.outerHTML}`;
+    const n = seen.get(text) ?? 0;
+    seen.set(text, n + 1);
+    return {
+      key: `${n}\0${text}`,
+      sig: "",
+      build: () => el,
+      // The same source at other lines: the element stays, with its new lines.
+      update: (old: HTMLElement) => {
+        if (src && old.dataset.src !== src) old.dataset.src = src;
+      },
+    };
+  });
+}
+
+/**
+ * Makes the document `live` show the Markdown `source`, of which `rendered` is the new render. A
+ * block with the same source text keeps its element, so its images and diagrams do not load again
+ * and the preview does not flash. Call it with `live === rendered` for the first render.
+ */
+export function updateDoc(live: HTMLElement, rendered: HTMLElement, source: string) {
+  reconcile(live, docItems(rendered, source));
 }

@@ -2,7 +2,7 @@
 
 import { resetZoom, zoomBy } from "./zoom";
 import { api, type BranchInfo, type Op, type RemoteInfo } from "./api";
-import { openCompare, WORKTREE } from "./compare-view";
+import { type CompareCallbacks, openCompare, WORKTREE } from "./compare-view";
 import { menuBelow, type MenuItem, showMenu } from "./context-menu";
 import { confirmDialog, formDialog } from "./dialogs";
 import { keymap } from "./keyboard";
@@ -14,15 +14,20 @@ import { collapse } from "./selection";
 import { save, settings } from "./settings";
 import { openSettings } from "./settings-flow";
 import { log, remoteBtn, sidebar, toggleDiff, toggleSidebar, viewBtn } from "./shell";
+import { nextMarks } from "./stale";
 import { app } from "./state";
 import { branchUrl, commitUrl, webUrl } from "./web-url";
 import { copyText } from "./dom";
 import { openInEditor } from "./editor-flow";
+import { listLocalNotes, localNoteHandlers } from "./local-notes";
 
 export async function fetchRemote(name: string) {
   const out = await runOp({ op: "fetchRemote", name }, `Fetching ${name}`);
   if (out?.result.ok) void loadRemoteTags(sidebar.remoteTagsOf ?? undefined);
 }
+
+/** Pushes one tag to a remote, then checks the tags of that remote again. */
+export const pushTag = (tag: string, remote: string) => tagOp({ op: "pushTag", remote, tag }, `Pushing ${tag}`, remote);
 
 /** Runs an operation that changes the tags of a remote, then checks the tags of that remote again. */
 async function tagOp(op: Op, label: string, remote: string) {
@@ -72,8 +77,9 @@ export async function manageRemotes() {
   });
 }
 
-/** Opens Compare Branches. The right side can be the working tree. `path` is the file to show first. */
-export function compareBranches(leftRef: string, rightRef: string, path?: string) {
+/** Opens Compare Branches. The right side can be the working tree. `path` is the file to show first.
+ * `scope` limits the files of the working tree to one changelist. */
+export function compareBranches(leftRef: string, rightRef: string, path?: string, scope?: CompareCallbacks["scope"]) {
   const names = [
     ...app.refs.filter((b) => b.kind === "local").map((b) => b.name),
     ...app.refs.filter((b) => b.kind === "remote").map((b) => b.name),
@@ -98,6 +104,8 @@ export function compareBranches(leftRef: string, rightRef: string, path?: string
     writeFile: async (p, text, expected) => !!(await runOp({ op: "writeFile", path: p, text, expected }, `Reverting a change of ${p}`))?.result.ok,
     openInEditor: (p) => void openInEditor(p),
     copyText: (t) => void copyText(t),
+    scope,
+    notes: { list: listLocalNotes, handlers: localNoteHandlers },
   }, path);
 }
 
@@ -130,6 +138,27 @@ export function toggleFavorite(b: BranchInfo) {
   void api.setFavorites(favorites).catch((e) => toast(String(e).replace(/^Error: /, ""), "error"));
 }
 sidebar.onToggleFavorite = toggleFavorite;
+
+/** The stale marks of the user in the active repository (see stale.ts). */
+let staleMarks: string[] = [];
+
+export async function loadStale() {
+  staleMarks = await api.staleBranches().catch(() => []);
+  showStale();
+}
+
+/** Draws the Stale group again, for example after a change of the setting of the days. */
+export function showStale() {
+  sidebar.setStale(staleMarks, settings.staleDays);
+}
+
+/** Puts branches in the Stale group, or takes them out. A stale branch shows in Stale, not in Local. */
+export function setStale(branches: BranchInfo[], on: boolean) {
+  if (!app.view) return;
+  staleMarks = nextMarks(staleMarks, branches, on, settings.staleDays, sidebar.staleClock);
+  showStale();
+  void api.setStaleBranches(staleMarks).catch((e) => toast(String(e).replace(/^Error: /, ""), "error"));
+}
 
 sidebar.onRemoteMenu = (remote, e) =>
   showMenu(e.clientX, e.clientY, [
@@ -205,7 +234,7 @@ viewBtn.addEventListener("click", () => {
     save();
     log.buildHeader();
   };
-  const mark = (key: "highlightMine" | "highlightMerges" | "highlightCurrent" | "commitTimestamp") => () => {
+  const mark = (key: "commitTimestamp") => () => {
     settings[key] = !settings[key];
     save();
     log.redraw();
@@ -222,11 +251,6 @@ viewBtn.addEventListener("click", () => {
     { label: "Hash", checked: settings.showHash, action: col("showHash") },
     { label: "Commit Timestamp", checked: settings.commitTimestamp, action: mark("commitTimestamp") },
     { separator: true },
-    { header: "Highlight" },
-    { label: "My Commits", checked: settings.highlightMine, action: mark("highlightMine") },
-    { label: "Merge Commits", checked: settings.highlightMerges, action: mark("highlightMerges") },
-    { label: "Current Branch", checked: settings.highlightCurrent, action: mark("highlightCurrent") },
-    { separator: true },
     {
       label: "Group Branches by Prefix",
       checked: settings.groupBranchesByPrefix,
@@ -236,7 +260,7 @@ viewBtn.addEventListener("click", () => {
         sidebar.setGroupByPrefix(settings.groupBranchesByPrefix);
       },
     },
-    { label: "Branches Panel", checked: settings.showSidebar, shortcut: keymap.shortcut("branches"), action: toggleSidebar },
+    { label: "Left Panel", checked: settings.showSidebar, action: toggleSidebar },
     { label: "Diff Panel", checked: settings.showDiff, shortcut: keymap.shortcut("diffPanel"), action: () => toggleDiff() },
     { separator: true },
     { label: `Zoom In`, shortcut: keymap.shortcut("zoomIn"), action: () => zoomBy(1) },

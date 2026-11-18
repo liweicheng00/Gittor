@@ -61,7 +61,7 @@ await shot("ct1-unversioned-dragged");
 
 // The compare window of main and nested shows a tree.
 const openCompare = async () => {
-  await page.click(".lp-tab:text-is('Branches')");
+  await page.click(".lp-tab[aria-label^='Branches']");
   await page.click(".group-header:has-text('Local') ~ .branch:has-text('nested') >> nth=0", { button: "right" });
   await page.click(".menu-item:has-text('Compare Branches: main and nested')");
   await page.waitForSelector(".compare-file");

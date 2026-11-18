@@ -73,7 +73,7 @@ git(origin, "checkout", "-q", "feature/cli");
 execFileSync("sh", ["-c", `sed -i '1i // remote header' "${origin}/cli.rs" && git -C "${origin}" commit -qam "Remote change on cli"`]);
 git(origin, "checkout", "-q", "main");
 await switchTo("feature/cli");
-await page.click(".lp-tab:has-text('Changes')");
+await page.click(".lp-tab[aria-label^='Changes']");
 execFileSync("sh", ["-c", `echo "// more" >> "${repo}/cli.rs"`]);
 await page.click("button[title='Refresh the local changes']");
 await page.waitForSelector(".cl-file:has-text('cli.rs')");

@@ -5,10 +5,10 @@ import { api, type BranchInfo, inTauri, type LogFilter, openWindow, pickFolder, 
 import { showMenu } from "./context-menu";
 import { h, icon } from "./dom";
 import { emptyFilter } from "./filter-bar";
-import { loadFavorites } from "./remotes";
+import { loadFavorites, loadStale } from "./remotes";
 import { clearCompare } from "./selection";
 import { addRecent, save, setRecentProject, settings } from "./settings";
-import { authors, banner, commitPanel, details, fetchBtn, filterBar, ideBtn, localHistoryBtn, terminalBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, sidebar, stashPanel, statusActivity, submodulePanel, tabBar, tabScroll, tabsInTitleBar, tabCommit, tabReviews, tabStash, task, updateBtn, updateStatus } from "./shell";
+import { authors, banner, centerHooks, commitPanel, repoLabel, details, fetchBtn, filterBar, ideBtn, localHistoryBtn, terminalBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, sidebar, stashPanel, statusActivity, submodulePanel, tabBar, tabScroll, tabsInTitleBar, tabCommit, tabReviews, tabStash, tabWorktrees, task, worktreePanel, updateBtn, updateStatus } from "./shell";
 import { app } from "./state";
 import { showWorkspace } from "./welcome";
 import { formDialog } from "./dialogs";
@@ -59,12 +59,16 @@ export function renderTabs() {
   }
   // In the title bar, the tab bar always shows: it also holds the window buttons of macOS.
   tabBar.hidden = !tabsInTitleBar && settings.tabs.length < 2;
+  // The tab names the repository; the toolbar names it only without tabs.
+  repoLabel.hidden = !tabBar.hidden;
   // Two folders with the same name get the folders above them: "work/app" and "old/app".
   const names = new Map(settings.tabs.map((r, i) => [r, pathLabels(settings.tabs)[i]]));
   const scroll = tabScroll.scrollLeft;
   tabScroll.replaceChildren(
-    ...settings.tabs.map((root) => {
+    ...settings.tabs.map((root, index) => {
       const name = names.get(root) ?? baseName(root);
+      // The number of Alt+<n>: the first eight tabs, and 9 for the last one. It shows while Alt is down.
+      const num = index < 8 ? index + 1 : index === settings.tabs.length - 1 ? 9 : 0;
       const info = tabInfo.get(root);
       // A linked worktree shows the worktree icon. Its tooltip names the main repository.
       const worktree = info?.mainRoot ?? null;
@@ -72,12 +76,15 @@ export function renderTabs() {
         ? [icon("worktree", "tab-icon"), h("span", { class: "tab-name" }, name)]
         : [h("span", { class: "tab-name" }, name)];
       const title = [worktree ? `Worktree of ${worktree}` : "", info?.branch ? `Branch: ${info.branch}` : info ? "Detached HEAD" : "", root].filter(Boolean).join("\n");
-      const close = h("button", { class: "tab-close", title: "Close the tab" }, icon("close"));
+      // Mod+W closes the active tab: its close button names the key.
+      const close = h("button", { class: "tab-close", title: "Close the tab", "data-key-action": root === settings.activeTab ? "closeProject" : undefined }, icon("close"));
       close.addEventListener("click", (e) => {
         e.stopPropagation();
         void closeTab(root);
       });
-      const tab = h("div", { class: "tab" + (root === settings.activeTab ? " on" : "") + (worktree ? " worktree" : ""), title, role: "tab", "data-root": root }, ...label, close);
+      // CSS draws the number from data-num, so the text of the tab stays its name.
+      const badge = num ? h("span", { class: "tab-num", "aria-hidden": "true", "data-num": String(num) }) : "";
+      const tab = h("div", { class: "tab" + (root === settings.activeTab ? " on" : "") + (worktree ? " worktree" : ""), title, role: "tab", "data-root": root }, badge, ...label, close);
       tab.addEventListener("contextmenu", (e) => {
         e.preventDefault();
         showMenu(e.clientX, e.clientY, [{ label: "Close Tab", action: () => void closeTab(root) }]);
@@ -225,7 +232,10 @@ async function loadRepo(r: ViewResult, state: TabState | null) {
   authors.clear();
   app.watchSeen = null;
   app.lastUndo = null;
-  sidebar.setRemoteTags(null, null);
+  centerHooks.reset();
+  // The marks of the tags that the remote does not have: the last answer for this repository, if any.
+  const cached = remoteTagsByRoot.get(r.root);
+  showRemoteTags(cached?.remote ?? null, cached?.names ?? null);
   commitPanel.clear();
   // The new repository starts at the log; a local change of the last repository does not count.
   app.diffSource = "log";
@@ -234,6 +244,8 @@ async function loadRepo(r: ViewResult, state: TabState | null) {
   // The watcher counters now are the base: the events after this reload what changed.
   app.watchSeen = await api.watchState().catch(() => null);
   await loadRefs();
+  // The first open of a repository asks its remote in the background; it needs the network.
+  if (!cached) void loadRemoteTags(undefined, true);
   commitPanel.setTemplate(await api.commitTemplate().catch(() => null));
   const target = state?.selected ?? r.headOid;
   // The user can choose a commit or a local change while the repository loads; that choice stays.
@@ -245,28 +257,32 @@ async function loadRepo(r: ViewResult, state: TabState | null) {
  * commits stay selected, and the file list and the diff stay as they are. A reload runs after each
  * operation and after a change in the git directory, so it must not move the view of the user.
  */
-export async function applyView(r: ViewResult, keepSelection: boolean) {
+export async function applyView(r: ViewResult, keepSelection: boolean, background = false) {
   const keepOids = keepSelection ? app.selected.map((s) => s.oid) : [];
-  const anchor = keepSelection ? log.viewAnchor() : null;
+  // At the top of the log, the view stays at the top: new commits show there.
+  const anchor = keepSelection && !log.atTop ? log.viewAnchor() : null;
   app.view = r;
-  document.title = `${r.root.split(/[\\/]/).pop()} – Gittor`;
+  const title = `${r.root.split(/[\\/]/).pop()} – Gittor`;
+  if (document.title !== title) document.title = title;
   refreshBtn.disabled = fetchBtn.disabled = updateBtn.disabled = pushBtn.disabled = remoteBtn.disabled = localHistoryBtn.disabled = terminalBtn.disabled = ideBtn.disabled = false;
-  updateStatus();
+  updateStatus(background);
   log.setCollapsed(r.collapsed);
-  log.reset(r.rowCount, r.recommendedWidth, keepSelection);
-  if (anchor) {
-    const at = await api.find(anchor.oid).catch(() => null);
-    if (at?.row != null) log.scrollToRow(at.row, anchor.offset);
-  }
   if (!keepSelection) {
+    log.reset(r.rowCount, r.recommendedWidth);
     app.selected = [];
     return clearCompare();
   }
+  // A reload: the rows on the screen stay until the new rows are there, so the log does not go blank.
+  const [at, found] = await Promise.all([
+    anchor ? api.find(anchor.oid).catch(() => null) : null,
+    Promise.all(keepOids.map((o) => api.find(o).catch(() => null))),
+  ]);
+  const rows = found.map((f) => f?.row ?? null).filter((x): x is number => x !== null);
+  const all = rows.length === keepOids.length;
+  await log.reload(r.rowCount, r.recommendedWidth, anchor && at?.row != null ? { row: at.row, offset: anchor.offset } : null, all ? rows : []);
   // Nothing was selected: the file list and the diff, for example of a local change, stay.
   if (!keepOids.length) return;
-  const rows = (await Promise.all(keepOids.map((o) => api.find(o)))).map((f) => f.row).filter((x): x is number => x !== null);
-  if (rows.length === keepOids.length) {
-    log.restoreSelection(rows);
+  if (all) {
     app.selected = await log.selectedRows();
     // The labels of the commits can change, so the details load again; the files and the diff stay.
     void details.show(app.selected);
@@ -280,7 +296,8 @@ export async function applyView(r: ViewResult, keepSelection: boolean) {
   } else clearCompare();
 }
 
-export async function loadRefs() {
+/** Loads the branches, the worktrees and the local changes. `background`: after a change outside the app. */
+export async function loadRefs(background = false) {
   const [r, rec, wt, st] = await Promise.all([
     api.refs().catch(() => [] as BranchInfo[]),
     api.recentBranches().catch(() => [] as RecentBranch[]),
@@ -294,13 +311,12 @@ export async function loadRefs() {
     app.repoState = st;
     sidebar.setRefs(app.refs);
     sidebar.setRecent(app.recent);
-    sidebar.setWorktrees(app.worktrees);
-    await loadFavorites();
+    showWorktrees();
+    await Promise.all([loadFavorites(), loadStale()]);
     // The tooltip of the tab names the branch; a checkout changes it.
     if (app.view) void refreshTabInfo(app.view.root);
-    log.myEmail = (await api.userEmail().catch(() => "")).toLowerCase();
     banner.update(app.repoState);
-    updateStatus();
+    updateStatus(background);
   } catch (e) {
     // The local changes still load.
     console.error("Loading the branches failed", e);
@@ -309,14 +325,43 @@ export async function loadRefs() {
 }
 
 /** Sets the label and the count of a left tab. The same label again makes no new elements. */
+/** The key of the favorite worktrees: the path of the main worktree, the same in each worktree. */
+function worktreeKey(): string {
+  return app.worktrees.find((w) => w.main)?.path ?? app.view?.root ?? "";
+}
+
+/** Shows the worktrees in the Worktrees tab. The tab shows a count when there is more than one. */
+export function showWorktrees() {
+  worktreePanel.setWorktrees(app.worktrees, settings.favoriteWorktrees[worktreeKey()] ?? []);
+  setTabLabel(tabWorktrees, "Worktrees", app.worktrees.length > 1 ? app.worktrees.length : 0);
+}
+
+/** Adds a worktree to the favorites, or removes it. */
+export function toggleWorktreeFavorite(path: string) {
+  const key = worktreeKey();
+  const now = settings.favoriteWorktrees[key] ?? [];
+  const next = now.includes(path) ? now.filter((p) => p !== path) : [...now, path];
+  if (next.length) settings.favoriteWorktrees[key] = next;
+  else delete settings.favoriteWorktrees[key];
+  save();
+  showWorktrees();
+}
+
 function setTabLabel(tab: HTMLElement, label: string, count: number) {
   const key = `${label}:${count}`;
   if (tab.dataset.label === key) return;
   tab.dataset.label = key;
-  tab.replaceChildren(label, count ? h("span", { class: "lp-count" }, String(count)) : "");
+  // The icon and the name stay; only the count changes.
+  tab.querySelector(".lp-count")?.remove();
+  if (count) tab.append(h("span", { class: "lp-count" }, String(count)));
+  tab.setAttribute("aria-label", count ? `${label} (${count})` : label);
 }
 
-export async function loadLocalChanges() {
+/**
+ * Loads the local changes, the stashes, the reviews and the submodules. With `filesOnly`, only files
+ * of the working tree changed: the stashes and the reviews are refs, so they do not load again.
+ */
+export async function loadLocalChanges(filesOnly = false) {
   try {
     commitPanel.set(await api.localChanges().catch(async () => {
       // One retry: the first call can meet a repository that is still opening.
@@ -328,6 +373,11 @@ export async function loadLocalChanges() {
   }
   const n = commitPanel.changeCount;
   setTabLabel(tabCommit, "Changes", n);
+  if (filesOnly) {
+    // Without submodules, only a change of .gitmodules can bring one.
+    if (submodulePanel.count > 0 || commitPanel.hasPath(".gitmodules")) await loadSubmodules();
+    return;
+  }
   try {
     stashPanel.set(await api.stashes());
   } catch {
@@ -386,7 +436,7 @@ export async function fetchAll() {
 /** Asks a remote for its tags, so the Tags group marks the tags that are only local. It needs the network,
  * so it runs after a fetch, after a push of tags, and on request. Without `remote`: the remote of the
  * current branch, else origin, else the first remote. */
-export async function loadRemoteTags(remote?: string) {
+export async function loadRemoteTags(remote?: string, quiet = false) {
   const root = app.view?.root;
   const cur = app.refs.find((b) => b.current);
   let name = remote ?? cur?.upstream?.split("/")[0];
@@ -394,13 +444,29 @@ export async function loadRemoteTags(remote?: string) {
     const remotes = (await api.remotes().catch(() => [])).map((r) => r.name);
     name = remotes.includes("origin") ? "origin" : remotes[0];
   }
-  if (!name) return sidebar.setRemoteTags(null, null);
+  if (!name) return showRemoteTags(null, null);
   try {
-    const tags = await api.remoteTags(name);
-    if (app.view?.root === root) sidebar.setRemoteTags(name, tags);
+    const tags = await api.remoteTags(name, quiet);
+    if (root) remoteTagsByRoot.set(root, { remote: name, names: tags });
+    if (app.view?.root === root) showRemoteTags(name, tags);
   } catch {
-    if (app.view?.root === root) sidebar.setRemoteTags(null, null);
+    // No network, or the remote refuses: no marks, and no message.
+    if (app.view?.root === root) showRemoteTags(null, null);
   }
+}
+
+/** The answer of the last check of the remote tags of each repository, so a switch of tabs asks no remote. */
+const remoteTagsByRoot = new Map<string, { remote: string; names: string[] }>();
+
+/** Marks the tags that the remote does not have: in the Branches tab, in the log and in the details. */
+function showRemoteTags(remote: string | null, names: string[] | null) {
+  sidebar.setRemoteTags(remote, names);
+  const next = remote && names ? { remote, names: new Set(names) } : null;
+  const same = (next === null && app.remoteTags === null) || (!!next && !!app.remoteTags && next.remote === app.remoteTags.remote && next.names.size === app.remoteTags.names.size && [...next.names].every((n) => app.remoteTags!.names.has(n)));
+  if (same) return;
+  app.remoteTags = next;
+  log.refsVersion++;
+  log.redraw();
 }
 
 /** True when the user chose what the diff shows: a commit in the log, or a local change. */

@@ -17,7 +17,7 @@ const clearToasts = () => page.evaluate(() => document.querySelectorAll(".toast"
 execFileSync("sh", ["-c", `cd "${repo}" && echo "More docs" >> README.md`]);
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
-await page.click(".lp-tab:has-text('Changes')");
+await page.click(".lp-tab[aria-label^='Changes']");
 await page.waitForSelector(".cl-file");
 
 // 1. Stash one file from the commit panel.
@@ -31,7 +31,7 @@ check("main.rs is stashed, README.md stays", !status1.includes("main.rs") && sta
 await clearToasts();
 
 // 2. Stash the rest with the unversioned file.
-await page.click(".lp-tab:has-text('Stash')");
+await page.click(".lp-tab[aria-label^='Stash']");
 await page.click(".stash-all");
 await page.fill(".dialog-field:has-text('Message') input", "Docs and notes");
 await page.check(".dialog-check:has-text('unversioned') input");

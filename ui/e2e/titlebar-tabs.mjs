@@ -71,6 +71,11 @@ await shot("tb2-two-tabs");
 // The last tab closes: the bar stays for the window buttons.
 await page.keyboard.press("Control+w");
 await within("Mod+W closes one tab", async () => (await layout()).tabs === 1);
+// The other project loads its commit and the diff of its file. A close before that leaves requests
+// for a closed repository.
+await within("the other project shows the diff of its file", async () =>
+  ((await page.textContent(".diff-toolbar").catch(() => "")) ?? "").includes("t.txt"));
+await page.waitForTimeout(500);
 await page.keyboard.press("Control+w");
 await within("without tabs, the bar stays", async () => {
   const x = await layout();

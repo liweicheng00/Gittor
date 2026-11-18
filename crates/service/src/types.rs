@@ -153,6 +153,9 @@ pub struct TagArgs {
 #[derive(Deserialize)]
 pub struct RemoteArgs {
     pub remote: String,
+    /// Remote tags only: ask the user no question (a check in the background).
+    #[serde(default)]
+    pub quiet: bool,
 }
 
 /// Clone Repository: the URL, the folder to put the clone in, and the name of the new folder. An empty
@@ -277,6 +280,13 @@ pub struct FilePair {
 #[derive(Deserialize)]
 pub struct OidArgs {
     pub oid: String,
+}
+
+/// A plan of an interactive rebase to check before it runs.
+#[derive(Deserialize)]
+pub struct RewriteCheckArgs {
+    pub base: String,
+    pub plan: Vec<gittor_git::ops::PlanEntry>,
 }
 
 /// A file at a commit, for Show Repository at Revision.

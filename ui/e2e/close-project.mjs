@@ -52,6 +52,20 @@ await page.keyboard.press("Control+w");
 await within("after the last tab, the welcome screen shows", async () => await page.isVisible(".welcome-card"));
 check("the recent list still has both projects", ((await page.textContent(".recent")) ?? "").includes("-close"));
 await shot("cp2-welcome");
+check("the welcome screen has no toolbar", !(await page.isVisible(".toolbar")));
+check("the welcome screen has no status bar", !(await page.isVisible(".statusbar")));
+await page.click(".welcome-settings");
+await within("the Settings link opens Settings", async () => await page.isVisible(".settings-page"));
+await page.keyboard.press("Escape");
+// A low window: the top of the card can scroll into view, and nothing is cut above it.
+await page.setViewportSize({ width: 1000, height: 360 });
+await page.$eval(".welcome", (e) => (e.scrollTop = 0));
+check("the top of the welcome card shows in a low window", await page.$eval(".welcome-logo", (logo) => logo.getBoundingClientRect().top >= logo.closest(".welcome").getBoundingClientRect().top));
+await shot("cp3-welcome-low");
+await page.setViewportSize({ width: 1600, height: 1000 });
+// A repository shows the toolbar and the status bar again.
+await page.click(".recent-item >> nth=0");
+await within("a repository shows the toolbar and the status bar again", async () => (await page.isVisible(".toolbar")) && (await page.isVisible(".statusbar")));
 
 console.log("errors:", JSON.stringify(errors));
 await browser.close();

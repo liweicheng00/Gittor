@@ -6,18 +6,18 @@ import { openInEditorHere, openProjectInEditor } from "./editor-flow";
 import { openInTerminal } from "./terminal-flow";
 import { showLocalHistory } from "./history-flow";
 import { isMac, type KeyAction, Keymap } from "./keymap";
-import { undoLast } from "./operations";
+import { newBranchHere, undoLast } from "./operations";
 import { askForRepo, closeActiveTab, fetchAll, refresh, switchTab } from "./repo";
 import { settings } from "./settings";
 import { openSettings } from "./settings-flow";
-import { changes, commitPanel, diff, filterBar, openBtn, showLeftTab, statusActivity, submodulePanel, toggleDiff, toggleSidebar } from "./shell";
+import { changes, commitPanel, diff, filesPanel, filterBar, worktreePanel, openBtn, showLeftTab, statusActivity, submodulePanel, toggleDiff } from "./shell";
 import { app } from "./state";
 import { pushBranch, updateBranch } from "./sync";
 import { resetZoom, zoomBy } from "./zoom";
 
 export const keymap = new Keymap();
 const typing = (t: HTMLElement) => t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || !!t.closest(".monaco-editor");
-/** The next open project, as Cmd+` in macOS. With one project open, the Open menu shows the recent ones. */
+/** The next open project, with the key left of 1 (Alt+` by default). With one project open, the Open menu shows the recent ones. */
 const switchProject = (d: number) => {
   if (settings.tabs.length < 2) return openBtn.click();
   nextTab(d);
@@ -44,6 +44,7 @@ for (const a of [
   { id: "fetch", label: "Fetch", defaults: [], run: () => app.view && void fetchAll() },
   { id: "update", label: "Update the Current Branch", defaults: ["Mod+T"], run: () => app.view && void updateBranch() },
   { id: "push", label: "Push", defaults: ["Mod+Shift+K"], run: () => app.view && void pushBranch() },
+  { id: "newBranch", label: "New Branch", defaults: ["Mod+B"], run: () => app.view && void newBranchHere() },
   {
     id: "commit",
     label: "Changes Tab (and the commit message)",
@@ -57,15 +58,15 @@ for (const a of [
   { id: "filter", label: "Find in the Log (filter)", defaults: ["Mod+F"], run: () => { filterBar.text.focus(); filterBar.text.select(); }, when: (t: HTMLElement) => !t.closest(".monaco-editor") },
   {
     id: "branches",
-    label: "Branches Panel",
+    label: "Branches Tab",
     defaults: ["Mod+1"],
-    run: () => {
-      if (settings.showSidebar && settings.leftTab !== "branches") showLeftTab("branches");
-      else toggleSidebar();
-    },
+    // A second press stays on the tab. View › Sidebar hides the left panel.
+    run: () => showLeftTab("branches"),
   },
   { id: "stash", label: "Stash Tab", defaults: ["Mod+3"], run: () => showLeftTab("stash") },
   { id: "reviews", label: "Reviews Tab", defaults: ["Mod+4"], run: () => showLeftTab("reviews") },
+  { id: "worktrees", label: "Worktrees Tab", defaults: ["Mod+6"], run: () => { showLeftTab("worktrees"); worktreePanel.focus(); } },
+  { id: "files", label: "Files Tab", defaults: ["Mod+`"], run: () => { showLeftTab("files"); filesPanel.focus(); } },
   {
     id: "submodules",
     label: "Submodules (in the Changes tab)",
@@ -79,11 +80,16 @@ for (const a of [
   { id: "diffPanel", label: "Diff Panel (show or hide)", defaults: [], run: () => toggleDiff() },
   { id: "hideDiff", label: "Hide the Diff Panel", defaults: ["Escape"], run: () => toggleDiff(false), when: (t: HTMLElement) => !typing(t) && settings.showDiff },
   { id: "closeProject", label: "Close the Project Tab", defaults: ["Mod+W"], run: () => void closeActiveTab() },
-  { id: "switchProject", label: "Switch Project", defaults: ["Mod+`"], run: () => switchProject(1) },
-  { id: "switchProjectBack", label: "Switch Project (back)", defaults: ["Mod+Shift+`"], run: () => switchProject(-1) },
+  { id: "switchProject", label: "Switch Project", defaults: ["Alt+`"], run: () => switchProject(1) },
+  { id: "switchProjectBack", label: "Switch Project (back)", defaults: ["Alt+Shift+`"], run: () => switchProject(-1) },
   ...projectKeys,
   { id: "openInEditor", label: "Open in Editor", defaults: ["F4"], run: (t: HTMLElement) => app.view && openInEditorHere(t) },
-  { id: "openProjectInEditor", label: "Open the Repository in the Editor", defaults: ["Shift+F4"], run: () => app.view && openProjectInEditor() },
+  {
+    id: "openProjectInEditor",
+    label: "Open the Editor (the repository, with the file in view)",
+    defaults: ["Mod+E", "Shift+F4"],
+    run: (t: HTMLElement) => app.view && openProjectInEditor(t),
+  },
   { id: "openInTerminal", label: "Open in Terminal", defaults: ["Alt+F12"], run: () => app.view && openInTerminal() },
   { id: "localHistory", label: "Local History", defaults: [], run: () => app.view && showLocalHistory("") },
   { id: "nextTab", label: "Next Tab", defaults: ["Mod+PageDown"], run: () => nextTab(1) },

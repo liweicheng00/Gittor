@@ -2,7 +2,8 @@
 
 import { api, type CommitInfo, type Row, type TagInfo } from "./api";
 import { copyText, formatDate, h, icon } from "./dom";
-import { refLabel } from "./ref-label";
+import { refLabel, tagNotOn } from "./ref-label";
+import { app } from "./state";
 
 export class DetailsPanel {
   readonly el: HTMLElement;
@@ -16,7 +17,11 @@ export class DetailsPanel {
     this.clear();
   }
 
+  /** The commit that the panel shows, to skip a draw of the same commit. */
+  private shownKey = "";
+
   clear() {
+    this.shownKey = "";
     this.body.replaceChildren(h("div", { class: "muted" }, "No commit selected."));
   }
 
@@ -24,6 +29,9 @@ export class DetailsPanel {
     const req = ++this.request;
     if (rows.length === 0) return this.clear();
     if (rows.length > 1) {
+      const key = JSON.stringify(rows.map((r) => [r.oid, r.subject, r.author, r.authorTime]));
+      if (key === this.shownKey) return;
+      this.shownKey = key;
       this.body.replaceChildren(
         h("div", { class: "details-multi" }, `${rows.length} commits selected`),
         ...rows.map((r) =>
@@ -40,8 +48,14 @@ export class DetailsPanel {
     }
     try {
       const c = await api.commit(rows[0].oid);
-      if (req === this.request) this.render(c);
+      if (req !== this.request) return;
+      // The same commit again, for example after a reload of the log: the panel stays as it is.
+      const key = JSON.stringify(c);
+      if (key === this.shownKey) return;
+      this.shownKey = key;
+      this.render(c);
     } catch (e) {
+      this.shownKey = "";
       if (req === this.request) this.body.replaceChildren(h("div", { class: "error" }, String(e)));
     }
   }
@@ -86,7 +100,16 @@ export class DetailsPanel {
   private render(c: CommitInfo) {
     const copy = h("button", { class: "icon-button", title: "Copy the full hash" }, icon("copy"));
     copy.addEventListener("click", () => void copyText(c.oid));
-    const refs = c.refs.length ? h("div", { class: "details-refs" }, ...c.refs.map((r) => h("span", { class: `ref ref-${r.kind}` }, refLabel(r)))) : "";
+    const refs = c.refs.length
+      ? h(
+          "div",
+          { class: "details-refs" },
+          ...c.refs.map((r) => {
+            const notOn = tagNotOn(r, app.remoteTags);
+            return h("span", { class: `ref ref-${r.kind}${notOn ? " ref-unpushed" : ""}`, title: notOn ? `Not on ${notOn}` : "" }, refLabel(r));
+          }),
+        )
+      : "";
     const sameCommitter = c.committer === c.author && c.committer_email === c.author_email;
     const tags = c.refs.filter((r) => r.kind === "tag").map((r) => r.name);
     const tagCards = h("div", { class: "tag-cards" });

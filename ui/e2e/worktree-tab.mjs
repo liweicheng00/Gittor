@@ -36,8 +36,10 @@ const within = async (what, fn, ms = 10000) => {
 const tabs = () => page.$$eval(".tab", (els) => els.map((e) => ({ text: e.textContent.replace(/\s+/g, " ").trim(), worktree: e.classList.contains("worktree"), title: e.title })));
 
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
-await page.waitForSelector(".sidebar .worktree", { timeout: 30000 });
-await page.dblclick(`.sidebar .worktree:has(.branch-name:text-is('${wt.split("/").pop()}'))`);
+await page.waitForSelector(".log-row", { timeout: 30000 });
+await page.click(".lp-tab[aria-label^='Worktrees']");
+await page.waitForSelector(".worktree-panel .worktree");
+await page.dblclick(`.worktree-panel .worktree:has(.branch-name:text-is('${wt.split("/").pop()}'))`);
 await within("two tabs", async () => (await tabs()).length === 2);
 await within("the worktree tab shows its name, and its tooltip names the main repository", async () => {
   const t = (await tabs()).find((x) => x.text.startsWith(wt.split("/").pop()));
@@ -49,9 +51,9 @@ check("the worktree tab has the worktree icon", (await page.$(".tab.worktree .ic
 
 // The same folder name: the worktree list and the tabs show the folder above.
 const short = (p) => p.split("/").slice(-2).join("/");
-const listed = await page.$$eval(".sidebar .worktree .branch-name", (els) => els.map((e) => e.textContent));
+const listed = await page.$$eval(".worktree-panel .worktree .branch-name", (els) => els.map((e) => e.textContent));
 check("the worktree list shows the folders above the same names", same.every((p) => listed.includes(short(p))));
-for (const p of same) await page.dblclick(`.sidebar .worktree:has(.branch-name:text-is('${short(p)}'))`).then(() => page.waitForTimeout(1500));
+for (const p of same) await page.dblclick(`.worktree-panel .worktree:has(.branch-name:text-is('${short(p)}'))`).then(() => page.waitForTimeout(1500));
 await within("four tabs", async () => (await tabs()).length === 4);
 const texts = (await tabs()).map((t) => t.text);
 check("the two tabs with the same name differ", same.every((p) => texts.some((t) => t.startsWith(short(p)))));

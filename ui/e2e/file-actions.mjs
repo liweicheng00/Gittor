@@ -47,7 +47,7 @@ await fileMenu("Initial commit", "README.md", "Get from Revision");
 await page.click(".dialog-buttons button:has-text('Get')");
 await page.waitForTimeout(1500);
 check("README.md has its first version", readFileSync(`${repo}/README.md`, "utf8") === git("show", `${git("rev-list", "--max-parents=0", "HEAD")}:README.md`) + "\n");
-await page.click(".lp-tab:has-text('Changes')");
+await page.click(".lp-tab[aria-label^='Changes']");
 await page.waitForTimeout(800);
 const tree = (await page.textContent(".commit-tree")).replace(/\s+/g, " ");
 console.log("local changes:", tree);
@@ -55,7 +55,7 @@ check("the local changes list the three files", tree.includes("main.rs") && tree
 await shot("fa2-local-changes");
 
 // Compare branches as commit lists.
-await page.click(".lp-tab:has-text('Branches')");
+await page.click(".lp-tab[aria-label^='Branches']");
 await page.click(".branch:has(.branch-name:text-is('feature/cli'))", { button: "right" });
 await page.click(".menu-item:has-text('Show Commits Not in main')");
 await page.waitForTimeout(2000);

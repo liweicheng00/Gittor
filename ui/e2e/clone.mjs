@@ -30,7 +30,7 @@ const within = async (what, fn, ms = 15000) => {
 };
 const folderField = ".dialog-field:has-text('Into the folder') input";
 const openClone = async () => {
-  await page.click(".tb-button:has-text('Open')");
+  await page.click(".tb-button[aria-label='Open']");
   await page.click(".menu-item:has-text('Clone Repository')");
   await page.waitForSelector(".dialog:has-text('Clone Repository')");
 };

@@ -223,7 +223,7 @@ await page.click(".branch-picker .menu-item:has-text('feature/cli → main')");
 await within("the switcher opens the first review", async () => (await files()) === "cli.rs");
 await page.keyboard.press("Escape");
 await within("the tab lists both reviews", async () => (await page.$$(".review-row")).length === 2);
-check("the tab counts the open reviews", (await text(".lp-tab:has-text('Reviews')")).includes("2"));
+check("the tab counts the open reviews", (await text(".lp-tab[aria-label^='Reviews']")).includes("2"));
 await shot("rv2-list");
 
 // Merge from the list with Squash, and delete the branch.
@@ -256,7 +256,7 @@ for (const f of ["src/app/one.rs", "src/app/two.rs", "top.txt"]) {
 execFileSync("git", ["-C", tmp, "add", "."]);
 execFileSync("git", ["-C", tmp, "-c", "commit.gpgsign=false", "commit", "-q", "-m", "Tree files"]);
 execFileSync("git", ["-C", repo, "worktree", "remove", "--force", tmp]);
-await page.click(".tb-button:has-text('Refresh')");
+await page.click(".tb-button[aria-label='Refresh']");
 await page.keyboard.press("Control+1");
 await page.waitForSelector(".sidebar .branch:has-text('feature/tree')");
 await page.keyboard.press("Control+4");

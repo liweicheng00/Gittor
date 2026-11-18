@@ -3,6 +3,7 @@
 use crate::{err, Result, Service};
 use serde::Deserialize;
 
+/// A list of full ref names: the favorites, or the stale branches.
 #[derive(Deserialize)]
 struct FavoritesArgs {
     refs: Vec<String>,
@@ -39,6 +40,8 @@ impl Service {
             "ui_settings" => serde_json::to_string(&self.ui_settings()?),
             "favorites" => serde_json::to_string(&self.favorites()?),
             "set_favorites" => serde_json::to_string(&self.set_favorites(parse::<FavoritesArgs>(body)?.refs)?),
+            "stale_branches" => serde_json::to_string(&self.stale_branches()?),
+            "set_stale_branches" => serde_json::to_string(&self.set_stale_branches(parse::<FavoritesArgs>(body)?.refs)?),
             "activate" => serde_json::to_string(&self.activate(parse(body)?)?),
             "close" => serde_json::to_string(&self.close(parse(body)?)?),
             "fetch" => serde_json::to_string(&self.fetch()?),
@@ -61,9 +64,9 @@ impl Service {
                 self.askpass_answer(parse(body)?);
                 Ok("null".to_string())
             }
-            "user_email" => serde_json::to_string(&self.user_email()?),
             "remote_containing" => serde_json::to_string(&self.remote_containing(parse(body)?)?),
             "tree_files" => serde_json::to_string(&self.tree_files(parse(body)?)?),
+            "worktree_files" => serde_json::to_string(&self.worktree_files()?),
             "file_at" => serde_json::to_string(&self.file_at(parse(body)?)?),
             "children" => serde_json::to_string(&self.children(parse(body)?)?),
             "head_message" => serde_json::to_string(&self.head_message()?),
@@ -78,6 +81,7 @@ impl Service {
             "worktrees" => serde_json::to_string(&self.worktrees()?),
             "worktree_blockers" => serde_json::to_string(&self.worktree_blockers(parse(body)?)?),
             "recent_branches" => serde_json::to_string(&self.recent_branches()?),
+            "rewrite_check" => serde_json::to_string(&self.rewrite_check(parse(body)?)?),
             "rewrite_range" => serde_json::to_string(&self.rewrite_range(parse(body)?)?),
             "run_op" => serde_json::to_string(&self.run_op(parse(body)?)?),
             "compare" => serde_json::to_string(&self.compare(parse(body)?)?),

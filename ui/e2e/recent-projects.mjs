@@ -53,7 +53,7 @@ await page.evaluate((recent) => {
 }, [...trees.slice(0, 4), lib, repo]);
 await page.reload();
 await page.waitForSelector(".log-row", { timeout: 30000 });
-await page.click(".tb-button:has-text('Open')");
+await page.click(".tb-button[aria-label='Open']");
 await page.waitForSelector(".menu .menu-item[title]");
 let rows = await menuRows();
 check("the demo repository comes first: the most recent use is a worktree of it", rows[0]?.title === repo && !rows[0].indent);
@@ -71,7 +71,7 @@ for (const t of trees) await page.evaluate(async (p) => {
 await page.reload();
 await page.waitForSelector(".log-row", { timeout: 30000 });
 // A real open of a worktree records its project and trims the list.
-await page.click(".tb-button:has-text('Open')");
+await page.click(".tb-button[aria-label='Open']");
 await page.waitForTimeout(400);
 await page.click(`.menu .menu-item[title='${trees[13]}']`);
 await within("the worktree opens in a tab", async () => (await page.$$(".tab")).length === 2);
@@ -79,7 +79,7 @@ await within("the list keeps the other project", async () => (await stored()).re
 const s = await stored();
 check("the list keeps 8 worktrees of the project", s.recent.filter((p) => p.startsWith(wtDir)).length === 8);
 check("the project of the worktree is known", s.recentProjects?.[trees[13]] === repo);
-await page.click(".tb-button:has-text('Open')");
+await page.click(".tb-button[aria-label='Open']");
 await page.waitForSelector(".menu .menu-item[title]");
 rows = await menuRows();
 check("the menu shows 2 projects", rows.filter((r) => !r.indent).map((r) => r.title).join() === `${repo},${lib}`);

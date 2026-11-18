@@ -1,10 +1,9 @@
 // The Changes tab: local changes, changelists, commit, rollback and partial changelists.
 
 import { visit } from "./nav";
-import { api, type ChangeListView, IGNORE_LIST, type LocalNoteEdit } from "./api";
+import { api, type ChangeListView, IGNORE_LIST } from "./api";
 import { copyText } from "./dom";
-import type { NoteHandlers } from "./note-layer";
-import { formatNote, formatNotes } from "./note-format";
+import { formatNotes } from "./note-format";
 import { type LocalFile } from "./commit-panel";
 import { menuBelow, type MenuItem, showMenu } from "./context-menu";
 import { mergeFile } from "./conflicts";
@@ -21,12 +20,6 @@ import { pushBranch } from "./sync";
 
 let localRequest = 0;
 
-/** Shows the notes of a local file again, after a change of its notes. */
-async function reloadLocalNotes(path: string) {
-  const notes = await api.localNotes(path).catch(() => []);
-  if (app.diffSource === "local" && diff.currentPath === path) diff.setNotes(notes.map((n) => ({ ...n, outdated: false })), localNoteHandlers(path));
-}
-
 /** Copies the open notes on all local changes, file by file. A resolved note is done, so it stays out. */
 commitPanel.onCopyNotes = async () => {
   const open = (await api.localNotes("").catch(() => [])).filter((n) => !n.resolved);
@@ -35,35 +28,36 @@ commitPanel.onCopyNotes = async () => {
   void copyText(paths.map((p) => formatNotes(p, open.filter((n) => n.path === p))).join("\n\n"));
 };
 
-/** Add, delete, resolve and copy for the notes on the local changes of a file. */
-function localNoteHandlers(path: string): NoteHandlers {
-  const run = async (e: LocalNoteEdit) => {
-    try {
-      await api.localNoteEdit(e);
-    } catch (err) {
-      toast(String(err).replace(/^Error: /, ""), "error");
-    }
-    await reloadLocalNotes(path);
-  };
-  return {
-    add: (line, endLine, text) => run({ action: "add", path, line, endLine, text }),
-    remove: (id) => run({ action: "delete", path, id }),
-    resolve: (id, resolved) => run({ action: "resolve", path, id, resolved }),
-    copy: (n) => void copyText(formatNote(path, n)),
-  };
+/** Loads a file of the Files tab again; files-flow.ts sets it. */
+let reloadFileView: () => Promise<void> = async () => {};
+export const setFileViewReload = (fn: () => Promise<void>) => (reloadFileView = fn);
+
+/** Loads the diff of the local file that shows again, after a change outside the app, and the file that
+ * the center panel shows. */
+export async function refreshLocalDiff() {
+  await reloadFileView();
+  const f = commitPanel.activeFile();
+  if (app.diffSource === "local" && f) await showLocalDiff(f, true);
 }
-export async function showLocalDiff(f: LocalFile) {
+
+/**
+ * Shows the diff of a local file. `refresh` is a load of the file that shows already: when the file
+ * and HEAD are the same as before, nothing draws; else the diff gets the new text in place.
+ */
+export async function showLocalDiff(f: LocalFile, refresh = false) {
   const path = f.change.path;
-  visit({
-    key: `local\0${path}`,
-    label: `Local change: ${path}`,
-    open: () => {
-      showLeftTab("commit");
-      commitPanel.revealFile(path, f.list);
-    },
-  });
+  if (!refresh) {
+    visit({
+      key: `local\0${path}`,
+      label: `Local change: ${path}`,
+      open: () => {
+        showLeftTab("commit");
+        commitPanel.revealFile(path, f.list);
+      },
+    });
+    app.request++;
+  }
   const req = ++localRequest;
-  app.request++;
   app.diffSource = "local";
   const head = commitPanel.head;
   const status = f.change.status === "?" ? "A" : f.change.status === "U" ? "M" : f.change.status;
@@ -75,6 +69,7 @@ export async function showLocalDiff(f: LocalFile) {
       : { left: { text: null, binary: false, size: 0, missing: true }, right: (await api.filePair("worktree", "worktree", change.path, null)).right };
     if (req !== localRequest || app.diffSource !== "local") return;
     if (f.change.status === "?") pair.left = { text: null, binary: false, size: 0, missing: true };
+    if (refresh && diff.shows(change, pair.left, pair.right)) return;
     diff.setSource(
       f.change.status === "D" ? (head ? { path: f.change.old_path ?? f.change.path, rev: { commit: head } } : null) : { path: f.change.path, rev: "worktree" },
     );
@@ -89,11 +84,8 @@ export async function showLocalDiff(f: LocalFile) {
     diff.setMoveChange(f.list !== null && text && f.change.status === "M" ? (line, at) => moveChangeMenu(f, line, at) : null);
     // Revert This Change rolls back one change of the file to HEAD.
     diff.setRevert(text && f.change.status === "M" ? (p, t, expected) => void runOp({ op: "writeFile", path: p, text: t, expected }, `Rolling back a change of ${p}`) : null);
-    // Notes on the working-tree file. They go away when the file changes.
-    const notes = text || (f.change.status !== "D" && !pair.right.missing && !pair.right.binary) ? await api.localNotes(path).catch(() => []) : null;
-    if (req !== localRequest || app.diffSource !== "local") return;
+    // The notes on the local changes are in the Compare window (a double click), not here.
     diff.show(change, pair.left, pair.right);
-    if (notes) diff.setNotes(notes.map((n) => ({ ...n, outdated: false })), localNoteHandlers(path));
   } catch (e) {
     if (req === localRequest) diff.message(String(e));
   }
@@ -275,6 +267,16 @@ commitPanel.onAmendToggle = () => api.headMessage().catch(() => "");
 commitPanel.onCommit = (files, message, amend, list, push, signOff) => void commitFiles(files, message, amend, list, push, signOff);
 
 // A double click on a local change opens the compare window: the current branch and the working tree,
-// with this file first. The window lists all local changes, so the user can go through them there.
+// with this file first. The window lists the files of the changelist of this file only, ".ignore" too.
 // A double click on a file with conflicts opens the merge window.
-commitPanel.onActivate = (f) => (f.change.status === "U" ? void mergeFile(f.change.path) : compareBranches(currentBranch() ?? "HEAD", WORKTREE, f.change.path));
+commitPanel.onActivate = (f) => {
+  if (f.change.status === "U") return void mergeFile(f.change.path);
+  const name = f.list === null ? "Unversioned Files" : (commitPanel.lists.find((l) => l.id === f.list)?.name ?? f.list);
+  // The files come from the backend at each load: a change from outside can reach the window first.
+  const paths = async () => {
+    const local = await api.localChanges();
+    const list = f.list === null ? local.unversioned : (local.lists.find((l) => l.id === f.list)?.changes.map((c) => c.path) ?? []);
+    return new Set(list);
+  };
+  compareBranches(currentBranch() ?? "HEAD", WORKTREE, f.change.path, { name, paths });
+};

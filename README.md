@@ -25,14 +25,17 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | Keys | Action |
 |---|---|
 | `Ctrl/Cmd+O` | Open a repository |
-| `Ctrl/Cmd+1` … `Ctrl/Cmd+5` | Branches, Changes, Stash and Reviews tabs; the submodules in the Changes tab |
+| ``Ctrl/Cmd+` ``, `Ctrl/Cmd+1` … `Ctrl/Cmd+4` | Files, Branches, Changes, Stash and Reviews tabs |
+| `Ctrl/Cmd+5` | The submodules in the Changes tab |
+| `Ctrl/Cmd+6` | Worktrees tab |
 | `Ctrl/Cmd+K`, `Ctrl/Cmd+Enter` | Commit (from the tab, from the message field) |
 | `Ctrl/Cmd+Alt+K` | Commit and push |
 | `Ctrl/Cmd+Shift+K` | Push |
+| `Ctrl/Cmd+B` | New branch (from the current branch, or another one) |
 | `Ctrl/Cmd+T` | Update |
 | `Ctrl/Cmd+R`, `F5` | Refresh |
 | `Ctrl/Cmd+F` | Filter the log |
-| `Shift+F4` | Open the repository in the editor of Settings › Editor (the IDE button) |
+| `Ctrl/Cmd+E`, `Shift+F4` | Open the repository in the editor of Settings › Editor, with the selected file or the file of the diff (the IDE button) |
 | `Alt+F12` | Open a terminal in the folder of the repository (Settings › Terminal sets the app) |
 | `Ctrl/Cmd+Z` | Undo the last operation (outside a text field) |
 | `Ctrl/Cmd+C` | Copy the hash |
@@ -40,6 +43,8 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | `F7`, `Shift+F7` | Next and previous change |
 | `Alt+Down`, `Alt+Up` | Next and previous file |
 | `Ctrl/Cmd+PageDown`, `Ctrl/Cmd+PageUp` | Next and previous tab |
+| ``Alt+` ``, ``Alt+Shift+` `` | Next and previous project (with one project, the Open menu) |
+| `Alt+1` … `Alt+9` | Project tab 1 to 8, and the last project tab |
 | `Ctrl/Cmd+W` | Close the project tab (`Cmd+Shift+W` closes the window on macOS) |
 | `Ctrl/Cmd+Alt+Left`, `Ctrl/Cmd+Alt+Right` | Back and Forward (also `Cmd+[` and `Cmd+]` on macOS) |
 | `Esc` | Hide the diff panel |
@@ -50,7 +55,7 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | Data | Place |
 |---|---|
 | Changelists, Local History, temporary files | `<git dir>/gittor/` of each worktree |
-| Reviews and favorite branches | `<common git dir>/gittor/`, shared by all worktrees |
+| Reviews, favorite branches and stale branches | `<common git dir>/gittor/`, shared by all worktrees |
 | Git program, Local History limits, editor, terminal | `settings.json` in `~/.config/gittor` (Linux), `~/Library/Application Support/gittor` (macOS) or `%APPDATA%\gittor` (Windows) |
 | A copy of the UI settings, for Gittor Dev | `ui-settings.json` in the same folder |
 | The settings of Gittor Dev (a test build) | the folder `gittor-dev` next to it; the first start copies the folder `gittor` |

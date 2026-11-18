@@ -76,6 +76,10 @@ html.titlebar-tabs .tab { border-top: 2px solid transparent; }
 .tab:hover { background: var(--hover); }
 /* A linked worktree: its icon and the name of its main repository. */
 .tab .tab-icon { color: var(--accent); }
+/* The number of Alt+<n> on each project tab, while Alt is down. */
+.tab-num { display: none; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 4px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 600; line-height: 16px; text-align: center; }
+.tab-num::before { content: attr(data-num); }
+.tabbar.show-numbers .tab-num { display: inline-block; }
 .tab.on { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
 .tab-add { flex: none; }
 .tab-close, .tab-add { border: none; background: none; color: var(--muted); cursor: pointer; border-radius: 4px; padding: 0 4px; font: inherit; }
@@ -200,6 +204,9 @@ html.titlebar-tabs .tab { border-top: 2px solid transparent; }
 .ref-local { color: var(--local); border-color: var(--local); }
 .ref-remote { color: var(--remote); border-color: var(--remote); }
 .ref-tag { color: var(--tag); border-color: var(--tag); }
+/* A tag that the remote does not have: dashed, with an arrow up. */
+.ref.ref-unpushed { border-style: dashed; }
+.ref.ref-unpushed::before { content: "↑"; margin-right: 2px; }
 .ref-head, .ref-other { color: var(--head); border-color: var(--head); }
 
 /* changes */
@@ -314,6 +321,8 @@ html.titlebar-tabs .tab { border-top: 2px solid transparent; }
 .primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .primary.big, .big { padding: 8px 20px; font-size: 14px; }
 .welcome-actions { display: flex; gap: 10px; justify-content: center; }
+.welcome-settings { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; color: var(--muted); font-size: 12px; cursor: pointer; padding: 2px 6px; }
+.welcome-settings:hover { color: var(--fg); }
 
 .dialog.wide { width: min(760px, calc(100vw - 32px)); }
 .dialog button { color: var(--fg); }
@@ -346,7 +355,7 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .rebase-row.action-drop .rebase-subject, .rebase-row.action-drop .rebase-hash { text-decoration: line-through; opacity: 0.55; }
 .rebase-row.action-squash, .rebase-row.action-fixup { background: var(--panel); }
 .rebase-row.action-edit .rebase-subject::after { content: "  ⏸ stops here"; color: var(--tag); font-size: 11px; }
-.rebase-row.action-squash .rebase-subject::before, .rebase-row.action-fixup .rebase-subject::before { content: "↳ "; color: var(--muted); }
+.rebase-row.action-squash .rebase-subject::before, .rebase-row.action-fixup .rebase-subject::before { content: "↴ "; color: var(--muted); }
 
 /* toasts */
 .copy-hint { position: fixed; z-index: 120; display: flex; align-items: center; gap: 4px; max-width: 360px; padding: 3px 9px; border-radius: 12px; background: var(--fg); color: var(--bg); font-size: 12px; white-space: nowrap; pointer-events: none; box-shadow: var(--shadow); animation: copy-hint-in 0.12s ease-out; transition: opacity 0.3s; }
@@ -421,13 +430,36 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 /* left pane: branches and commit tabs */
 .leftpane { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--panel); border-right: 1px solid var(--border); }
 .leftpane[hidden] { display: none; }
-.leftpane > .sidebar, .leftpane > .commit-panel, .leftpane > .stash-panel { flex: 1; min-height: 0; border-right: 0; }
+.leftpane > .sidebar, .leftpane > .commit-panel, .leftpane > .stash-panel, .leftpane > .files-panel, .leftpane > .worktree-panel { flex: 1; min-height: 0; border-right: 0; }
+.files-panel { display: flex; flex-direction: column; min-height: 0; background: var(--panel-2); }
+.files-head { display: flex; align-items: center; gap: 6px; padding: 6px 8px; }
+.files-search { flex: 1; min-width: 0; padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--fg); }
+.files-count { flex: none; font-size: 11px; }
+.files-list { flex: 1; min-height: 0; overflow: auto; outline: none; padding-bottom: 8px; }
+.worktree-panel { display: flex; flex-direction: column; min-height: 0; background: var(--panel-2); }
+.worktree-search { flex: 1; min-width: 0; margin: 6px 0 6px 8px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--fg); }
+.worktree-list { flex: 1; min-height: 0; overflow: auto; outline: none; padding: 2px 0 8px; }
+.worktree-list .branch { padding-left: 8px; }
+.worktree-empty { padding: 6px 10px; }
+.worktree-add { font-size: 15px; }
+.files-row { display: flex; align-items: center; gap: 5px; padding-top: 2px; padding-bottom: 2px; padding-right: 8px; white-space: nowrap; cursor: default; }
+.files-row:hover { background: var(--hover); }
+.files-row.selected, .files-row.cursor { background: var(--select); }
+.files-name { overflow: hidden; text-overflow: ellipsis; }
+/* A modified file is blue, as in IntelliJ. */
+.files-name.status-text-M { color: var(--renamed); }
+.files-dir-hint { overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
 .leftpane > [hidden] { display: none !important; }
 .leftpane .sidebar > .pane-title { display: none; }
 .lp-tabs { display: flex; overflow: hidden; border-bottom: 1px solid var(--border); padding: 0 2px; gap: 0; }
-.lp-tab { font-size: 11.5px; white-space: nowrap; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding: 6px 2px 5px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; }
+/* The left tabs: an icon each, with the name in the tooltip. The name stays out of view for screen readers. */
+.lp-tab { flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 3px; white-space: nowrap; overflow: hidden; padding: 7px 2px 6px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; }
+.lp-tab .lp-icon { width: 19px; height: 19px; vertical-align: 0; }
+/* A name for screen readers and for the scenarios, out of view. */
+.sr-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.tb-icon-only .icon:not(.icon-caret) { width: 16px; height: 16px; }
 .lp-tab:hover { color: var(--fg); }
-.lp-count { margin-left: 2px; padding: 0 3px; border-radius: 8px; background: var(--select); color: var(--fg); font-size: 10px; font-weight: 600; }
+.lp-count { padding: 0 4px; border-radius: 8px; background: var(--select); color: var(--fg); font-size: 10.5px; font-weight: 600; line-height: 15px; }
 .lp-tab.on { color: var(--fg); border-bottom-color: var(--accent); }
 
 /* commit panel */
@@ -631,8 +663,9 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .commit-push:disabled { opacity: 0.5; cursor: default; }
 
 /* welcome */
-.welcome { flex: 1; display: flex; align-items: center; justify-content: center; overflow: auto; padding: 16px; }
-.welcome-card { width: min(560px, 100%); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.welcome { flex: 1; display: flex; overflow: auto; padding: 16px; }
+/* margin: auto centers the card, and a card higher than the window starts at the top: it can scroll. */
+.welcome-card { margin: auto; width: min(560px, 100%); display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
 .welcome-card h1 { margin: 0; font-size: 24px; font-weight: 600; }
 .welcome-card p { margin: 0 0 8px; }
 .welcome-logo { position: relative; width: 64px; height: 64px; border-radius: 14px; background: var(--panel); border: 1px solid var(--border); }
@@ -758,6 +791,19 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .review-file.viewed .rebase-subject { color: var(--muted); }
 .review-file-notes { font-size: 11px; color: var(--muted); }
 .review-right { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-height: 0; min-width: 0; }
+/* The center panel with an open file of the Files tab: the tabs, and the file in place of the log. */
+.center-tabs { display: flex; flex: none; overflow-x: auto; border-bottom: 1px solid var(--border); background: var(--panel); }
+.center-tab { display: flex; align-items: center; gap: 4px; padding: 4px 6px 4px 12px; white-space: nowrap; color: var(--muted); border-bottom: 2px solid transparent; cursor: default; }
+.center-tab.on { color: var(--fg); border-bottom-color: var(--accent); }
+.center-tab:hover { background: var(--hover); }
+.center-tab-close { border: 0; background: none; color: var(--muted); padding: 0 2px; cursor: pointer; display: inline-flex; }
+.center-tab:only-child, .center-tab:first-child { padding-right: 12px; }
+.file-host { flex: 1; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto; }
+.file-host > .diff { min-height: 0; }
+/* A file has no diff: the buttons for changes and the options of a diff hide. Its tab closes it. */
+.file-host .diff-toolbar [data-key-action="previousChange"], .file-host .diff-toolbar [data-key-action="nextChange"],
+.file-host .diff-toolbar [data-key-action="previousFile"], .file-host .diff-toolbar [data-key-action="nextFile"],
+.file-host .diff-toolbar [data-key-action="hideDiff"], .file-host .diff-option:has([data-key]) { display: none; }
 .review-notes { border-top: 1px solid var(--border); max-height: 220px; display: flex; flex-direction: column; min-height: 0; }
 .review-notes-title { display: flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 12px; color: var(--muted); }
 .review-notes-copy { padding: 1px 6px; font-size: 11px; }
@@ -819,6 +865,7 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .column-grip { flex: 0 0 5px; }
 .compare-side > .compare-files, .compare-side > .review-files { flex: 1 1 0; min-height: 0; overflow: auto; }
 .tag-local { font-size: 10px; padding: 0 4px; border-radius: 3px; border: 1px solid var(--tag); color: var(--tag); margin-left: 4px; }
+.branch-gone { border-color: var(--muted); color: var(--muted); }
 .tag-cards:empty { display: none; }
 .tag-card { border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; margin: 6px 0; }
 .tag-card-head { display: flex; align-items: center; gap: 6px; }
@@ -848,10 +895,6 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .branch.selected { background: var(--select); }
 .branch.selected:hover { background: var(--select); }
 
-/* The highlighters of the log (View > Highlight). */
-.log-row.hl-mine .subject-text { font-weight: 600; }
-.log-row.hl-merge .subject-text, .log-row.hl-merge .author, .log-row.hl-merge .date { color: var(--muted); }
-.log-row.hl-other:not(.selected) .subject, .log-row.hl-other:not(.selected) .author, .log-row.hl-other:not(.selected) .date, .log-row.hl-other:not(.selected) .hash { opacity: 0.45; }
 
 /* Show Repository at Revision. */
 .repo-browser-search { margin: 6px 8px; width: auto; }
@@ -870,3 +913,37 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .branch-folder { display: flex; gap: 6px; align-items: center; padding: 1px 6px 1px 8px; white-space: nowrap; cursor: default; color: var(--muted); }
 .branch-folder:hover { background: var(--hover); }
 .branch-folder .branch-name { color: var(--fg); }
+
+/* The interactive rebase editor: the plan, its drag and drop, and the check. */
+.rebase-dialog .rebase-list { margin: 8px 0; }
+.rebase-row { grid-template-columns: auto 14px 96px 76px minmax(0, 1fr) auto auto; cursor: default; }
+/* The small graph of the new order: a line through all rows and a node in each. */
+.rebase-node { position: relative; align-self: stretch; margin: -3px 0; }
+.rebase-node::before { content: ""; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: var(--accent); opacity: 0.6; }
+.rebase-row:first-child .rebase-node::before { top: 50%; }
+.rebase-row:last-child .rebase-node::before { bottom: 50%; }
+.rebase-node::after { content: ""; position: absolute; left: 2px; top: calc(50% - 5px); width: 10px; height: 10px; box-sizing: border-box; border-radius: 50%; background: var(--accent); border: 2px solid var(--accent); }
+.rebase-row.action-squash .rebase-node::after, .rebase-row.action-fixup .rebase-node::after { left: 4px; top: calc(50% - 3px); width: 6px; height: 6px; }
+.rebase-row.action-drop .rebase-node::after { background: var(--bg); opacity: 0.6; }
+.rebase-node.node-conflict::after { background: var(--danger, #e05555); border-color: var(--danger, #e05555); }
+.rebase-node.node-empty::after { background: var(--bg); }
+.rebase-row.drag-source { opacity: 0.4; }
+.rebase-row.drag-source .rebase-node::after { background: var(--bg); border-style: dashed; }
+.rebase-drag-tip { position: fixed; z-index: 1000; pointer-events: none; background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; font-size: 12px; white-space: nowrap; box-shadow: 0 4px 14px #0004; }
+.rebase-grip { color: var(--muted); cursor: grab; user-select: none; letter-spacing: -2px; padding: 0 2px; }
+.rebase-row .rebase-status { white-space: nowrap; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+.rebase-status.status-ok { color: var(--ok, #4caf50); }
+.rebase-status.status-conflict { color: var(--danger, #e05555); }
+.rebase-status.status-empty, .rebase-status.status-afterConflict, .rebase-status.status-dropped { color: var(--muted); }
+.rebase-row.drop-squash { outline: 2px dashed var(--tag); outline-offset: -2px; background: var(--panel); }
+.rebase-row.drop-above { box-shadow: inset 0 2px 0 var(--accent, #3574f0); }
+.rebase-row.drop-below { box-shadow: inset 0 -2px 0 var(--accent, #3574f0); }
+.rebase-list.dragging { cursor: grabbing; }
+.rebase-reworded { color: var(--tag); margin-right: 4px; }
+.rebase-drag-ghost { position: fixed; z-index: 1000; pointer-events: none; background: var(--accent, #3574f0); color: #fff; padding: 3px 10px; border-radius: 4px; font-size: 12px; box-shadow: 0 6px 18px #0009; opacity: 0.95; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rebase-drag-ghost.fixup::before { content: "fixup "; opacity: 0.8; }
+.rebase-summary { margin: 6px 0; display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+.rebase-sum.bad { color: var(--danger, #e05555); }
+.rebase-sum.warn { color: var(--tag); }
+.rebase-sum.ok { color: var(--ok, #4caf50); }
+.rebase-checking { color: var(--muted); font-size: 12px; margin-right: auto; align-self: center; }

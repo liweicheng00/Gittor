@@ -67,7 +67,7 @@ await page.keyboard.press("Escape");
 check("Esc in the filter field keeps the panel", (await diffHeight()) > 0);
 
 // The close button.
-await page.click(".diff-toolbar button[title='Hide the diff panel']");
+await page.click(".diff-toolbar button[title^='Hide the diff panel']");
 await within("the close button hides the panel", async () => (await diffHeight()) === 0);
 
 // A double click on a changed file shows a hidden panel.
@@ -85,9 +85,9 @@ await page.click(".log-row >> nth=2");
 await showByMenu();
 await within("the size stays after a reload", async () => Math.abs((await diffHeight()) - tall) < 3);
 
-// With one project open, Mod+` shows the Open menu with the recent projects.
-await page.keyboard.press("Control+Backquote");
-await within("Mod+` opens the Open menu", async () => ((await page.textContent(".menu").catch(() => "")) ?? "").includes("Clone Repository"));
+// With one project open, Alt+` shows the Open menu with the recent projects.
+await page.keyboard.press("Alt+Backquote");
+await within("Alt+` opens the Open menu", async () => ((await page.textContent(".menu").catch(() => "")) ?? "").includes("Clone Repository"));
 await shot("dp2-open-menu");
 await page.keyboard.press("Escape");
 await shot("dp2-shown");

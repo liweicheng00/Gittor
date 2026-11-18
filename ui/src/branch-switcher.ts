@@ -14,7 +14,7 @@ export function showBranchSwitcher(
   document.querySelector(".switcher")?.remove();
   const search = h("input", { class: "switcher-search", placeholder: "Search branches", spellcheck: false });
   const list = h("div", { class: "switcher-list" });
-  const newBtn = h("button", { class: "switcher-new" }, icon("add"), " New Branch…");
+  const newBtn = h("button", { class: "switcher-new", "data-key-action": "newBranch" }, icon("add"), " New Branch…");
   const pop = h("div", { class: "switcher menu" }, search, newBtn, list);
   const close = () => {
     pop.remove();

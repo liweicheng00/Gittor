@@ -1,9 +1,21 @@
 // Branches panel: local branches, remote branches grouped by remote, and tags.
 
-import type { BranchInfo, RecentBranch, Worktree } from "./api";
-import { pathLabels } from "./path-labels";
+import type { BranchInfo, RecentBranch } from "./api";
 import { compareTags } from "./version-sort";
+import { isStale } from "./stale";
 import { h, icon, twisty } from "./dom";
+import { type KeyedItem, reconcile } from "./keyed";
+
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/** The rows of one draw of the list, with the key and the signature of each for `reconcile`. */
+class RowList {
+  readonly items: KeyedItem<HTMLElement>[] = [];
+  add(key: string, sig: unknown, el: HTMLElement) {
+    this.items.push({ key, sig: JSON.stringify(sig), build: () => el });
+  }
+}
+
 
 export class Sidebar {
   readonly el: HTMLElement;
@@ -11,12 +23,14 @@ export class Sidebar {
   private search: HTMLInputElement;
   private refs: BranchInfo[] = [];
   private recent: RecentBranch[] = [];
-  private worktrees: Worktree[] = [];
-  private collapsed = new Set<string>(["Tags"]);
+  private collapsed = new Set<string>(["Stale", "Tags"]);
   private filterSet = new Set<string>();
   /** Favorite branches and tags, by full ref name. */
   private favorites = new Set<string>();
   private onlyFavorites = false;
+  /** The marks of the user (see stale.ts), and the days without a commit that make a branch stale. */
+  private stale = new Set<string>();
+  private staleDays = 30;
   /** Branches with a prefix ("feature/a") show in a folder of the prefix, as IntelliJ's Group by Directory. */
   private groupByPrefix = false;
   private favBtn: HTMLButtonElement;
@@ -30,9 +44,6 @@ export class Sidebar {
   private selection = new Set<string>();
   private anchor: string | null = null;
   onCheckout: (b: BranchInfo) => void = () => {};
-  onOpenWorktree: (w: Worktree) => void = () => {};
-  onWorktreeMenu: (w: Worktree, e: MouseEvent) => void = () => {};
-  onAddWorktree: () => void = () => {};
   /** The context menu of a remote group. */
   onRemoteMenu: (remote: string, e: MouseEvent) => void = () => {};
   /** The context menu of the Local group header. */
@@ -60,7 +71,10 @@ export class Sidebar {
     this.render();
   }
 
+  // Each setter draws the list only when its data changed. A reload of the same refs then makes no new
+  // elements: the list does not flash, and a click on a row still works.
   setRefs(refs: BranchInfo[]) {
+    if (same(refs, this.refs)) return;
     this.refs = refs;
     const known = new Set(refs.map((b) => b.full));
     this.selection = new Set([...this.selection].filter((f) => known.has(f)));
@@ -68,7 +82,9 @@ export class Sidebar {
   }
 
   setRemoteTags(remote: string | null, names: string[] | null) {
-    this.remoteTags = remote && names ? { remote, names: new Set(names) } : null;
+    const next = remote && names ? { remote, names: new Set(names) } : null;
+    if (same(next && [next.remote, [...next.names]], this.remoteTags && [this.remoteTags.remote, [...this.remoteTags.names]])) return;
+    this.remoteTags = next;
     this.render();
   }
 
@@ -78,18 +94,36 @@ export class Sidebar {
   }
 
   setRecent(recent: RecentBranch[]) {
+    if (same(recent, this.recent)) return;
     this.recent = recent;
     this.render();
   }
 
-  setWorktrees(w: Worktree[]) {
-    this.worktrees = w;
+  setFavorites(full: Iterable<string>) {
+    const next = new Set(full);
+    if (same([...next].sort(), [...this.favorites].sort())) return;
+    this.favorites = next;
     this.render();
   }
 
-  setFavorites(full: Iterable<string>) {
-    this.favorites = new Set(full);
+  setStale(marks: Iterable<string>, days: number) {
+    const next = new Set(marks);
+    if (days === this.staleDays && same([...next].sort(), [...this.stale].sort())) return;
+    this.stale = next;
+    this.staleDays = days;
     this.render();
+  }
+
+  isStale(b: BranchInfo): boolean {
+    return b.kind === "local" && isStale(b, this.stale, this.staleDays, this.staleClock);
+  }
+
+  /** The time that the age of a branch counts from: the newest commit of all refs. An old repository
+   * that nobody changed for a long time then does not show all its branches as stale. */
+  get staleClock(): number {
+    let newest = 0;
+    for (const b of this.refs) if (b.time > newest) newest = b.time;
+    return newest || Date.now() / 1000;
   }
 
   isFavorite(b: BranchInfo): boolean {
@@ -97,6 +131,7 @@ export class Sidebar {
   }
 
   setFilter(names: string[]) {
+    if (same([...names].sort(), [...this.filterSet].sort())) return;
     this.filterSet = new Set(names);
     this.render();
   }
@@ -147,10 +182,12 @@ export class Sidebar {
     const current = this.refs.filter((b) => b.current);
     const recent = this.recent
       .map((r) => this.refs.find((b) => b.kind === "local" && b.name === r.name))
-      .filter((b): b is BranchInfo => !!b && match(b));
+      .filter((b): b is BranchInfo => !!b && match(b) && !this.isStale(b));
     if (recent.length) groups.push(["Recent", recent]);
     const locals = this.refs.filter((b) => b.kind === "local" && match(b));
-    groups.push(["Local", locals]);
+    // A stale branch shows in the Stale group only, not in Local.
+    groups.push(["Local", locals.filter((b) => !this.isStale(b))]);
+    groups.push(["Stale", locals.filter((b) => this.isStale(b))]);
     const remotes = new Map<string, BranchInfo[]>();
     for (const b of this.refs.filter((b) => b.kind === "remote" && match(b))) {
       const remote = b.name.split("/")[0];
@@ -160,7 +197,7 @@ export class Sidebar {
     for (const [remote, list] of remotes) groups.push([`Remote: ${remote}`, list]);
     groups.push(["Tags", this.refs.filter((b) => b.kind === "tag" && match(b)).sort((a, b) => compareTags(a.name, b.name))]);
 
-    const frag = document.createDocumentFragment();
+    const frag = new RowList();
     if (current.length) {
       const c = current[0];
       const head = h("div", { class: "sidebar-head", title: `${c.subject}\nClick: go to the commit of HEAD` }, h("span", { class: "head-icon" }, "HEAD"), " ", c.name);
@@ -169,7 +206,7 @@ export class Sidebar {
         e.preventDefault();
         this.onContextMenu(c, e);
       });
-      frag.append(head);
+      frag.add("head", c, head);
     }
     for (const [title, unsorted] of groups) {
       // Favorites first, as in IntelliJ; the order stays otherwise.
@@ -194,6 +231,7 @@ export class Sidebar {
           this.onTagsMenu(e);
         });
       }
+      if (title === "Stale") header.title = (this.staleDays > 0 ? `Local branches without a commit for ${this.staleDays} days, ` : "Local branches ") + "with a tracked branch that is gone from the remote, or that you marked as stale";
       if (title === "Local") {
         header.addEventListener("contextmenu", (e) => {
           e.preventDefault();
@@ -206,63 +244,24 @@ export class Sidebar {
           this.onRemoteMenu(title.slice("Remote: ".length), e);
         });
       }
-      frag.append(header);
+      frag.add(`g:${title}`, [open, items.length], header);
       if (!open) continue;
       const label = (b: BranchInfo) => (title.startsWith("Remote") ? b.name.slice(b.name.indexOf("/") + 1) : b.name);
       if (this.groupByPrefix && !q && (title === "Local" || title.startsWith("Remote: "))) this.renderFolders(frag, title, items, label);
-      else for (const b of items) frag.append(this.item(b, label(b)));
+      else for (const b of items) frag.add(`b:${title}\0${b.full}`, this.itemSig(b, label(b), 0), this.item(b, label(b)));
     }
-    this.renderWorktrees(frag);
-    this.list.replaceChildren(frag);
+    reconcile(this.list, frag.items);
+    this.paintSelection();
   }
 
-  private renderWorktrees(frag: DocumentFragment) {
-    const title = "Worktrees";
-    const open = !this.collapsed.has(title);
-    const add = h("button", { class: "icon-button group-action", title: "Add a worktree" }, "+");
-    add.addEventListener("click", (e) => {
-      e.stopPropagation();
-      this.onAddWorktree();
-    });
-    const header = h(
-      "div",
-      { class: "group-header" },
-      twisty(open),
-      h("span", {}, title),
-      h("span", { class: "group-count" }, String(this.worktrees.length)),
-      add,
-    );
-    header.addEventListener("click", () => {
-      if (this.collapsed.has(title)) this.collapsed.delete(title);
-      else this.collapsed.add(title);
-      this.render();
-    });
-    frag.append(header);
-    if (!open) return;
-    // Worktrees with the same folder name show the folders above them too.
-    const labels = pathLabels(this.worktrees.map((w) => w.path));
-    for (const [index, w] of this.worktrees.entries()) {
-      const name = labels[index] ?? w.path;
-      const detail = w.branch ?? (w.detached ? `detached ${w.head?.slice(0, 8) ?? ""}` : w.bare ? "bare" : "");
-      const el = h(
-        "div",
-        { class: "branch worktree" + (w.current ? " current" : ""), title: `${w.path}${w.locked ? "\nlocked" : ""}${w.prunable ? "\nprunable: the folder is missing" : ""}` },
-        h("span", { class: "branch-icon" + (w.current ? " current" : "") }, icon("worktree")),
-        h("span", { class: "branch-name" }, name),
-        h("span", { class: "worktree-branch" }, detail),
-        w.prunable ? h("span", { class: "behind" }, "missing") : w.locked ? h("span", { class: "muted-inline", title: "Locked" }, icon("lock")) : "",
-      );
-      el.addEventListener("dblclick", () => !w.current && this.onOpenWorktree(w));
-      el.addEventListener("contextmenu", (e) => {
-        e.preventDefault();
-        this.onWorktreeMenu(w, e);
-      });
-      frag.append(el);
-    }
+  /** All that the row of a branch shows. */
+  private itemSig(b: BranchInfo, label: string, depth: number): unknown {
+    const localTag = b.kind === "tag" && !!this.remoteTags && !this.remoteTags.names.has(b.name);
+    return [b, label, depth, this.filterSet.has(b.name), this.favorites.has(b.full), localTag && this.remoteTags?.remote];
   }
 
   /** The branches of a group in folders of their prefixes. A folder opens and closes with a click. */
-  private renderFolders(frag: DocumentFragment, group: string, items: BranchInfo[], label: (b: BranchInfo) => string) {
+  private renderFolders(frag: RowList, group: string, items: BranchInfo[], label: (b: BranchInfo) => string) {
     interface Folder {
       dirs: Map<string, Folder>;
       branches: BranchInfo[];
@@ -297,13 +296,13 @@ export class Sidebar {
           else this.collapsed.delete(key);
           this.render();
         });
-        frag.append(row);
+        frag.add(`f:${key}`, [open, sub.count, depth], row);
         if (open) walk(sub, `${path}${name}/`, depth + 1);
       }
       for (const b of f.branches) {
         const el = this.item(b, label(b).split("/").pop()!);
         el.style.paddingLeft = `${22 + depth * 14}px`;
-        frag.append(el);
+        frag.add(`b:${group}\0${b.full}`, this.itemSig(b, label(b), depth + 1), el);
       }
     };
     walk(root, "", 0);
@@ -314,6 +313,7 @@ export class Sidebar {
     const badges = h("span", { class: "badges" });
     if (b.ahead) badges.append(h("span", { class: "ahead", title: `${b.ahead} commits ahead of ${b.upstream}` }, `↑${b.ahead}`));
     if (b.behind) badges.append(h("span", { class: "behind", title: `${b.behind} commits behind ${b.upstream}` }, `↓${b.behind}`));
+    if (b.gone) badges.append(h("span", { class: "tag-local branch-gone", title: `${b.upstream ?? "The tracked branch"} is gone from the remote` }, "gone"));
     if (b.kind === "tag" && this.remoteTags && !this.remoteTags.names.has(b.name)) {
       badges.append(h("span", { class: "tag-local", title: `Not on ${this.remoteTags.remote}. Push it from the context menu.` }, "local"));
     }

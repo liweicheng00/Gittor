@@ -2,15 +2,18 @@
 
 import { allowRewrite } from "./protected";
 import { api, type BranchInfo, type ErrorKind, errorHint, inTauri, type Op, type OpOutcome, pickFolder, type PlanEntry, type Row, type Worktree } from "./api";
+import { branchSections, type PickerSection } from "./branch-picker";
 import { showBranchSwitcher } from "./branch-switcher";
 import { mergeFile, offerContinue, resolveConflicts } from "./conflicts";
 import { showMenu } from "./context-menu";
-import { confirmDialog, deleteMergedDialog, formDialog, interactiveRebaseDialog, messageDialog, removeWorktreeDialog, resetDialog } from "./dialogs";
+import { confirmDialog, deleteMergedDialog, formDialog, messageDialog, removeWorktreeDialog, resetDialog } from "./dialogs";
 import { copyText } from "./dom";
 import { toast } from "./notify";
 import { applyView, jumpToOid, loadRefs, openRepo } from "./repo";
 import { short } from "./selection";
-import { banner, branchBtn, sidebar, statusActivity, task } from "./shell";
+import { banner, branchBtn, sidebar, statusActivity, task, worktreePanel } from "./shell";
+import { openRebaseEditor } from "./rebase-flow";
+import { settings } from "./settings";
 import { app } from "./state";
 
 /** Runs a write operation, reloads the log, and reports the result. */
@@ -73,14 +76,33 @@ export async function checkoutCommit(oid: string, label = short(oid)) {
   await runOp({ op: "checkout", target: oid, kind: "commit" }, `Checking out ${label}`);
 }
 
+/** The New Branch dialog. "From" starts at `at` (a branch, HEAD or a commit), and the branch picker can
+ * choose another branch. A commit that is not a branch shows as its own group in the picker. */
 export async function newBranch(at: string, atLabel: string) {
-  const r = await formDialog(`New branch from ${atLabel}`, [
+  const isRef = at === "HEAD" || app.refs.some((b) => b.name === at);
+  const extra: PickerSection[] = isRef ? [] : [["Start point", [{ value: at, label: atLabel }]]];
+  if (at === "HEAD") extra.push(["Detached HEAD", [{ value: "HEAD", label: atLabel }]]);
+  const r = await formDialog("New Branch", [
     { key: "name", label: "Branch name", placeholder: "feature/my-change" },
+    {
+      key: "from",
+      label: "From",
+      type: "branch",
+      value: at,
+      sections: () => [...extra, ...branchSections()],
+      display: (v) => (v === at ? atLabel : v),
+    },
     { key: "checkout", label: "Checkout the new branch", type: "checkbox", value: true },
   ], "Create");
   if (!r || !String(r.name).trim()) return;
-  await runOp({ op: "createBranch", name: String(r.name).trim(), at, checkout: !!r.checkout }, "Creating branch");
+  await runOp({ op: "createBranch", name: String(r.name).trim(), at: String(r.from || at), checkout: !!r.checkout }, "Creating branch");
 }
+
+/** The New Branch dialog for the current branch, or for HEAD when it is detached. */
+export const newBranchHere = () => {
+  const cur = currentBranch();
+  return newBranch(cur ?? "HEAD", cur ?? "HEAD");
+};
 
 export async function newTag(at: string, atLabel: string) {
   const r = await formDialog(`New tag on ${atLabel}`, [
@@ -211,6 +233,12 @@ export async function rewriteSelected(kind: "squash" | "drop" | "reword" | "auth
 }
 
 export async function interactiveRebase(from: Row) {
+  await interactiveRebaseFrom(from.oid);
+}
+
+/** The Interactive Rebase editor for the commits of the current branch from `oid` (the oldest) to HEAD. */
+export async function interactiveRebaseFrom(oid: string) {
+  const from = { oid };
   let range;
   try {
     range = await api.rewriteRange(`${from.oid}^`);
@@ -219,9 +247,7 @@ export async function interactiveRebase(from: Row) {
   }
   if (!range.entries.length) return toast("There are no commits to rebase.", "info");
   if (!(await allowRewrite(from.oid))) return;
-  const plan = await interactiveRebaseDialog(range);
-  if (!plan) return;
-  await runOp({ op: "rewrite", base: range.base, plan, what: "Interactive rebase" }, "Rebasing");
+  openRebaseEditor(range, settings.activeTab ?? "", currentBranch() ?? "HEAD");
 }
 
 export async function deleteBranch(b: BranchInfo) {
@@ -321,9 +347,9 @@ banner.onMarkResolved = (paths) => void runOp({ op: "markResolved", paths }, "Ma
 banner.onShowFile = (path) => void mergeFile(path);
 
 sidebar.onCheckout = (b) => void checkoutBranch(b);
-sidebar.onAddWorktree = () => void addWorktree();
-sidebar.onOpenWorktree = (w) => void openRepo(w.path);
-sidebar.onWorktreeMenu = (w, e) =>
+worktreePanel.onAdd = () => void addWorktree();
+worktreePanel.onOpen = (w) => void openRepo(w.path);
+worktreePanel.onMenu = (w, e) =>
   showMenu(e.clientX, e.clientY, [
     { label: "Open", disabled: w.current || w.prunable, action: () => void openRepo(w.path) },
     { label: "Go to Commit", disabled: !w.head, action: () => w.head && void jumpToOid(w.head, true) },
@@ -336,7 +362,7 @@ sidebar.onWorktreeMenu = (w, e) =>
 branchBtn.addEventListener("click", () =>
   showBranchSwitcher(branchBtn, app.refs, app.recent, {
     checkout: (b) => void checkoutBranch(b),
-    newBranch: () => void newBranch("HEAD", currentBranch() ?? "HEAD"),
+    newBranch: () => void newBranchHere(),
     menu: (b, e) => sidebar.onContextMenu(b, e),
   }),
 );

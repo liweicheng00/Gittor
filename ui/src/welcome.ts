@@ -4,11 +4,15 @@ import { h, icon } from "./dom";
 import { askForRepo, cloneRepo, openRepo } from "./repo";
 import { learnRecentProjects, recentRows } from "./recent";
 import { removeRecent } from "./settings";
-import { welcome, workspace } from "./shell";
+import { settingsBtn, statusBar, toolbar, welcome, workspace } from "./shell";
 
+/** Shows the workspace of a repository, or the welcome screen. The toolbar and the status bar are for a
+ * repository: the welcome screen has none. */
 export function showWorkspace(show: boolean) {
   workspace.hidden = !show;
   welcome.hidden = show;
+  toolbar.hidden = !show;
+  statusBar.hidden = !show;
   if (!show) renderWelcome();
 }
 
@@ -18,6 +22,9 @@ function renderWelcome() {
   open.addEventListener("click", () => void askForRepo());
   const clone = h("button", { class: "big" }, "Clone Repository…");
   clone.addEventListener("click", () => void cloneRepo());
+  // The toolbar does not show here: this link opens Settings, for example for the git program.
+  const settingsLink = h("button", { class: "welcome-settings", "data-key-action": "settings" }, icon("settings"), "Settings…");
+  settingsLink.addEventListener("click", () => settingsBtn.click());
   const recentList = h("div", { class: "recent" });
   const rows = recentRows();
   for (const r of rows) {
@@ -46,6 +53,7 @@ function renderWelcome() {
       h("h1", {}, "Gittor"),
       h("p", { class: "muted-inline" }, "A light git log viewer with the commit graph of IntelliJ."),
       h("div", { class: "welcome-actions" }, open, clone),
+      settingsLink,
       rows.length ? h("div", { class: "recent-title" }, "Recent repositories") : "",
       recentList,
     ),

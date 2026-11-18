@@ -25,7 +25,7 @@ const within = async (what, fn, ms = 5000) => {
 
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
-await page.click(".lp-tab:has-text('Changes')");
+await page.click(".lp-tab[aria-label^='Changes']");
 await page.waitForSelector(".cl-file:has-text('main.rs')");
 await page.waitForTimeout(1500);
 
@@ -45,7 +45,7 @@ git("add", "README.md");
 git("commit", "-q", "-m", "Commit from a terminal", "--", "README.md");
 await within("a commit from a terminal appears in the log", async () => (await page.textContent(".log-row >> nth=0")).includes("Commit from a terminal"));
 git("branch", "made-in-terminal");
-await page.click(".lp-tab:has-text('Branches')");
+await page.click(".lp-tab[aria-label^='Branches']");
 await within("a branch from a terminal appears", async () => (await page.textContent(".sidebar-list")).includes("made-in-terminal"));
 await shot("ar1-refreshed");
 console.log("errors:", JSON.stringify(errors));
