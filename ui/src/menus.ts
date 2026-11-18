@@ -62,6 +62,10 @@ async function rowMenu(r: Row, e: MouseEvent) {
   items.push({ separator: true }, { header: "Commits" });
   items.push(
     { label: multi ? `Cherry-Pick ${rows.length} Commits` : "Cherry-Pick", action: () => void runOp({ op: "cherryPick", oids: [...rows].reverse().map((s) => s.oid) }, "Cherry-picking") },
+    {
+      label: multi ? `Cherry-Pick ${rows.length} Commits without Commit` : "Cherry-Pick without Commit",
+      action: () => void runOp({ op: "cherryPickNoCommit", oids: [...rows].reverse().map((s) => s.oid) }, "Cherry-picking without a commit"),
+    },
     { label: multi ? `Revert ${rows.length} Commits` : "Revert Commit", action: () => void runOp({ op: "revert", oids: rows.map((s) => s.oid) }, "Reverting") },
     { label: "Edit Commit Message…", disabled: multi, action: () => void rewriteSelected("reword", [r]) },
     { label: "Fixup…", disabled: multi || !r.onHead, action: () => fixupInto(r, "fixup") },

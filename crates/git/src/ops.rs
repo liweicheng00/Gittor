@@ -395,6 +395,32 @@ impl Repo {
         }
     }
 
+    /// Applies the changes of commits, oldest first, to the index and the working tree, without a commit
+    /// (`git cherry-pick --no-commit`). Local changes can stay. Undo puts back the local changes of before,
+    /// while nobody changed the files since.
+    pub fn cherry_pick_no_commit(&self, oids: &[String]) -> Result<OpResult> {
+        let mut args = vec!["cherry-pick", "--no-commit"];
+        for o in oids {
+            args.push(safe(o)?);
+        }
+        let head = self.resolve("HEAD").ok_or_else(|| GitError("The repository has no commit yet".into()))?;
+        let before = self.local_snapshot()?;
+        match self.git_write(&args, &[]) {
+            Ok(_) => {
+                let mut r = OpResult::ok(format!("Applied the changes of {} commit(s). Commit them when you are ready", oids.len()));
+                r.undo = vec![crate::undo::UndoAction::RestoreLocalChanges { head, before, after: self.local_snapshot()? }];
+                Ok(r)
+            }
+            Err((_, e)) => Ok(self.stopped("The cherry-pick", e)),
+        }
+    }
+
+    /// The local changes of tracked files as a commit of `git stash create`, which changes nothing. Empty
+    /// when there are no local changes.
+    pub(crate) fn local_snapshot(&self) -> Result<String> {
+        Ok(String::from_utf8_lossy(&self.git(&["stash", "create"])?).trim().to_string())
+    }
+
     /// Reverts commits newest first, each as its own commit.
     pub fn revert(&self, oids: &[String]) -> Result<OpResult> {
         let mut args = vec!["revert", "--no-edit"];

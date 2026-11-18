@@ -38,10 +38,24 @@ pub enum UndoAction {
     MoveRef { name: String, to: String, expected: String },
     /// Gives a config key its values again. No values removes the key.
     SetConfig { key: String, values: Vec<String> },
+    /// Puts back the local changes of before an operation that changed only files, for example a
+    /// cherry-pick without a commit. `before` and `after` are commits of `git stash create`; empty means
+    /// no local changes. The step stops when HEAD or the files changed since the operation.
+    RestoreLocalChanges { head: String, before: String, after: String },
 }
 
 
 impl Repo {
+    /// The trees of the index and of the working tree in a commit of `git stash create`. Empty for no
+    /// local changes. The commits differ in their time, so only their trees can be compared.
+    fn snapshot_trees(&self, snapshot: &str) -> Result<(String, String)> {
+        if snapshot.is_empty() {
+            return Ok(Default::default());
+        }
+        let tree = |rev: String| self.git(&["rev-parse", &rev]).map(|o| String::from_utf8_lossy(&o).trim().to_string());
+        Ok((tree(format!("{}^2^{{tree}}", safe(snapshot)?))?, tree(format!("{snapshot}^{{tree}}"))?))
+    }
+
     /// Moves the current branch back after a rewrite, if nothing moved it since.
     /// With `soft`, the changes of the undone commits stay as local changes, as IntelliJ's Undo Commit does.
     pub fn undo(&self, to: &str, expected_head: &str, soft: bool) -> Result<OpResult> {
@@ -97,6 +111,17 @@ impl Repo {
                 UndoAction::MoveRef { name, to, expected } => self.git_write(&["update-ref", "-m", "gittor: undo", safe(name)?, safe(to)?, safe(expected)?], &[]),
                 UndoAction::RenameBranch { from, to } => self.git_write(&["branch", "-m", safe(from)?, safe(to)?], &[]),
                 UndoAction::StashStore { oid, message: m } => self.git_write(&["stash", "store", "-m", m, safe(oid)?], &[]),
+                UndoAction::RestoreLocalChanges { head, before, after } => {
+                    head_is(head)?;
+                    if self.snapshot_trees(&self.local_snapshot()?)? != self.snapshot_trees(after)? {
+                        return Err(GitError("The files changed since the operation. Undo is not possible".into()));
+                    }
+                    let before = if before.is_empty() { None } else { Some(safe(before)?) };
+                    self.git_write(&["reset", "-q", "--hard", safe(head)?], &reflog).and_then(|out| match before {
+                        Some(b) => self.git_write(&["stash", "apply", "-q", "--index", b], &[]),
+                        None => Ok(out),
+                    })
+                }
                 UndoAction::SetConfig { key, values } => {
                     let _ = self.git_write(&["config", "--unset-all", safe(key)?], &[]);
                     values.iter().try_for_each(|v| self.git_write(&["config", "--add", key, v], &[]).map(|_| ())).map(|_| String::new())

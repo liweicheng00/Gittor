@@ -350,3 +350,51 @@ fn change_author_and_sign_off() {
     assert!(m.starts_with("Fix it\n\nSigned-off-by: "), "{m}");
     assert_eq!(repo.with_sign_off(&m).unwrap(), m);
 }
+
+#[test]
+fn cherry_pick_without_commit_and_undo() {
+    let dir = temp_repo("pick-no-commit");
+    let base = commit(&dir, "a.txt", "1\n", "base");
+    let repo = Repo::open(&dir).unwrap();
+    assert!(repo.create_branch("feature", &base, true).unwrap().ok);
+    let f1 = commit(&dir, "f.txt", "f\n", "add f");
+    let f2 = commit(&dir, "a.txt", "1\n2\n", "change a");
+    assert!(repo.checkout("main", "local").unwrap().ok);
+    // A local change of the user, in a file that the commits do not touch.
+    std::fs::write(dir.join("local.txt"), "mine\n").unwrap();
+    git(&dir, &["add", "local.txt"]);
+    std::fs::write(dir.join("local.txt"), "mine, edited\n").unwrap();
+    let head = git(&dir, &["rev-parse", "HEAD"]);
+
+    let r = repo.cherry_pick_no_commit(&[f1, f2]).unwrap();
+    assert!(r.ok, "{}", r.message);
+    assert_eq!(git(&dir, &["rev-parse", "HEAD"]), head, "no commit");
+    assert_eq!(std::fs::read_to_string(dir.join("a.txt")).unwrap(), "1\n2\n");
+    assert!(dir.join("f.txt").exists());
+    assert_eq!(r.undo.len(), 1);
+
+    // Undo puts back the local changes of before, in the index and in the working tree.
+    assert!(repo.apply_undo(&r.undo).unwrap().ok);
+    assert!(!dir.join("f.txt").exists());
+    assert_eq!(std::fs::read_to_string(dir.join("a.txt")).unwrap(), "1\n");
+    assert_eq!(std::fs::read_to_string(dir.join("local.txt")).unwrap(), "mine, edited\n");
+    assert_eq!(git(&dir, &["show", ":local.txt"]), "mine");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn undo_of_cherry_pick_without_commit_stops_after_an_edit() {
+    let dir = temp_repo("pick-no-commit-edit");
+    let base = commit(&dir, "a.txt", "1\n", "base");
+    let repo = Repo::open(&dir).unwrap();
+    assert!(repo.create_branch("feature", &base, true).unwrap().ok);
+    let f1 = commit(&dir, "a.txt", "1\n2\n", "change a");
+    assert!(repo.checkout("main", "local").unwrap().ok);
+    let r = repo.cherry_pick_no_commit(&[f1]).unwrap();
+    assert!(r.ok, "{}", r.message);
+    // The user edits the file after the operation: Undo must not lose the edit.
+    std::fs::write(dir.join("a.txt"), "1\n2\n3\n").unwrap();
+    assert!(repo.apply_undo(&r.undo).is_err());
+    assert_eq!(std::fs::read_to_string(dir.join("a.txt")).unwrap(), "1\n2\n3\n");
+    let _ = std::fs::remove_dir_all(&dir);
+}

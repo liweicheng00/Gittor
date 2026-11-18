@@ -245,6 +245,7 @@ export type Op =
   | { op: "checkoutRebase"; branch: string; onto: string }
   | { op: "rewriteFiles"; oid: string; paths: string[]; extract?: string }
   | { op: "cherryPick"; oids: string[] }
+  | { op: "cherryPickNoCommit"; oids: string[] }
   | { op: "revert"; oids: string[] }
   | { op: "reset"; to: string; mode: "soft" | "mixed" | "hard" | "keep" }
   | { op: "continue" }
