@@ -45,6 +45,16 @@ for (const a of [
   { id: "update", label: "Update the Current Branch", defaults: ["Mod+T"], run: () => app.view && void updateBranch() },
   { id: "push", label: "Push", defaults: ["Mod+Shift+K"], run: () => app.view && void pushBranch() },
   { id: "newBranch", label: "New Branch", defaults: ["Mod+B"], run: () => app.view && void newBranchHere() },
+  { id: "undo", label: "Undo the Last Operation", defaults: ["Mod+Z"], run: () => app.view && void undoLast(), when: (t: HTMLElement) => !typing(t) },
+  { id: "filter", label: "Find in the Log (filter)", defaults: ["Mod+F"], run: () => { filterBar.text.focus(); filterBar.text.select(); }, when: (t: HTMLElement) => !t.closest(".monaco-editor") },
+  { id: "files", label: "Files Tab", defaults: ["Mod+`"], run: () => { showLeftTab("files"); filesPanel.focus(); } },
+  {
+    id: "branches",
+    label: "Branches Tab",
+    defaults: ["Mod+1"],
+    // A second press stays on the tab. View › Sidebar hides the left panel.
+    run: () => showLeftTab("branches"),
+  },
   {
     id: "commit",
     label: "Changes Tab (and the commit message)",
@@ -54,19 +64,9 @@ for (const a of [
       commitPanel.focusMessage();
     },
   },
-  { id: "undo", label: "Undo the Last Operation", defaults: ["Mod+Z"], run: () => app.view && void undoLast(), when: (t: HTMLElement) => !typing(t) },
-  { id: "filter", label: "Find in the Log (filter)", defaults: ["Mod+F"], run: () => { filterBar.text.focus(); filterBar.text.select(); }, when: (t: HTMLElement) => !t.closest(".monaco-editor") },
-  {
-    id: "branches",
-    label: "Branches Tab",
-    defaults: ["Mod+1"],
-    // A second press stays on the tab. View › Sidebar hides the left panel.
-    run: () => showLeftTab("branches"),
-  },
+  { id: "worktrees", label: "Worktrees Tab", defaults: ["Mod+3"], run: () => { showLeftTab("worktrees"); worktreePanel.focus(); } },
   { id: "stash", label: "Stash Tab", defaults: ["Mod+4"], run: () => showLeftTab("stash") },
   { id: "reviews", label: "Reviews Tab", defaults: ["Mod+5"], run: () => showLeftTab("reviews") },
-  { id: "worktrees", label: "Worktrees Tab", defaults: ["Mod+3"], run: () => { showLeftTab("worktrees"); worktreePanel.focus(); } },
-  { id: "files", label: "Files Tab", defaults: ["Mod+`"], run: () => { showLeftTab("files"); filesPanel.focus(); } },
   {
     id: "submodules",
     label: "Submodules (in the Changes tab)",
