@@ -202,6 +202,10 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   its own `DiffView` with `showFile` (the text, without colors), the notes on local changes and
   `NotesPanel`. Show Diff in the menu shows the diff in the diff panel. `centerHooks.reset` closes the
   files when another repository shows. ``Alt+` `` switches the project.
+- The Worktrees tab (`worktree-panel.ts`, `worktree-flow.ts`, `Mod+6`, the last left tab): the worktrees
+  with a search (name, path, branch; `worktree-filter.ts` has unit tests) and a star for each. Favorites
+  come first. The UI setting `favoriteWorktrees` keeps them by the path of the main worktree, so each
+  worktree of a repository shows the same favorites. The Branches tab has no worktrees.
 - Icons: add the Lucide file name to the glob and to `NAMES` in `ui/src/icons.ts`.
 - Trees of files: `buildTree`, `treeOrder`, `walkTree` in `file-tree.ts`.
   Unique short names of folders: `pathLabels` in `path-labels.ts`.

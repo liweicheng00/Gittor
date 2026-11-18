@@ -10,7 +10,7 @@ import { newBranchHere, undoLast } from "./operations";
 import { askForRepo, closeActiveTab, fetchAll, refresh, switchTab } from "./repo";
 import { settings } from "./settings";
 import { openSettings } from "./settings-flow";
-import { changes, commitPanel, diff, filesPanel, filterBar, openBtn, showLeftTab, statusActivity, submodulePanel, toggleDiff } from "./shell";
+import { changes, commitPanel, diff, filesPanel, filterBar, worktreePanel, openBtn, showLeftTab, statusActivity, submodulePanel, toggleDiff } from "./shell";
 import { app } from "./state";
 import { pushBranch, updateBranch } from "./sync";
 import { resetZoom, zoomBy } from "./zoom";
@@ -65,6 +65,7 @@ for (const a of [
   },
   { id: "stash", label: "Stash Tab", defaults: ["Mod+3"], run: () => showLeftTab("stash") },
   { id: "reviews", label: "Reviews Tab", defaults: ["Mod+4"], run: () => showLeftTab("reviews") },
+  { id: "worktrees", label: "Worktrees Tab", defaults: ["Mod+6"], run: () => { showLeftTab("worktrees"); worktreePanel.focus(); } },
   { id: "files", label: "Files Tab", defaults: ["Mod+`"], run: () => { showLeftTab("files"); filesPanel.focus(); } },
   {
     id: "submodules",

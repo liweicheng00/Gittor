@@ -11,7 +11,7 @@ import { copyText } from "./dom";
 import { toast } from "./notify";
 import { applyView, jumpToOid, loadRefs, openRepo } from "./repo";
 import { short } from "./selection";
-import { banner, branchBtn, sidebar, statusActivity, task } from "./shell";
+import { banner, branchBtn, sidebar, statusActivity, task, worktreePanel } from "./shell";
 import { openRebaseEditor } from "./rebase-flow";
 import { settings } from "./settings";
 import { app } from "./state";
@@ -347,9 +347,9 @@ banner.onMarkResolved = (paths) => void runOp({ op: "markResolved", paths }, "Ma
 banner.onShowFile = (path) => void mergeFile(path);
 
 sidebar.onCheckout = (b) => void checkoutBranch(b);
-sidebar.onAddWorktree = () => void addWorktree();
-sidebar.onOpenWorktree = (w) => void openRepo(w.path);
-sidebar.onWorktreeMenu = (w, e) =>
+worktreePanel.onAdd = () => void addWorktree();
+worktreePanel.onOpen = (w) => void openRepo(w.path);
+worktreePanel.onMenu = (w, e) =>
   showMenu(e.clientX, e.clientY, [
     { label: "Open", disabled: w.current || w.prunable, action: () => void openRepo(w.path) },
     { label: "Go to Commit", disabled: !w.head, action: () => w.head && void jumpToOid(w.head, true) },

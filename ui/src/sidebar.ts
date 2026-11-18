@@ -1,7 +1,6 @@
 // Branches panel: local branches, remote branches grouped by remote, and tags.
 
-import type { BranchInfo, RecentBranch, Worktree } from "./api";
-import { pathLabels } from "./path-labels";
+import type { BranchInfo, RecentBranch } from "./api";
 import { compareTags } from "./version-sort";
 import { h, icon, twisty } from "./dom";
 import { type KeyedItem, reconcile } from "./keyed";
@@ -25,7 +24,6 @@ export class Sidebar {
   private search: HTMLInputElement;
   private refs: BranchInfo[] = [];
   private recent: RecentBranch[] = [];
-  private worktrees: Worktree[] = [];
   private collapsed = new Set<string>(["Stale", "Tags"]);
   private filterSet = new Set<string>();
   /** Favorite branches and tags, by full ref name. */
@@ -44,9 +42,6 @@ export class Sidebar {
   private selection = new Set<string>();
   private anchor: string | null = null;
   onCheckout: (b: BranchInfo) => void = () => {};
-  onOpenWorktree: (w: Worktree) => void = () => {};
-  onWorktreeMenu: (w: Worktree, e: MouseEvent) => void = () => {};
-  onAddWorktree: () => void = () => {};
   /** The context menu of a remote group. */
   onRemoteMenu: (remote: string, e: MouseEvent) => void = () => {};
   /** The context menu of the Local group header. */
@@ -99,12 +94,6 @@ export class Sidebar {
   setRecent(recent: RecentBranch[]) {
     if (same(recent, this.recent)) return;
     this.recent = recent;
-    this.render();
-  }
-
-  setWorktrees(w: Worktree[]) {
-    if (same(w, this.worktrees)) return;
-    this.worktrees = w;
     this.render();
   }
 
@@ -239,7 +228,6 @@ export class Sidebar {
       if (this.groupByPrefix && !q && (title === "Local" || title.startsWith("Remote: "))) this.renderFolders(frag, title, items, label);
       else for (const b of items) frag.add(`b:${title}\0${b.full}`, this.itemSig(b, label(b), 0), this.item(b, label(b)));
     }
-    this.renderWorktrees(frag);
     reconcile(this.list, frag.items);
     this.paintSelection();
   }
@@ -248,51 +236,6 @@ export class Sidebar {
   private itemSig(b: BranchInfo, label: string, depth: number): unknown {
     const localTag = b.kind === "tag" && !!this.remoteTags && !this.remoteTags.names.has(b.name);
     return [b, label, depth, this.filterSet.has(b.name), this.favorites.has(b.full), localTag && this.remoteTags?.remote];
-  }
-
-  private renderWorktrees(frag: RowList) {
-    const title = "Worktrees";
-    const open = !this.collapsed.has(title);
-    const add = h("button", { class: "icon-button group-action", title: "Add a worktree" }, "+");
-    add.addEventListener("click", (e) => {
-      e.stopPropagation();
-      this.onAddWorktree();
-    });
-    const header = h(
-      "div",
-      { class: "group-header" },
-      twisty(open),
-      h("span", {}, title),
-      h("span", { class: "group-count" }, String(this.worktrees.length)),
-      add,
-    );
-    header.addEventListener("click", () => {
-      if (this.collapsed.has(title)) this.collapsed.delete(title);
-      else this.collapsed.add(title);
-      this.render();
-    });
-    frag.add(`g:${title}`, [open, this.worktrees.length], header);
-    if (!open) return;
-    // Worktrees with the same folder name show the folders above them too.
-    const labels = pathLabels(this.worktrees.map((w) => w.path));
-    for (const [index, w] of this.worktrees.entries()) {
-      const name = labels[index] ?? w.path;
-      const detail = w.branch ?? (w.detached ? `detached ${w.head?.slice(0, 8) ?? ""}` : w.bare ? "bare" : "");
-      const el = h(
-        "div",
-        { class: "branch worktree" + (w.current ? " current" : ""), title: `${w.path}${w.locked ? "\nlocked" : ""}${w.prunable ? "\nprunable: the folder is missing" : ""}` },
-        h("span", { class: "branch-icon" + (w.current ? " current" : "") }, icon("worktree")),
-        h("span", { class: "branch-name" }, name),
-        h("span", { class: "worktree-branch" }, detail),
-        w.prunable ? h("span", { class: "behind" }, "missing") : w.locked ? h("span", { class: "muted-inline", title: "Locked" }, icon("lock")) : "",
-      );
-      el.addEventListener("dblclick", () => !w.current && this.onOpenWorktree(w));
-      el.addEventListener("contextmenu", (e) => {
-        e.preventDefault();
-        this.onWorktreeMenu(w, e);
-      });
-      frag.add(`w:${w.path}`, [w, name], el);
-    }
   }
 
   /** The branches of a group in folders of their prefixes. A folder opens and closes with a click. */

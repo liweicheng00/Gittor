@@ -430,12 +430,18 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 /* left pane: branches and commit tabs */
 .leftpane { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--panel); border-right: 1px solid var(--border); }
 .leftpane[hidden] { display: none; }
-.leftpane > .sidebar, .leftpane > .commit-panel, .leftpane > .stash-panel, .leftpane > .files-panel { flex: 1; min-height: 0; border-right: 0; }
+.leftpane > .sidebar, .leftpane > .commit-panel, .leftpane > .stash-panel, .leftpane > .files-panel, .leftpane > .worktree-panel { flex: 1; min-height: 0; border-right: 0; }
 .files-panel { display: flex; flex-direction: column; min-height: 0; background: var(--panel-2); }
 .files-head { display: flex; align-items: center; gap: 6px; padding: 6px 8px; }
 .files-search { flex: 1; min-width: 0; padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--fg); }
 .files-count { flex: none; font-size: 11px; }
 .files-list { flex: 1; min-height: 0; overflow: auto; outline: none; padding-bottom: 8px; }
+.worktree-panel { display: flex; flex-direction: column; min-height: 0; background: var(--panel-2); }
+.worktree-search { flex: 1; min-width: 0; margin: 6px 0 6px 8px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--fg); }
+.worktree-list { flex: 1; min-height: 0; overflow: auto; outline: none; padding: 2px 0 8px; }
+.worktree-list .branch { padding-left: 8px; }
+.worktree-empty { padding: 6px 10px; }
+.worktree-add { font-size: 15px; }
 .files-row { display: flex; align-items: center; gap: 5px; padding-top: 2px; padding-bottom: 2px; padding-right: 8px; white-space: nowrap; cursor: default; }
 .files-row:hover { background: var(--hover); }
 .files-row.selected, .files-row.cursor { background: var(--select); }

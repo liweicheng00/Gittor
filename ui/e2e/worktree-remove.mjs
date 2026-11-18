@@ -36,13 +36,15 @@ const within = async (what, fn, ms = 10000) => {
 };
 const dialogText = async () => ((await page.textContent(".dialog")) ?? "").replace(/\s+/g, " ");
 const openDialog = async (name) => {
-  await page.click(`.sidebar .worktree:has(.branch-name:text-is('${wt(name).split("/").pop()}'))`, { button: "right" });
+  await page.click(`.worktree-panel .worktree:has(.branch-name:text-is('${wt(name).split("/").pop()}'))`, { button: "right" });
   await page.click(".menu-item:has-text('Remove Worktree')");
   await page.waitForSelector(".dialog:has-text('Remove Worktree')");
 };
 
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
-await page.waitForSelector(".sidebar .worktree", { timeout: 30000 });
+await page.waitForSelector(".log-row", { timeout: 30000 });
+await page.click(".lp-tab[aria-label^='Worktrees']");
+await page.waitForSelector(".worktree-panel .worktree");
 
 // Untracked files: the dialog lists them, says why, and Remove Anyway removes the worktree.
 await openDialog("files");

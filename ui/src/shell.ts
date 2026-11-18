@@ -17,6 +17,7 @@ import { OpBanner } from "./op-banner";
 import { save, settings } from "./settings";
 import { Sidebar } from "./sidebar";
 import { FilesPanel } from "./files-panel";
+import { WorktreePanel } from "./worktree-panel";
 import { ReviewPanel } from "./review-panel";
 import { StashPanel } from "./stash-panel";
 import { SubmodulePanel } from "./submodule-panel";
@@ -35,6 +36,7 @@ export const commitPanel = new CommitPanel();
 export const stashPanel = new StashPanel();
 export const reviewPanel = new ReviewPanel();
 export const filesPanel = new FilesPanel();
+export const worktreePanel = new WorktreePanel();
 export const submodulePanel = new SubmodulePanel();
 
 export const banner = new OpBanner();
@@ -100,12 +102,13 @@ export const tabCommit = lpTab("changes", "Changes", "Changes: the local changes
 export const tabStash = lpTab("stash", "Stash", "Stash: the stashes");
 export const tabReviews = lpTab("review", "Reviews", "Reviews: the reviews of branches");
 export const tabFiles = lpTab("files", "Files", "Files: the files of the working tree");
+export const tabWorktrees = lpTab("worktree", "Worktrees", "Worktrees: the worktrees of the repository");
 // The submodules show under the commit message, so that their changes show together with the files.
 commitPanel.el.append(submodulePanel.el);
-const leftPane = h("aside", { class: "leftpane" }, h("div", { class: "lp-tabs" }, tabFiles, tabBranches, tabCommit, tabStash, tabReviews), sidebar.el, commitPanel.el, stashPanel.el, reviewPanel.el, filesPanel.el);
+const leftPane = h("aside", { class: "leftpane" }, h("div", { class: "lp-tabs" }, tabFiles, tabBranches, tabCommit, tabStash, tabReviews, tabWorktrees), sidebar.el, commitPanel.el, stashPanel.el, reviewPanel.el, filesPanel.el, worktreePanel.el);
 /** Called when the Files tab shows, so that it can load its files. */
 export const leftTabHooks = { files: () => {} };
-export function showLeftTab(tab: "branches" | "commit" | "stash" | "reviews" | "files") {
+export function showLeftTab(tab: "branches" | "commit" | "stash" | "reviews" | "files" | "worktrees") {
   settings.leftTab = tab;
   save();
   if (!settings.showSidebar) {
@@ -122,6 +125,8 @@ export function showLeftTab(tab: "branches" | "commit" | "stash" | "reviews" | "
   reviewPanel.el.hidden = tab !== "reviews";
   tabFiles.classList.toggle("on", tab === "files");
   filesPanel.el.hidden = tab !== "files";
+  tabWorktrees.classList.toggle("on", tab === "worktrees");
+  worktreePanel.el.hidden = tab !== "worktrees";
   if (tab === "files") leftTabHooks.files();
 }
 tabBranches.addEventListener("click", () => showLeftTab("branches"));
@@ -129,6 +134,7 @@ tabCommit.addEventListener("click", () => showLeftTab("commit"));
 tabStash.addEventListener("click", () => showLeftTab("stash"));
 tabReviews.addEventListener("click", () => showLeftTab("reviews"));
 tabFiles.addEventListener("click", () => showLeftTab("files"));
+tabWorktrees.addEventListener("click", () => showLeftTab("worktrees"));
 const top = h("div", { class: "top" }, leftPane, sideGrip, center, rightGrip, right);
 export const workspace = h("main", { class: "workspace" }, top, diffGrip, diff.el);
 export const welcome = h("main", { class: "welcome" });

@@ -115,7 +115,8 @@ console.log("abort:", await toastText(), "banner hidden:", await page.$eval(".op
 await clearToasts();
 
 // worktree
-await page.click(".group-action[title='Add a worktree']");
+await page.click(".lp-tab[aria-label^='Worktrees']");
+await page.click(".worktree-add");
 await page.waitForSelector(".dialog-field");
 await page.fill(".dialog-field:has-text('Branch') input", "wt/experiment");
 await page.fill(".dialog-field:has-text('Folder') input", repo + "-wt");
@@ -123,11 +124,12 @@ await shot("v9-worktree-dialog");
 await page.click(".dialog-buttons button:has-text('Create')");
 await page.waitForTimeout(1500);
 console.log("worktree:", await toastText());
-console.log("worktrees:", (await page.textContent(".sidebar-list")).replace(/\s+/g, " ").match(/Worktrees.*/)?.[0]);
+console.log("worktrees:", (await page.textContent(".worktree-list")).replace(/\s+/g, " "));
 await clearToasts();
 await page.click(".branch.worktree:has-text('wt/experiment')", { button: "right" });
 await shot("v10-worktree-menu");
 await page.keyboard.press("Escape");
+await page.click(".lp-tab[aria-label^='Branches']");
 
 // back to main to show recent
 await page.click(".tb-branch-button");

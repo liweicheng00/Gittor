@@ -101,7 +101,7 @@
 :root[data-style="glow"] ::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
 
 /* Surfaces that style.css paints with the opaque --bg. */
-:root[data-style="glow"] :is(.sidebar-search, .filter-bar input, .filter-button, .commit-message, .dialog-input, .files-search, .commit-push, .branch-button, .log-header, .changes-parent, .switcher-search) { background: var(--glass-field); }
+:root[data-style="glow"] :is(.sidebar-search, .filter-bar input, .filter-button, .commit-message, .dialog-input, .files-search, .worktree-search, .commit-push, .branch-button, .log-header, .changes-parent, .switcher-search) { background: var(--glass-field); }
 :root[data-style="glow"] .md-preview { background: transparent; }
 :root[data-style="glow"] .md-col-label { background: color-mix(in srgb, var(--bg) 88%, transparent); }
 :root[data-style="glow"] .diff-notice { background: color-mix(in srgb, var(--bg) 70%, transparent); }
@@ -154,6 +154,7 @@
 :root[data-style="glow"] .filter-bar input:focus,
 :root[data-style="glow"] .dialog-input:focus,
 :root[data-style="glow"] .files-search:focus,
+:root[data-style="glow"] .worktree-search:focus,
 :root[data-style="glow"] .switcher-search:focus,
 :root[data-style="glow"] .commit-message:focus,
 :root[data-style="glow"] select:focus { outline: none; border-color: var(--accent); box-shadow: var(--glow-ring); }

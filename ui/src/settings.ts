@@ -19,7 +19,7 @@ export interface Settings {
   showDate: boolean;
   showHash: boolean;
   showSidebar: boolean;
-  leftTab: "branches" | "commit" | "stash" | "reviews" | "files";
+  leftTab: "branches" | "commit" | "stash" | "reviews" | "files" | "worktrees";
   updateMode: "merge" | "rebase";
   autoRefresh: boolean;
   changesAsTree: boolean;
@@ -81,6 +81,8 @@ export interface Settings {
   /** Favorite branches and tags by repository root, as full ref names. A repository without an entry has
    * main and master as favorites. */
   favorites: Record<string, string[]>;
+  /** Favorite worktrees by the path of the main worktree, as paths. */
+  favoriteWorktrees: Record<string, string[]>;
   /** The last commit messages, newest first. */
   messageHistory: string[];
   /** Add "Signed-off-by" to commits. */
@@ -150,6 +152,7 @@ const DEFAULTS: Settings = {
   historyMaxMb: 200,
   keymap: {},
   favorites: {},
+  favoriteWorktrees: {},
   messageHistory: [],
   signOff: false,
   subjectLimit: 72,

@@ -8,7 +8,7 @@ import { emptyFilter } from "./filter-bar";
 import { loadFavorites } from "./remotes";
 import { clearCompare } from "./selection";
 import { addRecent, save, setRecentProject, settings } from "./settings";
-import { authors, banner, centerHooks, commitPanel, repoLabel, details, fetchBtn, filterBar, ideBtn, localHistoryBtn, terminalBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, sidebar, stashPanel, statusActivity, submodulePanel, tabBar, tabScroll, tabsInTitleBar, tabCommit, tabReviews, tabStash, task, updateBtn, updateStatus } from "./shell";
+import { authors, banner, centerHooks, commitPanel, repoLabel, details, fetchBtn, filterBar, ideBtn, localHistoryBtn, terminalBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, sidebar, stashPanel, statusActivity, submodulePanel, tabBar, tabScroll, tabsInTitleBar, tabCommit, tabReviews, tabStash, tabWorktrees, task, worktreePanel, updateBtn, updateStatus } from "./shell";
 import { app } from "./state";
 import { showWorkspace } from "./welcome";
 import { formDialog } from "./dialogs";
@@ -311,7 +311,7 @@ export async function loadRefs(background = false) {
     app.repoState = st;
     sidebar.setRefs(app.refs);
     sidebar.setRecent(app.recent);
-    sidebar.setWorktrees(app.worktrees);
+    showWorktrees();
     await loadFavorites();
     // The tooltip of the tab names the branch; a checkout changes it.
     if (app.view) void refreshTabInfo(app.view.root);
@@ -325,6 +325,28 @@ export async function loadRefs(background = false) {
 }
 
 /** Sets the label and the count of a left tab. The same label again makes no new elements. */
+/** The key of the favorite worktrees: the path of the main worktree, the same in each worktree. */
+function worktreeKey(): string {
+  return app.worktrees.find((w) => w.main)?.path ?? app.view?.root ?? "";
+}
+
+/** Shows the worktrees in the Worktrees tab. The tab shows a count when there is more than one. */
+export function showWorktrees() {
+  worktreePanel.setWorktrees(app.worktrees, settings.favoriteWorktrees[worktreeKey()] ?? []);
+  setTabLabel(tabWorktrees, "Worktrees", app.worktrees.length > 1 ? app.worktrees.length : 0);
+}
+
+/** Adds a worktree to the favorites, or removes it. */
+export function toggleWorktreeFavorite(path: string) {
+  const key = worktreeKey();
+  const now = settings.favoriteWorktrees[key] ?? [];
+  const next = now.includes(path) ? now.filter((p) => p !== path) : [...now, path];
+  if (next.length) settings.favoriteWorktrees[key] = next;
+  else delete settings.favoriteWorktrees[key];
+  save();
+  showWorktrees();
+}
+
 function setTabLabel(tab: HTMLElement, label: string, count: number) {
   const key = `${label}:${count}`;
   if (tab.dataset.label === key) return;
