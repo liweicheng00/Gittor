@@ -105,7 +105,7 @@ export const tabFiles = lpTab("files", "Files", "Files: the files of the working
 export const tabWorktrees = lpTab("worktree", "Worktrees", "Worktrees: the worktrees of the repository");
 // The submodules show under the commit message, so that their changes show together with the files.
 commitPanel.el.append(submodulePanel.el);
-const leftPane = h("aside", { class: "leftpane" }, h("div", { class: "lp-tabs" }, tabFiles, tabBranches, tabCommit, tabStash, tabReviews, tabWorktrees), sidebar.el, commitPanel.el, stashPanel.el, reviewPanel.el, filesPanel.el, worktreePanel.el);
+const leftPane = h("aside", { class: "leftpane" }, h("div", { class: "lp-tabs" }, tabFiles, tabBranches, tabCommit, tabWorktrees, tabStash, tabReviews), sidebar.el, commitPanel.el, stashPanel.el, reviewPanel.el, filesPanel.el, worktreePanel.el);
 /** Called when the Files tab shows, so that it can load its files. */
 export const leftTabHooks = { files: () => {} };
 export function showLeftTab(tab: "branches" | "commit" | "stash" | "reviews" | "files" | "worktrees") {
