@@ -460,10 +460,13 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .sr-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .tb-icon-only .icon:not(.icon-caret) { width: 16px; height: 16px; }
 .lp-tab:hover { color: var(--fg); background: var(--hover); }
-.lp-count { padding: 0 4px; border-radius: 8px; background: var(--select); color: var(--fg); font-size: 10.5px; font-weight: 600; line-height: 15px; }
+/* The count sits on the top right corner of the icon, as a badge. The ring in the color of the bar keeps it
+   apart from the icon. */
+.lp-tab { position: relative; }
+.lp-count { position: absolute; top: 1px; left: calc(50% + 3px); min-width: 15px; box-sizing: border-box; padding: 0 4px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 9.5px; font-weight: 700; line-height: 15px; text-align: center; box-shadow: 0 0 0 2px var(--panel-2); }
 /* The active tab is a filled block with the icon in the accent color. */
 .lp-tab.on { color: var(--accent); background: var(--select); }
-.lp-tab.on .lp-count { background: var(--bg); }
+.lp-tab.on .lp-count { box-shadow: 0 0 0 2px var(--select); }
 
 /* commit panel */
 .commit-panel { display: flex; flex-direction: column; min-height: 0; }
