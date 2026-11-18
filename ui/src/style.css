@@ -305,7 +305,7 @@ html.titlebar-tabs .tab { border-top: 2px solid transparent; }
 .menu-check { width: 14px; text-align: center; color: var(--accent); }
 .menu-label { flex: 1; overflow: hidden; text-overflow: ellipsis; max-width: 420px; }
 .menu-detail { margin-left: 10px; color: var(--muted); font-size: 11px; }
-.menu-item.indent { padding-left: 22px; }
+.menu-item.indent { padding-left: 40px; }
 .menu-item.indent .menu-check { color: var(--muted); }
 .menu-shortcut { color: var(--muted); font-size: 11px; margin-left: 16px; }
 .menu-sep { height: 1px; background: var(--border); margin: 4px 0; }
