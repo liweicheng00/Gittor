@@ -108,12 +108,27 @@ pub fn project_command(template: &str, dir: &Path) -> Result<(String, Vec<String
 /// The project command, then the arguments of the command of a file at a line. Most editors take both
 /// in one call: they open the folder as a project and show the file in it, for example
 /// "code <folder> --goto <file>:<line>:<column>" or "idea <folder> --line <line> <file>".
+///
+/// Xcode is different. `xed` reads its options only before the first path, and a folder opens as a plain
+/// folder, not as the Xcode project in it. So with a file, xed gets the file at the line only; Xcode
+/// shows it in the open project of the file.
 pub fn project_file_command(template: &str, dir: &Path, file: Option<(&Path, u32, u32)>) -> Result<(String, Vec<String>)> {
+    if let Some((file, line, column)) = file {
+        if file_only(template) {
+            return editor_command(template, file, line, column);
+        }
+    }
     let (program, mut args) = project_command(template, dir)?;
     if let Some((file, line, column)) = file {
         args.extend(editor_command(template, file, line, column)?.1);
     }
     Ok((program, args))
+}
+
+/// True for an editor that must not get the folder before the file: Xcode (`xed`).
+fn file_only(template: &str) -> bool {
+    let words = split_command(template).unwrap_or_default();
+    words.first().and_then(|p| Path::new(p).file_name()).is_some_and(|n| n == "xed")
 }
 
 /// The command of Open in Editor: the folder of the project and the file at the line, as the Zed manual
@@ -310,6 +325,12 @@ mod tests {
         assert_eq!(run("code --goto {file}:{line}:{column}"), "code|/r/app|--goto|/r/app/src/a.rs:12:3");
         assert_eq!(run("idea --line {line} --column {column} {file}"), "idea|/r/app|--line|12|--column|3|/r/app/src/a.rs");
         assert_eq!(run("zed {file}:{line}:{column}"), "zed|/r/app|/r/app/src/a.rs:12:3");
+        assert_eq!(run("subl {file}:{line}:{column}"), "subl|/r/app|/r/app/src/a.rs:12:3");
+        assert_eq!(run("cursor --goto {file}:{line}:{column}"), "cursor|/r/app|--goto|/r/app/src/a.rs:12:3");
+        assert_eq!(run("xed --line {line} {file}"), "xed|--line|12|/r/app/src/a.rs", "xed takes its options before the paths, and no folder");
+        assert_eq!(run("/usr/bin/xed --line {line} {file}"), "/usr/bin/xed|--line|12|/r/app/src/a.rs");
+        let (_, a) = project_file_command("xed --line {line} {file}", d, None).unwrap();
+        assert_eq!(a, ["/r/app"], "without a file, xed opens the folder");
         let (p, a) = file_in_project("zed {file}:{line}:{column}", d, f, 42, 10).unwrap();
         assert_eq!((p.as_str(), a), ("zed", vec!["/r/app".to_string(), "/r/app/src/a.rs:42:10".into()]), "Open in Editor opens the file in the project");
         let (_, a) = file_in_project("", d, f, 1, 1).unwrap();
