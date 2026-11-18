@@ -209,8 +209,9 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   worktrees.
 - Stale branches (`stale.ts`, unit tests): a local branch is stale when it has no commit for
   `settings.staleDays` days (30 by default, 0 turns the age off), or its tracked branch is gone. The days
-  count back from the newest commit of all refs (`Sidebar.staleClock`), so the old dates of the demo
-  repository do not make its branches stale. The user marks more branches in the menu of a branch (Mark
+  count back from the newest commit of all refs (`Sidebar.staleClock`). `make-demo-repo.sh` and
+  `rebase-drag.prep.sh` date their commits in the last 14 days; with old dates, a commit of a scenario
+  at the time of the run puts the demo branches in Stale, and they leave Local. The user marks more branches in the menu of a branch (Mark
   as Stale, also for a multiple selection), and takes branches out (Remove from Stale). The marks are
   full ref names, and "!" before a name keeps an old branch out. The query `stale_branches` keeps them
   in `stale-branches.json` of the common git dir, as the favorites. A stale branch shows in the Stale
