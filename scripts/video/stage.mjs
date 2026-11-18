@@ -185,12 +185,15 @@ export class Director {
     const p = await this.point(target, dx, dy);
     const dist = Math.hypot(p.x - this.x, p.y - this.y);
     const time = ms ?? Math.min(900, Math.max(300, dist * 1.1));
-    const steps = Math.max(8, Math.round(time / 16));
-    for (let i = 1; i <= steps; i++) {
-      const t = i / steps;
+    // The move follows the clock, so it takes the same time when the page draws slowly (the glass
+    // themes blur what is behind a dialog).
+    const begin = Date.now();
+    for (;;) {
+      const t = Math.min(1, (Date.now() - begin) / time);
       const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
       await this.page.mouse.move(this.x + (p.x - this.x) * e, this.y + (p.y - this.y) * e);
-      await this.page.waitForTimeout(time / steps / 2);
+      if (t >= 1) break;
+      await this.page.waitForTimeout(8);
     }
     this.x = p.x;
     this.y = p.y;

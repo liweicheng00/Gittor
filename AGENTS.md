@@ -137,6 +137,11 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   this rhythm. `shorts-fit.mjs` makes copies under a size limit: the Google Drive connector of a cloud
   session takes files up to about 3.1 MB. Do not commit the videos of the shorts: the owner keeps them
   in Google Drive (the folder "Gittor shorts"), because they take too much space in the repository.
+  The shorts use the theme Plasma. The glass themes blur what is behind a dialog, so the page draws
+  slowly in a recording: `Director.move` follows the clock, not a count of steps. Notes on local
+  changes are in the Compare window (a double click on the file), so the `agent` scene works there.
+  `record.mjs` (the intro video) still has the selectors of the old left tabs and needs the same
+  changes before the next recording.
   Give `shorts.sh` a work dir with a short path (`SHORTS_WORK`), because the worktree dialog shows it. Do not use a symbolic link: the tab then shows `work/rustcalc`, not `rustcalc`.
 - CI: `.github/workflows/ci.yml` runs the tests, clippy, the types, the unit tests and all UI
   scenarios on each push to main, the scenarios in 4 parts on 4 machines. Failed scenarios run once

@@ -24,7 +24,7 @@ mkdirSync(out, { recursive: true });
 const meta = JSON.parse(readFileSync(join(rec, "scenes.json"), "utf8"));
 
 /** The shorts: the scene, and the captions. A caption starts at a mark of the scene (or at the start) and
- * stays until the next caption. */
+ * stays until the next caption. `speed` replaces SPEED for a scene that is long. */
 const shorts = [
   { scene: "tour", captions: [[null, "A light git client.<br>The basics, fast."], ["log", "All the history,<br>as a graph"], ["diff", "One click<br>to the diff"], ["branches", "Switch branches"], ["changes", "Check, write, commit"], ["undo", "Changed your mind?<br>Undo."]] },
   { scene: "agent", captions: [[null, "Your agent wrote it.<br>Now review it."], ["note", "Leave a note<br>on the line"], ["copy", "Copy the notes"], ["term", "Paste them<br>to your agent"], ["fix", "The fix lands.<br>The note clears."], ["commit", "Then commit"]] },
@@ -35,7 +35,7 @@ const shorts = [
   { scene: "inspect", captions: [[null, "Every line<br>has a story"], ["history", "File history,<br>across renames"], ["annotate", "Who changed<br>each line"], ["preview", "Markdown and<br>diagrams, rendered"], ["source", "The source is<br>one click away"]] },
   { scene: "filter", captions: [[null, "Find any commit<br>in the graph"], ["copy", "Click a label:<br>the branch name is copied"], ["branch", "Double-click:<br>only that branch"], ["text", "Filter by text"], ["user", "And by user"], ["clear", "One click<br>to clear"]] },
 ];
-const SPEED = 1.15; // The scenes play a little faster than they were recorded.
+const BASE_SPEED = 1.15; // The scenes play a little faster than they were recorded.
 const END = 2.8; // The end card.
 const FADE = 0.4; // The cross fade to the end card.
 const FPS = 30;
@@ -101,6 +101,7 @@ const enc = ["-c:v", "libx264", "-preset", "slow", "-crf", "19", "-pix_fmt", "yu
 for (const [n, s] of shorts.entries()) {
   if (only.length && !only.includes(s.scene)) continue;
   const { start, duration, marks, cams, view } = meta[s.scene];
+  const SPEED = s.speed ?? BASE_SPEED;
   const len = duration / SPEED;
   const total = len + END - FADE;
   // The camera: the zoom and the middle of each place, in the pixels of the page.

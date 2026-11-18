@@ -19,7 +19,7 @@ const out = resolve(outArg);
 const repo = join(work, "rustcalc");
 
 const presetSettings = (extra) => ({
-  theme: "dark",
+  theme: "plasma",
   leftTab: "commit",
   showSidebar: true,
   showDiff: true,
@@ -140,7 +140,7 @@ const scenes = [
       // Only the toast of the commit shows at the Undo step.
       await d.page.evaluate(() => document.querySelector(".toast button[title=Close]")?.click());
       d.mark("changes");
-      await d.click(".lp-tab:text-is('Changes')", { after: 300 });
+      await d.click(".lp-tab[aria-label^='Changes']", { after: 300 });
       await d.cam([file("arith.rs"), ".commit-button"], { zoom: 1.9, align: "left" });
       await d.wait(900);
       await d.click(".commit-message", { after: 150 });
@@ -158,39 +158,50 @@ const scenes = [
     },
   },
   {
-    // Agent: a note on the change of the agent, the note goes to the agent, the fix clears it, then a commit.
+    // Agent: a note on the change of the agent in the Compare window, the note goes to the agent, the fix
+    // clears it, then a commit.
     name: "agent",
     prep: () => write("arith.rs", ARITH_BAD),
-    // The video starts on the diff of the agent, not on the commit that the log selects.
     async setup(d) {
       await d.page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
-      await d.page.click(file("arith.rs"));
-      await showsFile(d, "arith.rs");
-      await d.page.waitForSelector(`${modified} .view-line`);
-      await d.wait(500);
+      await d.page.waitForSelector(file("arith.rs"));
     },
     async run(d) {
-      await d.wait(1500);
-      await d.cam(DIFF, { zoom: 2 });
-      await d.wait(800);
+      const win = ".history-window[aria-label='Compare Branches']";
+      const side = `${win} .editor.modified`;
+      await d.wait(1400);
+      await d.cam(file("arith.rs"), { zoom: 1.9, align: "left" });
+      await d.wait(700);
+      // A double click on a local change opens it in the Compare window, which has the notes.
+      await d.click(file("arith.rs"), { double: true, after: 0 });
+      await d.page.waitForSelector(`${side} .view-line`);
+      await d.cam([lineNumber(side, 1), lineNumber(side, 8)], { zoom: 1.9, align: "left", pad: 40 });
+      await d.wait(900);
       d.mark("note");
-      await addNote(d, 6, NOTE_ARITH);
+      await d.move(lineNumber(side, 6), { dx: 6 });
+      await d.wait(250);
+      await d.click(`${side} .note-add-icon`, { after: 200 });
+      await d.page.waitForSelector(`${win} .note-card.draft textarea`);
+      await d.type(NOTE_ARITH, 28);
+      await d.wait(250);
+      await d.page.keyboard.press("Control+Enter");
+      await d.page.waitForSelector(`${win} .note-card:not(.draft)`);
       await d.wait(900);
       d.mark("copy");
-      await d.cam([".commit-copy-notes", file("arith.rs")], { zoom: 2 });
+      await d.cam(`${win} .review-notes-copy`, { zoom: 1.9 });
       await d.wait(700);
-      await d.click(".commit-copy-notes", { after: 600 });
+      await d.click(`${win} .review-notes-copy`, { after: 600 });
       const notes = await d.page.evaluate(() => navigator.clipboard.readText());
-      // The terminal is over the log and above the new side of the diff, so one place of the camera
-      // shows the terminal and the code that changes under it.
-      const box = await d.page.evaluate(() => {
-        const top = document.querySelector(".diff").getBoundingClientRect().top;
-        return { x: innerWidth - 520, y: top - 300, w: 508, h: 290, title: "agent — rustcalc" };
-      });
+      // The terminal is under the first lines of the new side, so one place of the camera shows the
+      // code that changes and the terminal.
+      const box = await d.page.evaluate((sel) => {
+        const r = document.querySelector(sel).getBoundingClientRect();
+        return { x: Math.min(r.left - 30, innerWidth - 520), y: r.top + 250, w: 508, h: 290, title: "agent — rustcalc" };
+      }, side);
       d.mark("term");
       await term(d, "open", box);
       await term(d, "print", `<span class="dim">~/rustcalc</span> <span class="hi">main</span>\n<span class="you">›</span> `);
-      await d.cam(".vid-term", { zoom: 1.9, align: "top", pad: 8 });
+      await d.cam([lineNumber(side, 1), ".vid-term"], { pad: 10 });
       await d.wait(1000);
       // The badge of the keys goes into the terminal, where the camera is.
       await d.page.evaluate(() => {
@@ -204,12 +215,14 @@ const scenes = [
       await term(d, "print", `\n\n● Edit <span class="hi">arith.rs</span>\n  <span class="del">- pub fn div(a: i32, b: i32) -&gt; i32 {</span>\n  <span class="add">+ pub fn div(a: i32, b: i32) -&gt; Option&lt;i32&gt; {</span>\n`);
       write("arith.rs", ARITH_GOOD);
       d.mark("fix");
-      await d.page.waitForFunction(() => !document.querySelector(".diff .note-card") && document.querySelector(".diff .editor.modified")?.textContent?.includes("checked_div"), null, { timeout: 15000 });
+      await d.page.waitForFunction(([w, e]) => !document.querySelector(`${w} .note-card`) && document.querySelector(e)?.textContent?.includes("checked_div"), [win, side], { timeout: 15000 });
       await d.wait(600);
       await term(d, "print", `<span class="ok">✔ Fixed 1 note</span>\n<span class="you">›</span> `);
       await d.wait(1700);
       d.mark("commit");
       await term(d, "close");
+      await d.page.keyboard.press("Escape");
+      await d.page.waitForSelector(win, { state: "detached" });
       await d.cam([file("arith.rs"), ".commit-button"], { zoom: 1.9, align: "left" });
       await d.wait(800);
       await d.click(".commit-message", { after: 150 });
@@ -247,10 +260,10 @@ const scenes = [
       await d.click(".dialog-buttons button:has-text('Start Review')", { after: 0 });
       await d.page.waitForSelector(".review-window");
       await d.cam("full");
-      await d.wait(1100);
+      await d.wait(600);
       const side = ".review-window .diff-host:not([hidden]) .monaco-editor:not(.original)";
       await d.cam(".review-window .diff-host:not([hidden])", { zoom: 1.7, align: "top left", pad: 4 });
-      await d.wait(700);
+      await d.wait(400);
       await d.move(lineNumber(side, 6), { dx: 6 });
       await d.wait(300);
       d.mark("note");
@@ -259,30 +272,30 @@ const scenes = [
       await d.type("Follow-up: add a test for b = 0.", 28);
       await d.wait(250);
       await d.page.keyboard.press("Control+Enter");
-      await d.wait(1200);
+      await d.wait(700);
       const viewed = (name) => `.review-window .review-file:has-text('${name}') input.review-viewed`;
       await d.cam([viewed("arith.rs"), viewed("main.rs"), ".review-window .review-file:has-text('main.rs')"], { zoom: 2 });
-      await d.wait(700);
+      await d.wait(400);
       d.mark("viewed");
-      await d.click(viewed("arith.rs"), { after: 500 });
-      await d.click(viewed("main.rs"), { after: 900 });
+      await d.click(viewed("arith.rs"), { after: 300 });
+      await d.click(viewed("main.rs"), { after: 500 });
       await d.cam(".review-window .review-merge", { zoom: 1.9 });
-      await d.wait(600);
+      await d.wait(400);
       d.mark("merge");
       await d.click(".review-window .review-merge", { after: 0 });
       await d.page.waitForSelector(`.dialog:has-text('Merge ${BRANCH}')`);
       await d.cam(".dialog");
-      await d.wait(900);
-      await d.click(".review-mode:has-text('Squash') input", { after: 1000 });
+      await d.wait(500);
+      await d.click(".review-mode:has-text('Squash') input", { after: 600 });
       await d.click(".dialog-buttons button:has-text('Merge')", { after: 0 });
       await d.page.waitForSelector(".toast", { timeout: 15000 });
       d.mark("merged");
       await d.cam(".toast", { zoom: 2 });
-      await d.wait(2300);
+      await d.wait(1700);
       // The new commit on main, with the changes of the branch.
       await d.cam([".log-row >> nth=0", ".log-row >> nth=5"], { zoom: 1.7 });
       await d.wait(600);
-      await d.click(".log-row >> nth=0", { after: 2400 });
+      await d.click(".log-row >> nth=0", { after: 1800 });
     },
   },
   {
@@ -404,15 +417,15 @@ const scenes = [
   {
     // Worktrees: add a worktree, open it in a tab, and drag the tab out to a new window.
     name: "worktrees",
-    settings: () => ({ leftTab: "branches" }),
+    settings: () => ({ leftTab: "worktrees" }),
     async run(d) {
       const folder = join(work, "rustcalc-wt/parser");
-      const item = ".sidebar .worktree:has(.branch-name:text-is('parser'))";
+      const item = ".worktree-panel .worktree:has(.branch-name:text-is('parser'))";
       await d.wait(1400);
       d.mark("add");
-      await d.cam(".group-action[title='Add a worktree']", { zoom: 1.9, align: "left" });
+      await d.cam(".worktree-add", { zoom: 1.9, align: "left" });
       await d.wait(700);
-      await d.click(".group-action[title='Add a worktree']", { after: 300 });
+      await d.click(".worktree-add", { after: 300 });
       await d.page.waitForSelector(".dialog-field:has-text('Branch') input");
       await d.cam(".dialog");
       await d.click(".dialog-field:has-text('Branch') input", { after: 150 });
@@ -469,7 +482,7 @@ const scenes = [
       await d.page.keyboard.press("Escape");
       d.mark("preview");
       await d.cam("full");
-      await d.click(".lp-tab:text-is('Changes')", { after: 400 });
+      await d.click(".lp-tab[aria-label^='Changes']", { after: 400 });
       await d.click(file("GUIDE.md"), { after: 0 });
       await d.page.waitForSelector(".diff-preview-toggle:not([hidden])", { timeout: 15000 });
       await d.cam(".diff", { zoom: 1.5, align: "top left", pad: 0 });
