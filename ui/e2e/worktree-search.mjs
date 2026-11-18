@@ -1,4 +1,4 @@
-// UI scenario for the Worktrees tab: Mod+6 opens it, the search finds worktrees by name, path and branch,
+// UI scenario for the Worktrees tab: Mod+3 opens it, the search finds worktrees by name, path and branch,
 // and a star puts a worktree first. The star filter shows the favorites and the current worktree only.
 // The favorites stay after a reload, and each worktree of the repository shows the same favorites.
 // Start the dev server first (see README). Build a fresh repository with make-demo-repo.sh, then:
@@ -40,8 +40,8 @@ await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=
 await page.waitForSelector(".log-row", { timeout: 30000 });
 check("the Branches tab has no worktrees", (await page.$$(".sidebar .worktree")).length === 0);
 await page.click(".log-row >> nth=0");
-await page.keyboard.press("Control+6");
-await within("Ctrl+6 shows the Worktrees tab", async () => (await page.isVisible(".worktree-panel")) && (await page.$(".lp-tab[aria-label^='Worktrees'].on")) !== null);
+await page.keyboard.press("Control+3");
+await within("Ctrl+3 shows the Worktrees tab", async () => (await page.isVisible(".worktree-panel")) && (await page.$(".lp-tab[aria-label^='Worktrees'].on")) !== null);
 check("the search field has the focus", await page.$eval(".worktree-search", (e) => e === document.activeElement));
 check("the tab shows the count", ((await page.textContent(".lp-tab[aria-label^='Worktrees'] .lp-count")) ?? "") === "3");
 await within("the tab lists the three worktrees", async () => same(await names(), [base(repo), base(alpha), base(beta)]));
@@ -76,7 +76,8 @@ await within("the favorite stays after a reload", async () => same(await names()
 await page.click(".worktree-search");
 await page.fill(".worktree-search", "alpha");
 await within("the search shows alpha", async () => same(await names(), [base(alpha)]));
-await page.keyboard.press("ArrowDown");
+await page.focus(".worktree-search");
+await page.press(".worktree-search", "ArrowDown");
 await within("Down selects the first row", async () => (await page.$(`${row(alpha)}.selected`)) !== null);
 await page.keyboard.press("Enter");
 await within("Enter opens the worktree in a tab", async () => ((await page.textContent(".tab.on").catch(() => "")) ?? "").includes(base(alpha)));

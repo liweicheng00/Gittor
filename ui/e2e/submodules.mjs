@@ -50,10 +50,10 @@ await page.waitForSelector(".log-row", { timeout: 30000 });
 // The left tabs fit the default width of the left pane: no label is cut.
 const cut = await page.$$eval(".lp-tab", (tabs) => tabs.filter((t) => !t.hidden && t.scrollWidth > t.clientWidth).map((t) => t.textContent));
 check(`no left tab label is cut (${cut.join(", ")})`, cut.length === 0);
-// Control+5 opens the Changes tab at the submodules.
+// Control+6 opens the Changes tab at the submodules.
 await page.waitForSelector(".submodule-panel:not([hidden])", { state: "attached" });
-await page.keyboard.press("Control+5");
-await within("Control+5 shows the submodules in the Changes tab", async () => (await page.isVisible(".commit-panel .sm-row")) && (await page.getAttribute(".lp-tab[aria-label^='Changes']", "class")).includes("on"));
+await page.keyboard.press("Control+6");
+await within("Control+6 shows the submodules in the Changes tab", async () => (await page.isVisible(".commit-panel .sm-row")) && (await page.getAttribute(".lp-tab[aria-label^='Changes']", "class")).includes("on"));
 const head = () => page.textContent(".sm-head .sm-title");
 const rowText = () => page.textContent(".sm-row");
 check("the tab lists vendor/lib on its branch", (await rowText()).includes("vendor/lib") && (await rowText()).includes("main"));
@@ -111,7 +111,7 @@ await within("the diff shows the two commits", async () => {
 await shot("sm2-submodule-diff");
 
 // Update to the recorded commit, with the button of the detail.
-await page.keyboard.press("Control+5");
+await page.keyboard.press("Control+6");
 await page.click(".sm-row");
 await page.click(".sm-detail .sm-update");
 await within("Update checks out the recorded commit", async () => run(sub, "rev-parse", "HEAD") === c2);

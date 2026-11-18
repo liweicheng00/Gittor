@@ -76,7 +76,7 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   no active changelist. The UI never checks a file in ".ignore", so no commit takes it.
 - Submodules: `Repo::submodules` reads all of them with three git commands (`.gitmodules`, the index,
   `git status --porcelain=v2`). The Submodules section is `submodule-panel.ts` and `submodule-flow.ts`.
-  It is under the commit message of the Changes tab (`shell.ts` puts it there); `Mod+5` opens it.
+  It is under the commit message of the Changes tab (`shell.ts` puts it there); `Mod+6` opens it.
   `loadSubmodules` in `repo.ts` loads it with the local changes. It hides when there are none.
 - App windows: a tab that the user drags out of the tab bar moves to a new window at the place of the
   mouse (`dragTab` in `tab-drag.ts`; `openWindow` in `api.ts`: the Tauri command `open_window`, or
@@ -202,7 +202,7 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   its own `DiffView` with `showFile` (the text, without colors), the notes on local changes and
   `NotesPanel`. Show Diff in the menu shows the diff in the diff panel. `centerHooks.reset` closes the
   files when another repository shows. ``Alt+` `` switches the project.
-- The Worktrees tab (`worktree-panel.ts`, `worktree-flow.ts`, `Mod+6`, the fourth left tab, after
+- The Worktrees tab (`worktree-panel.ts`, `worktree-flow.ts`, `Mod+3`, the fourth left tab, after
   Changes): the worktrees with a search (name, path, branch; `worktree-filter.ts` has unit tests) and a
   star for each. Favorites come first. The UI setting `favoriteWorktrees` keeps them by the path of the
   main worktree, so each worktree of a repository shows the same favorites. The Branches tab has no

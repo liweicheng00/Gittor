@@ -25,9 +25,8 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | Keys | Action |
 |---|---|
 | `Ctrl/Cmd+O` | Open a repository |
-| ``Ctrl/Cmd+` ``, `Ctrl/Cmd+1` … `Ctrl/Cmd+4` | Files, Branches, Changes, Stash and Reviews tabs |
-| `Ctrl/Cmd+5` | The submodules in the Changes tab |
-| `Ctrl/Cmd+6` | Worktrees tab |
+| ``Ctrl/Cmd+` ``, `Ctrl/Cmd+1` … `Ctrl/Cmd+5` | The left tabs in their order: Files, Branches, Changes, Worktrees, Stash and Reviews |
+| `Ctrl/Cmd+6` | The submodules in the Changes tab |
 | `Ctrl/Cmd+K`, `Ctrl/Cmd+Enter` | Commit (from the tab, from the message field) |
 | `Ctrl/Cmd+Alt+K` | Commit and push |
 | `Ctrl/Cmd+Shift+K` | Push |

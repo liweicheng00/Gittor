@@ -63,14 +63,14 @@ for (const a of [
     // A second press stays on the tab. View › Sidebar hides the left panel.
     run: () => showLeftTab("branches"),
   },
-  { id: "stash", label: "Stash Tab", defaults: ["Mod+3"], run: () => showLeftTab("stash") },
-  { id: "reviews", label: "Reviews Tab", defaults: ["Mod+4"], run: () => showLeftTab("reviews") },
-  { id: "worktrees", label: "Worktrees Tab", defaults: ["Mod+6"], run: () => { showLeftTab("worktrees"); worktreePanel.focus(); } },
+  { id: "stash", label: "Stash Tab", defaults: ["Mod+4"], run: () => showLeftTab("stash") },
+  { id: "reviews", label: "Reviews Tab", defaults: ["Mod+5"], run: () => showLeftTab("reviews") },
+  { id: "worktrees", label: "Worktrees Tab", defaults: ["Mod+3"], run: () => { showLeftTab("worktrees"); worktreePanel.focus(); } },
   { id: "files", label: "Files Tab", defaults: ["Mod+`"], run: () => { showLeftTab("files"); filesPanel.focus(); } },
   {
     id: "submodules",
     label: "Submodules (in the Changes tab)",
-    defaults: ["Mod+5"],
+    defaults: ["Mod+6"],
     run: () => {
       if (submodulePanel.el.hidden) return;
       showLeftTab("commit");
