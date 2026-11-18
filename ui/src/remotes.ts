@@ -14,6 +14,7 @@ import { collapse } from "./selection";
 import { save, settings } from "./settings";
 import { openSettings } from "./settings-flow";
 import { log, remoteBtn, sidebar, toggleDiff, toggleSidebar, viewBtn } from "./shell";
+import { nextMarks } from "./stale";
 import { app } from "./state";
 import { branchUrl, commitUrl, webUrl } from "./web-url";
 import { copyText } from "./dom";
@@ -138,21 +139,25 @@ export function toggleFavorite(b: BranchInfo) {
 }
 sidebar.onToggleFavorite = toggleFavorite;
 
-/** The local branches that the user marked as stale, in the active repository. */
-let stale: string[] = [];
+/** The stale marks of the user in the active repository (see stale.ts). */
+let staleMarks: string[] = [];
 
 export async function loadStale() {
-  stale = await api.staleBranches().catch(() => []);
-  sidebar.setStale(stale);
+  staleMarks = await api.staleBranches().catch(() => []);
+  showStale();
 }
 
-/** Marks branches as stale, or removes the mark. A stale branch shows in the Stale group, not in Local. */
+/** Draws the Stale group again, for example after a change of the setting of the days. */
+export function showStale() {
+  sidebar.setStale(staleMarks, settings.staleDays);
+}
+
+/** Puts branches in the Stale group, or takes them out. A stale branch shows in Stale, not in Local. */
 export function setStale(branches: BranchInfo[], on: boolean) {
   if (!app.view) return;
-  const full = new Set(branches.map((b) => b.full));
-  stale = on ? [...new Set([...stale, ...full])] : stale.filter((x) => !full.has(x));
-  sidebar.setStale(stale);
-  void api.setStaleBranches(stale).catch((e) => toast(String(e).replace(/^Error: /, ""), "error"));
+  staleMarks = nextMarks(staleMarks, branches, on, settings.staleDays, sidebar.staleClock);
+  showStale();
+  void api.setStaleBranches(staleMarks).catch((e) => toast(String(e).replace(/^Error: /, ""), "error"));
 }
 
 sidebar.onRemoteMenu = (remote, e) =>

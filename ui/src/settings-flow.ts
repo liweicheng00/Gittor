@@ -5,6 +5,7 @@ import { applyDiffSettings } from "./diff-view";
 import { keymap } from "./keyboard";
 import { toast } from "./notify";
 import { fetchAll, refresh } from "./repo";
+import { showStale } from "./remotes";
 import { save, settings } from "./settings";
 import { checkNow, updateStatus } from "./update-flow";
 import { openSettingsDialog, type Page } from "./settings-dialog";
@@ -97,6 +98,7 @@ export async function openSettings(page?: Page, ignoreAdd?: string[]) {
   applyTheme();
   applyDiffSettings();
   scheduleAutoFetch();
+  showStale();
   if (gitChanged && app.view) void refresh();
 }
 

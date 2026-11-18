@@ -81,6 +81,8 @@ export interface Settings {
   /** Favorite branches and tags by repository root, as full ref names. A repository without an entry has
    * main and master as favorites. */
   favorites: Record<string, string[]>;
+  /** A local branch without a commit for this many days shows in the Stale group; 0 turns it off. */
+  staleDays: number;
   /** Favorite worktrees by the path of the main worktree, as paths. */
   favoriteWorktrees: Record<string, string[]>;
   /** The last commit messages, newest first. */
@@ -153,6 +155,7 @@ const DEFAULTS: Settings = {
   keymap: {},
   favorites: {},
   favoriteWorktrees: {},
+  staleDays: 30,
   messageHistory: [],
   signOff: false,
   subjectLimit: 72,

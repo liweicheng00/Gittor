@@ -1,16 +1,28 @@
-// UI scenario for the Stale group of the Branches tab: the user marks branches as stale in their menu.
-// A stale branch shows in the Stale group only, not in Local or Recent. The mark stays after a reload,
-// and Remove from Stale puts the branch back in Local. The menu of a multiple selection marks many.
+// UI scenario for the Stale group of the Branches tab. A branch without a commit for the set days (30 by
+// default, counted from the newest commit) and a branch with a gone tracked branch show there by
+// themselves. The user marks more branches in their menu, and takes branches out. A stale branch shows in
+// the Stale group only, not in Local or Recent. The marks stay after a reload. Settings › General sets
+// the days; 0 turns the age off.
 // Start the dev server first (see README). Build a fresh repository with make-demo-repo.sh, then:
 // node e2e/stale-branches.mjs <repo> <screenshot-dir>.
 // Set CHROMIUM to a Chromium binary when Playwright has no downloaded browser.
 import { chromium } from "playwright";
 import { execFileSync } from "node:child_process";
 const [,, repo, outDir] = process.argv;
-const git = (...args) => execFileSync("git", ["-C", repo, ...args], { encoding: "utf8" }).trim();
-git("branch", "old/ancient", "HEAD");
+const git = (...args) => execFileSync("git", ["-C", repo, ...args], { encoding: "utf8", env: { ...process.env, ...gitEnv } }).trim();
+let gitEnv = {};
+// Two old branches: their last commits are from 2020.
+gitEnv = { GIT_AUTHOR_DATE: "2020-01-02T10:00:00Z", GIT_COMMITTER_DATE: "2020-01-02T10:00:00Z" };
+const tree = git("rev-parse", "HEAD^{tree}");
+git("branch", "old/ancient", git("commit-tree", tree, "-p", "HEAD", "-m", "Old work"));
+git("branch", "old/dusty", git("commit-tree", tree, "-p", "HEAD", "-m", "Dusty work"));
+gitEnv = {};
+// A branch whose tracked branch is gone from the remote.
 git("branch", "merged-pr", "HEAD");
+git("config", "branch.merged-pr.remote", "origin");
+git("config", "branch.merged-pr.merge", "refs/heads/merged-pr");
 git("branch", "spike", "HEAD");
+git("branch", "spike-2", "HEAD");
 
 const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
 const page = await (await browser.newContext({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1.5 })).newPage();
@@ -49,41 +61,57 @@ await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=
 await page.waitForSelector(".log-row", { timeout: 30000 });
 await page.click(".lp-tab[aria-label^='Branches']");
 await page.waitForSelector(branchRow("spike"));
-check("without a mark there is no Stale group", (await page.$(stale)) === null);
+const staleNames = async () => (await groupNames("Stale")) ?? [];
+const localNames = async () => (await groupNames("Local")) ?? [];
+check("the Stale group finds the old branches and the gone branch", ((await page.textContent(`${stale} .group-count`)) ?? "").trim() === "3");
+check("the Stale group is closed at first", (await staleNames()).length === 0);
+check("the stale branches are not in Local", !(await localNames()).some((n) => n.startsWith("old/") || n === "merged-pr"));
+check("the header says what the group is", ((await page.getAttribute(stale, "title")) ?? "").includes("30 days"));
+await page.click(stale);
+await within("the Stale group lists them", async () => JSON.stringify((await staleNames()).sort()) === JSON.stringify(["merged-pr", "old/ancient", "old/dusty"]));
+check("a branch with a gone tracked branch has the badge", (await page.$(".sidebar .branch:has(.branch-name:text-is('merged-pr')) .branch-gone")) !== null);
 
 // Mark one branch in its menu.
 await page.click(branchRow("spike"), { button: "right" });
 await menuItem("Mark as Stale");
-await page.waitForSelector(stale);
-check("the Stale group shows its count", ((await page.textContent(`${stale} .group-count`)) ?? "").trim() === "1");
-check("the Stale group is closed at first", ((await groupNames("Stale")) ?? []).length === 0);
-await within("the branch leaves Local", async () => !((await groupNames("Local")) ?? []).includes("spike"));
-await page.click(stale);
-await within("the Stale group lists the branch", async () => JSON.stringify(await groupNames("Stale")) === JSON.stringify(["spike"]));
+await within("the marked branch moves from Local to Stale", async () => (await staleNames()).includes("spike") && !(await localNames()).includes("spike"));
+// Take an old branch out: it goes back to Local, although it is old.
+await page.click(branchRow("old/ancient"), { button: "right" });
+await menuItem("Remove from Stale");
+await within("the old branch is back in Local", async () => (await localNames()).includes("old/ancient") && !(await staleNames()).includes("old/ancient"));
 
-// Mark two branches with the menu of a multiple selection.
-await page.click(branchRow("old/ancient"));
-await page.click(branchRow("merged-pr"), { modifiers: ["Control"] });
-await page.click(branchRow("merged-pr"), { button: "right" });
+// The menu of a multiple selection marks all its local branches.
+await page.click(branchRow("spike-2"));
+await page.click(branchRow("old/ancient"), { modifiers: ["Control"] });
+await page.click(branchRow("old/ancient"), { button: "right" });
 await menuItem("Mark as Stale");
 await within("the selection goes to Stale", async () => {
-  const s = (await groupNames("Stale")) ?? [];
-  const l = (await groupNames("Local")) ?? [];
-  return s.length === 3 && !l.includes("merged-pr") && !l.some((n) => n.includes("ancient"));
+  const s = await staleNames();
+  return s.includes("spike-2") && s.includes("old/ancient") && !(await localNames()).includes("spike-2");
 });
-check("the header says what the group is", ((await page.getAttribute(stale, "title")) ?? "").includes("marked as stale"));
+// A plain click selects one branch again; its menu acts on it alone.
+await page.click(branchRow("old/ancient"));
+await page.click(branchRow("old/ancient"), { button: "right" });
+await menuItem("Remove from Stale");
+await within("old/ancient leaves Stale again", async () => (await localNames()).includes("old/ancient"));
 await shot("stale1-group");
 
 // The marks stay after a reload: they are in the repository.
 await page.reload();
 await page.waitForSelector(".log-row", { timeout: 30000 });
-await within("the marks stay after a reload", async () => ((await page.textContent(`${stale} .group-count`).catch(() => "")) ?? "").trim() === "3");
-
-// Remove from Stale puts the branch back in Local.
 await page.click(stale);
-await page.click(`.sidebar .branch-local:has(.branch-name:text-is('spike')) >> nth=0`, { button: "right" });
-await menuItem("Remove from Stale");
-await within("the branch is back in Local", async () => ((await groupNames("Local")) ?? []).includes("spike") && !((await groupNames("Stale")) ?? []).includes("spike"));
+await within("the marks stay after a reload", async () =>
+  JSON.stringify((await staleNames()).sort()) === JSON.stringify(["merged-pr", "old/dusty", "spike", "spike-2"]) && (await localNames()).includes("old/ancient"));
+
+// Settings › General: 0 days turns the age off. The gone branch and the marked branches stay.
+await page.click("button[title^='Settings']");
+await page.waitForSelector(".settings-row:has-text('Stale branches') input");
+await page.fill(".settings-row:has-text('Stale branches') input", "0");
+await page.press(".settings-row:has-text('Stale branches') input", "Tab");
+await page.click(".dialog-buttons button:has-text('OK'), .settings-buttons button:has-text('OK')");
+await within("without the age, the old branch is back in Local", async () =>
+  (await localNames()).includes("old/dusty") && JSON.stringify((await staleNames()).sort()) === JSON.stringify(["merged-pr", "spike", "spike-2"]));
+check("the header does not name days", !((await page.getAttribute(stale, "title")) ?? "").includes("days"));
 
 console.log("errors:", JSON.stringify(errors));
 await browser.close();

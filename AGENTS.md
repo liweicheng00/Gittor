@@ -207,9 +207,14 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   star for each. Favorites come first. The UI setting `favoriteWorktrees` keeps them by the path of the
   main worktree, so each worktree of a repository shows the same favorites. The Branches tab has no
   worktrees.
-- Stale branches: the user marks them in the menu of a branch (Mark as Stale, also for a multiple
-  selection). They show in the Stale group of the Branches tab only, not in Local or Recent. The query
-  `stale_branches` keeps them in `stale-branches.json` of the common git dir, as the favorites.
+- Stale branches (`stale.ts`, unit tests): a local branch is stale when it has no commit for
+  `settings.staleDays` days (30 by default, 0 turns the age off), or its tracked branch is gone. The days
+  count back from the newest commit of all refs (`Sidebar.staleClock`), so the old dates of the demo
+  repository do not make its branches stale. The user marks more branches in the menu of a branch (Mark
+  as Stale, also for a multiple selection), and takes branches out (Remove from Stale). The marks are
+  full ref names, and "!" before a name keeps an old branch out. The query `stale_branches` keeps them
+  in `stale-branches.json` of the common git dir, as the favorites. A stale branch shows in the Stale
+  group only, not in Local or Recent. The current branch is never stale by the rule.
 - Icons: add the Lucide file name to the glob and to `NAMES` in `ui/src/icons.ts`.
 - Trees of files: `buildTree`, `treeOrder`, `walkTree` in `file-tree.ts`.
   Unique short names of folders: `pathLabels` in `path-labels.ts`.

@@ -2,6 +2,7 @@
 
 import type { BranchInfo, RecentBranch } from "./api";
 import { compareTags } from "./version-sort";
+import { isStale } from "./stale";
 import { h, icon, twisty } from "./dom";
 import { type KeyedItem, reconcile } from "./keyed";
 
@@ -27,8 +28,9 @@ export class Sidebar {
   /** Favorite branches and tags, by full ref name. */
   private favorites = new Set<string>();
   private onlyFavorites = false;
-  /** The local branches that the user marked as stale, by full ref name. */
+  /** The marks of the user (see stale.ts), and the days without a commit that make a branch stale. */
   private stale = new Set<string>();
+  private staleDays = 30;
   /** Branches with a prefix ("feature/a") show in a folder of the prefix, as IntelliJ's Group by Directory. */
   private groupByPrefix = false;
   private favBtn: HTMLButtonElement;
@@ -104,15 +106,24 @@ export class Sidebar {
     this.render();
   }
 
-  setStale(full: Iterable<string>) {
-    const next = new Set(full);
-    if (same([...next].sort(), [...this.stale].sort())) return;
+  setStale(marks: Iterable<string>, days: number) {
+    const next = new Set(marks);
+    if (days === this.staleDays && same([...next].sort(), [...this.stale].sort())) return;
     this.stale = next;
+    this.staleDays = days;
     this.render();
   }
 
   isStale(b: BranchInfo): boolean {
-    return this.stale.has(b.full);
+    return b.kind === "local" && isStale(b, this.stale, this.staleDays, this.staleClock);
+  }
+
+  /** The time that the age of a branch counts from: the newest commit of all refs. An old repository
+   * that nobody changed for a long time then does not show all its branches as stale. */
+  get staleClock(): number {
+    let newest = 0;
+    for (const b of this.refs) if (b.time > newest) newest = b.time;
+    return newest || Date.now() / 1000;
   }
 
   isFavorite(b: BranchInfo): boolean {
@@ -171,12 +182,12 @@ export class Sidebar {
     const current = this.refs.filter((b) => b.current);
     const recent = this.recent
       .map((r) => this.refs.find((b) => b.kind === "local" && b.name === r.name))
-      .filter((b): b is BranchInfo => !!b && match(b) && !this.stale.has(b.full));
+      .filter((b): b is BranchInfo => !!b && match(b) && !this.isStale(b));
     if (recent.length) groups.push(["Recent", recent]);
     const locals = this.refs.filter((b) => b.kind === "local" && match(b));
     // A stale branch shows in the Stale group only, not in Local.
-    groups.push(["Local", locals.filter((b) => !this.stale.has(b.full))]);
-    groups.push(["Stale", locals.filter((b) => this.stale.has(b.full))]);
+    groups.push(["Local", locals.filter((b) => !this.isStale(b))]);
+    groups.push(["Stale", locals.filter((b) => this.isStale(b))]);
     const remotes = new Map<string, BranchInfo[]>();
     for (const b of this.refs.filter((b) => b.kind === "remote" && match(b))) {
       const remote = b.name.split("/")[0];
@@ -220,7 +231,7 @@ export class Sidebar {
           this.onTagsMenu(e);
         });
       }
-      if (title === "Stale") header.title = "Branches that you marked as stale. Mark as Stale in the menu of a branch puts it here";
+      if (title === "Stale") header.title = (this.staleDays > 0 ? `Local branches without a commit for ${this.staleDays} days, ` : "Local branches ") + "with a tracked branch that is gone from the remote, or that you marked as stale";
       if (title === "Local") {
         header.addEventListener("contextmenu", (e) => {
           e.preventDefault();
