@@ -43,7 +43,8 @@ const setEditor = async (command) => {
   await page.click(".settings-dialog .dialog-buttons button:has-text('OK')");
   await savedSetting("editor", command);
 };
-const expectOpened = (what, line) => within(what, async () => opened() === `--goto\n${repo}/main.rs:${line}`);
+// The editor gets the folder of the repository first, so it opens the file in the project.
+const expectOpened = (what, line) => within(what, async () => opened() === `${repo}\n--goto\n${repo}/main.rs:${line}`);
 
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
@@ -54,15 +55,15 @@ await page.selectOption(".editor-preset", { label: "Visual Studio Code" });
 check("the preset fills the command", (await page.inputValue(".editor-command")) === "code --goto {file}:{line}:{column}");
 // The page names the parameters and shows the commands that the setting makes.
 const preview = () => page.$$eval(".command-preview code", (els) => els.map((e) => e.textContent));
-await within("the preview shows the commands of F4 and of the IDE button", async () => {
+await within("the preview shows the commands of F4 and of the IDE button: the folder, then the file", async () => {
   const p = await preview();
-  return p[0] === `code --goto ${repo}/src/main.rs:12:5` && p[1] === `code ${repo} --goto ${repo}/src/main.rs:12:5`;
+  return p[0] === `code ${repo} --goto ${repo}/src/main.rs:12:5` && p[1] === p[0];
 });
 check("the page names the parameters", (await page.$$eval(".param-chip", (els) => els.map((e) => e.textContent).join(" "))) === "{file} {line} {column}");
 await page.fill(".editor-command", "subl ");
 await page.click(".param-chip:text-is('{file}')");
 await within("a click on a parameter inserts it at the cursor", async () => (await page.inputValue(".editor-command")) === "subl {file}");
-await within("the preview follows the command", async () => (await preview())[0] === `subl ${repo}/src/main.rs`);
+await within("the preview follows the command", async () => (await preview())[0] === `subl ${repo} ${repo}/src/main.rs`);
 await shot("oe1-settings");
 await page.fill(".editor-command", `${script} --goto {file}:{line}`);
 check("another command shows as Other command", (await page.$eval(".editor-preset", (e) => e.selectedOptions[0].textContent)) === "Other command");
@@ -100,7 +101,7 @@ await page.click(".cl-file:has(.path:text-is('main.rs'))", { button: "right" });
 check("the menu shows the key", ((await page.textContent(".menu-item:has-text('Open in Editor')")) ?? "").includes("F4"));
 await shot("oe2-menu");
 await page.click(".menu-item:has-text('Open in Editor')");
-await within("the menu opens the file", async () => opened().startsWith(`--goto\n${repo}/main.rs:`));
+await within("the menu opens the file", async () => opened().startsWith(`${repo}\n--goto\n${repo}/main.rs:`));
 
 // F4 in the Compare window opens the file of its diff.
 rmSync(log, { force: true });
@@ -108,7 +109,7 @@ await page.dblclick(".cl-file:has(.path:text-is('main.rs'))");
 await page.waitForSelector(".merge-overlay .editor.modified .view-line");
 await page.waitForTimeout(800);
 await page.keyboard.press("F4");
-await within("F4 in the Compare window opens its file", async () => opened().startsWith(`--goto\n${repo}/main.rs:`));
+await within("F4 in the Compare window opens its file", async () => opened().startsWith(`${repo}\n--goto\n${repo}/main.rs:`));
 await page.keyboard.press("Escape");
 await page.waitForSelector(".merge-overlay", { state: "detached" });
 
