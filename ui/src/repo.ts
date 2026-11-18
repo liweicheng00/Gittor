@@ -8,7 +8,7 @@ import { emptyFilter } from "./filter-bar";
 import { loadFavorites } from "./remotes";
 import { clearCompare } from "./selection";
 import { addRecent, save, setRecentProject, settings } from "./settings";
-import { authors, banner, centerHooks, commitPanel, details, fetchBtn, filterBar, ideBtn, localHistoryBtn, terminalBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, sidebar, stashPanel, statusActivity, submodulePanel, tabBar, tabScroll, tabsInTitleBar, tabCommit, tabReviews, tabStash, task, updateBtn, updateStatus } from "./shell";
+import { authors, banner, centerHooks, commitPanel, repoLabel, details, fetchBtn, filterBar, ideBtn, localHistoryBtn, terminalBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, sidebar, stashPanel, statusActivity, submodulePanel, tabBar, tabScroll, tabsInTitleBar, tabCommit, tabReviews, tabStash, task, updateBtn, updateStatus } from "./shell";
 import { app } from "./state";
 import { showWorkspace } from "./welcome";
 import { formDialog } from "./dialogs";
@@ -59,6 +59,8 @@ export function renderTabs() {
   }
   // In the title bar, the tab bar always shows: it also holds the window buttons of macOS.
   tabBar.hidden = !tabsInTitleBar && settings.tabs.length < 2;
+  // The tab names the repository; the toolbar names it only without tabs.
+  repoLabel.hidden = !tabBar.hidden;
   // Two folders with the same name get the folders above them: "work/app" and "old/app".
   const names = new Map(settings.tabs.map((r, i) => [r, pathLabels(settings.tabs)[i]]));
   const scroll = tabScroll.scrollLeft;
@@ -327,7 +329,10 @@ function setTabLabel(tab: HTMLElement, label: string, count: number) {
   const key = `${label}:${count}`;
   if (tab.dataset.label === key) return;
   tab.dataset.label = key;
-  tab.replaceChildren(label, count ? h("span", { class: "lp-count" }, String(count)) : "");
+  // The icon and the name stay; only the count changes.
+  tab.querySelector(".lp-count")?.remove();
+  if (count) tab.append(h("span", { class: "lp-count" }, String(count)));
+  tab.setAttribute("aria-label", count ? `${label} (${count})` : label);
 }
 
 /**

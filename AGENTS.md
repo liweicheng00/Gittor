@@ -293,8 +293,9 @@ CHROMIUM=/opt/pw-browsers/chromium ui/e2e/run-all.sh <scratch>/e2e
 - The scenarios that measure text expect Inter for `system-ui`. This machine maps it in
   `/etc/fonts/conf.d/56-prefer-inter.conf`; the CI workflow writes the same file. With the wider
   default font of Ubuntu, all left tab labels are cut.
-- The left tabs share about 280 px at the default width. A new tab needs a short label; measure the
-  `scrollWidth` of each `.lp-tab` against its `clientWidth`.
+- The left tabs show an icon each; the name is in the tooltip and in `aria-label`, and out of view in
+  `.sr-label`. Playwright does not match text that is out of view, so find a tab with
+  `.lp-tab[aria-label^='Changes']`, not `:text-is`. The same holds for Open and Refresh of the toolbar.
 - On macOS, many scenarios fail as written. They press `Control+...` for Mod, which is Cmd on a Mac, and
   `/tmp` is `/private/tmp`, so a check of a path fails. To run them on a Mac, give node a preload with
   `NODE_OPTIONS="--import <file>"`, outside `ui/e2e`. The preload wraps `chromium.launch` and

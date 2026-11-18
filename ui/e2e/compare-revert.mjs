@@ -139,7 +139,7 @@ await within("the Changes diff rolls back the change", async () => read("main.rs
 const arithAtHead = read("arith.rs");
 writeFileSync(`${repo}/arith.rs`, arithAtHead + "// more\n");
 await page.click(".diff-option:has-text('Side by side') input");
-await page.click(".tb-button:has-text('Refresh')");
+await page.click(".tb-button[aria-label='Refresh']");
 await page.click(".cl-file:has(.path:text-is('arith.rs'))");
 await page.waitForSelector(".diff .editor.modified .view-line:has-text('// more')");
 await within("in one column, the button and the check box show", async () =>

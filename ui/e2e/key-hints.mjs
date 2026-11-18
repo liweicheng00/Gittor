@@ -40,7 +40,7 @@ await page.goto(url);
 await page.waitForSelector(".log-row", { timeout: 30000 });
 
 // A mouse click on Refresh: the hint shows its keys, without the name of the action, next to the mouse.
-const refresh = page.locator(".tb-button:has-text('Refresh')");
+const refresh = page.locator(".tb-button[aria-label='Refresh']");
 await refresh.click();
 await within("the hint shows only the keys of Refresh", async () => (await hint()) === "Ctrl+R or F5");
 const box = await refresh.boundingBox();
@@ -71,11 +71,11 @@ await clearHint();
 await refresh.hover();
 await within("the tooltip of Refresh names its keys", async () => (await refresh.getAttribute("title")) === "Reload commits and branches (Ctrl+R, F5)");
 // The tab Files has a hint too.
-await page.click(".lp-tab:text-is('Files')");
+await page.click(".lp-tab[aria-label^='Files']");
 await within("the Files tab shows its key", async () => (await hint()) === "Ctrl+`");
 await clearHint();
 // A key outside the keymap: Commit names Ctrl+Enter of the message field.
-await page.click(".lp-tab:has-text('Changes')");
+await page.click(".lp-tab[aria-label^='Changes']");
 await clearHint();
 await page.hover(".commit-button");
 await within("the tooltip of Commit names Ctrl+Enter", async () => ((await page.getAttribute(".commit-button", "title")) ?? "") === "Commit the checked files (Ctrl+Enter)");

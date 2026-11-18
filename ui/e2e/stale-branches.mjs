@@ -37,7 +37,7 @@ const within = async (what, fn, ms = 8000) => {
 
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
-await page.click(".lp-tab:text-is('Branches')");
+await page.click(".lp-tab[aria-label^='Branches']");
 const stale = ".sidebar .group-header:has(span:text-is('Stale'))";
 await page.waitForSelector(stale);
 check("the Stale group shows its count", ((await page.textContent(`${stale} .group-count`)) ?? "").trim() === "2");

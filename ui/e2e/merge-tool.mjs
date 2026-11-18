@@ -50,7 +50,7 @@ await page.click(".tb-button[title='Theme']");
 await page.click(".menu-item:has-text('Dark')");
 
 // A double click on a file with conflicts in the Changes tab opens the merge window.
-await page.click(".lp-tab:text-is('Changes')");
+await page.click(".lp-tab[aria-label^='Changes']");
 await page.dblclick(".cl-file:has(.path:text-is('calc.rs'))");
 await page.waitForSelector(".merge-window .monaco-editor");
 check("the Changes tab opens the merge window", ((await page.textContent(".merge-header")) ?? "").includes("calc.rs"));

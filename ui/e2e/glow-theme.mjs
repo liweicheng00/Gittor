@@ -181,7 +181,7 @@ for (const [name, t] of Object.entries(THEMES)) {
   await shot(`glow-${name}-1-log`);
 
   // The Changes tab with the focus in the commit message.
-  await page.click(".lp-tab:has-text('Changes')");
+  await page.click(".lp-tab[aria-label^='Changes']");
   await page.click(".cl-file:has-text('main.rs')");
   await within(`${t.label}: the local diff of main.rs shows`, async () => ((await page.textContent(".diff-title")) ?? "").includes("main.rs"));
   await page.click(".commit-message");
@@ -190,7 +190,7 @@ for (const [name, t] of Object.entries(THEMES)) {
   check(`${t.label}: no row of the Changes tab has a blurred shadow`, (await blurredRows()) === 0);
   await shot(`glow-${name}-2-changes`);
   await page.fill(".commit-message", "");
-  await page.click(".lp-tab:has-text('Branches')");
+  await page.click(".lp-tab[aria-label^='Branches']");
 
   // A context menu of a log row: it blurs the page behind it, and its items do not.
   await page.click(".log-row:has-text('Add math module')", { button: "right" });

@@ -70,12 +70,12 @@ await page.click(".settings-dialog .dialog-buttons button:has-text('OK')");
 await within("the diff font changes", async () => (await editorFontSize()) === "16px");
 
 // The new key works, and the old one does not.
-const branchesOn = () => page.$eval(".lp-tab:text-is('Branches')", (e) => e.classList.contains("on"));
-await page.click(".lp-tab:has-text('Changes')");
+const branchesOn = () => page.$eval(".lp-tab[aria-label^='Branches']", (e) => e.classList.contains("on"));
+await page.click(".lp-tab[aria-label^='Changes']");
 await page.click(".log-row >> nth=1");
 await page.keyboard.press("Alt+b");
 await within("Alt+B shows the Branches tab", branchesOn);
-await page.click(".lp-tab:has-text('Changes')");
+await page.click(".lp-tab[aria-label^='Changes']");
 await page.click(".log-row >> nth=1");
 await page.keyboard.press("Control+1");
 await page.waitForTimeout(400);

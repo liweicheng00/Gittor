@@ -54,7 +54,7 @@ const addNote = async (line, text) => {
 
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
-await page.click(".lp-tab:text-is('Changes')");
+await page.click(".lp-tab[aria-label^='Changes']");
 
 // The diff panel under the Changes tab has no notes.
 await page.click(".cl-file:has(.path:text-is('main.rs'))");
@@ -106,7 +106,7 @@ await within("the button leaves out the resolved note", async () => (await clipb
 // The note stays after a reload, while the file is the same.
 await page.reload();
 await page.waitForSelector(".log-row", { timeout: 30000 });
-await page.click(".lp-tab:text-is('Changes')");
+await page.click(".lp-tab[aria-label^='Changes']");
 await page.waitForSelector(".cl-file:has(.path:text-is('main.rs'))");
 await compareOf("main.rs");
 await within("the note stays after a reload", async () => (await chips()).length === 1);

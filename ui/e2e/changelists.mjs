@@ -30,10 +30,10 @@ const clearToasts = () => page.evaluate(() => document.querySelectorAll(".toast"
 
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
-await page.click(".lp-tab:has-text('Changes')");
+await page.click(".lp-tab[aria-label^='Changes']");
 await page.waitForSelector(".cl-file");
 console.log("tree:", await tree());
-check("tab shows the count", (await page.textContent(".lp-tab:has-text('Changes') .lp-count")) === "5");
+check("tab shows the count", (await page.textContent(".lp-tab[aria-label^='Changes'] .lp-count")) === "5");
 await page.click(".cl-file:has-text('arith.rs')");
 await page.waitForTimeout(1200);
 await shot("cl1-commit-panel");

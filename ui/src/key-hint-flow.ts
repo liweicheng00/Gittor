@@ -8,7 +8,7 @@ import { h } from "./dom";
 import { keymap, keyWorksAt } from "./keyboard";
 import { formatKey } from "./keymap";
 import { settings } from "./settings";
-import { fetchBtn, filterBar, localHistoryBtn, pushBtn, refreshBtn, settingsBtn, tabBranches, tabCommit, tabFiles, tabReviews, tabStash, updateBtn } from "./shell";
+import { fetchBtn, filterBar, openBtn, localHistoryBtn, pushBtn, refreshBtn, settingsBtn, tabBranches, tabCommit, tabFiles, tabReviews, tabStash, updateBtn } from "./shell";
 
 /** The hint of one action shows at most once in this time. */
 const AGAIN_MS = 3000;
@@ -17,6 +17,7 @@ const SHOW_MS = 900;
 const lastShown = new Map<string, number>();
 
 for (const [el, action] of [
+  [openBtn, "open"],
   [refreshBtn, "refresh"],
   [updateBtn, "update"],
   [fetchBtn, "fetch"],

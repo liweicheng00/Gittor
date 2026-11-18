@@ -54,7 +54,7 @@ const view = () =>
 
 await page.goto(`${process.env.GITTOR_E2E_URL ?? "http://127.0.0.1:5174"}/?repo=${encodeURIComponent(repo)}`);
 await page.waitForSelector(".log-row", { timeout: 30000 });
-await page.click(".lp-tab:has-text('Changes')");
+await page.click(".lp-tab[aria-label^='Changes']");
 await page.waitForSelector(".cl-file:has-text('long.txt')");
 // The watcher counts from the load of the repository; the first change comes after it.
 await page.waitForTimeout(1500);
@@ -156,10 +156,10 @@ check("the committed files left the list", !(await treeText()).includes("new-0.t
 const afterCommit = await view();
 check("the diff kept its place after the commit", afterCommit.text === before.text && afterCommit.top === before.top && afterCommit.selected === before.selected);
 // The branch of HEAD has a new commit: only its row is new.
-await page.click(".lp-tab:text-is('Branches')");
+await page.click(".lp-tab[aria-label^='Branches']");
 const branchesNow = await page.locator(".sidebar-list .branch").count();
 check("the rows of the other branches keep their elements", (await kept(".sidebar-list .branch")) >= Math.min(branchRows, branchesNow) - 3);
-await page.click(".lp-tab:has-text('Changes')");
+await page.click(".lp-tab[aria-label^='Changes']");
 
 // While the mouse is down, the view does not load again; it loads when the mouse goes up.
 const msg = await page.locator(".commit-message").boundingBox();

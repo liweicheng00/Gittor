@@ -9,6 +9,7 @@ import { DetailsPanel } from "./details-panel";
 import { DiffView, setMonacoTheme } from "./diff-view";
 import { GLOW_MONACO } from "./glow-monaco";
 import { dragResize, h, icon } from "./dom";
+import type { IconName } from "./icons";
 import { FilterBar } from "./filter-bar";
 import { LogView } from "./log-view";
 import { toast } from "./notify";
@@ -39,8 +40,9 @@ export const submodulePanel = new SubmodulePanel();
 export const banner = new OpBanner();
 export const authors = new Set<string>();
 
-export const openBtn = h("button", { class: "tb-button", title: `Open a repository (${mod}O)` }, icon("open"), "Open", icon("chevron-down", "icon-caret"));
-export const refreshBtn = h("button", { class: "tb-button", title: `Reload commits and branches (${mod}R)`, disabled: true }, icon("refresh"), "Refresh");
+// Open and Refresh show their icon only; the name is in the tooltip, and out of view for screen readers.
+export const openBtn = h("button", { class: "tb-button tb-icon-only", title: "Open a repository", "aria-label": "Open" }, icon("open"), h("span", { class: "sr-label" }, "Open"), icon("chevron-down", "icon-caret"));
+export const refreshBtn = h("button", { class: "tb-button tb-icon-only", title: "Reload commits and branches", "aria-label": "Refresh", disabled: true }, icon("refresh"), h("span", { class: "sr-label" }, "Refresh"));
 /** The menu part of the Update button: Fetch of all remotes or of one remote. */
 export const fetchBtn = h("button", { class: "tb-button tb-split-menu", title: "Fetch all remotes, or one remote", "aria-label": "Fetch", disabled: true }, icon("chevron-down", "icon-caret"));
 export const updateBtn = h("button", { class: "tb-button", title: `Update the current branch: fetch, then fast-forward. A branch with commits of its own asks for Merge or Rebase (${mod}T)`, disabled: true }, icon("update"), "Update");
@@ -49,7 +51,8 @@ export const remoteBtn = h("button", { class: "tb-button tb-icon tb-remote", tit
 export const localHistoryBtn = h("button", { class: "tb-button", title: "Local History: the recent versions of changed files", disabled: true }, icon("history"), "Local History");
 export const ideBtn = h("button", { class: "tb-button tb-icon tb-ide", title: "Open the repository in the editor of Settings › Editor", "aria-label": "IDE", disabled: true }, icon("ide"));
 export const terminalBtn = h("button", { class: "tb-button tb-icon tb-terminal", title: "Open a terminal in the folder of the repository", "aria-label": "Terminal", disabled: true }, icon("terminal"));
-const repoLabel = h("span", { class: "tb-repo" });
+/** The name of the repository. It hides while the tab bar shows, because the tab names it. */
+export const repoLabel = h("span", { class: "tb-repo" });
 export const branchBtn = h("button", { class: "tb-button tb-branch-button", title: "Switch branch (recent branches first)", hidden: true }, icon("branch"), icon("chevron-down", "icon-caret"));
 export const viewBtn = h("button", { class: "tb-button", title: "View options" }, "View", icon("chevron-down", "icon-caret"));
 const themeBtn = h("button", { class: "tb-button tb-icon", title: "Theme" }, icon("theme"));
@@ -88,11 +91,15 @@ export const fileHost = h("div", { class: "file-host", hidden: true });
 export const centerHooks = { reset: () => {} };
 const center = h("section", { class: "center" }, centerTabs, banner.el, filterBar.el, log.el, fileHost);
 const right = h("section", { class: "right" }, changes.el, detailsGrip, details.el);
-export const tabBranches = h("button", { class: "lp-tab", title: `Branches (${mod}1)` }, "Branches");
-export const tabCommit = h("button", { class: "lp-tab", title: `Local changes and commit (${mod}2)` }, "Changes");
-export const tabStash = h("button", { class: "lp-tab", title: `Stashes (${mod}3)` }, "Stash");
-export const tabReviews = h("button", { class: "lp-tab", title: `Reviews (${mod}4)` }, "Reviews");
-export const tabFiles = h("button", { class: "lp-tab", title: `The files of the working tree (${mod}\`)` }, "Files");
+/** A left tab: an icon, and a tooltip with its name. The name also stays in the tab for screen readers, out
+ * of view. The tooltip gets the key of the tab on hover (key-hint-flow.ts). */
+const lpTab = (name: IconName, label: string, title: string) =>
+  h("button", { class: "lp-tab", title, "aria-label": label }, icon(name, "lp-icon"), h("span", { class: "sr-label" }, label));
+export const tabBranches = lpTab("branch", "Branches", "Branches");
+export const tabCommit = lpTab("changes", "Changes", "Changes: the local changes and the commit");
+export const tabStash = lpTab("stash", "Stash", "Stash: the stashes");
+export const tabReviews = lpTab("review", "Reviews", "Reviews: the reviews of branches");
+export const tabFiles = lpTab("files", "Files", "Files: the files of the working tree");
 // The submodules show under the commit message, so that their changes show together with the files.
 commitPanel.el.append(submodulePanel.el);
 const leftPane = h("aside", { class: "leftpane" }, h("div", { class: "lp-tabs" }, tabFiles, tabBranches, tabCommit, tabStash, tabReviews), sidebar.el, commitPanel.el, stashPanel.el, reviewPanel.el, filesPanel.el);

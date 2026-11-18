@@ -64,7 +64,7 @@ await page.click(".dialog-buttons button:has-text('OK')");
 await page.waitForTimeout(3000);
 check("the fetch got the branch of the secure remote", git(repo, "branch", "-r").includes("secure/only-on-secure"));
 check("the server asked for authentication", denied > 0);
-await page.click(".lp-tab:has-text('Branches')");
+await page.click(".lp-tab[aria-label^='Branches']");
 check("the branch shows in the sidebar", (await page.textContent(".sidebar-list")).includes("only-on-secure"));
 
 // A second fetch asks only for the user name: the password is remembered.

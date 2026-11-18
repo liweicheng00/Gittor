@@ -106,7 +106,7 @@ const mixed = git("rev-parse", "HEAD~2");
 await within("origin/main is at Mixed work", async () => git("--git-dir", `${repo}-origin/.git`, "rev-parse", "main") === mixed);
 
 // The Rebase dialog shows its options. Fixup… showed the Changes tab.
-await page.click(".lp-tab:text-is('Branches')");
+await page.click(".lp-tab[aria-label^='Branches']");
 await page.click(".group-header:has-text('Local') ~ .branch:has-text('fix/readme') >> nth=0", { button: "right" });
 await menu("Rebase main onto fix/readme");
 await page.waitForSelector(".dialog:has-text('Rebase main onto fix/readme')");

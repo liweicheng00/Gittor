@@ -129,16 +129,16 @@ await page.click(".cl-file:has(.path:text-is('main.rs'))");
 await page.keyboard.press("Control+e");
 await within("Mod+E opens the repository at the selected file of the Changes tab", async () => opened().startsWith(`${repo}\n--goto\n${repo}/main.rs:`));
 // In the Files tab, Mod+E opens the selected file, also a file without a change.
-await page.click(".lp-tab:text-is('Files')");
+await page.click(".lp-tab[aria-label^='Files']");
 await page.waitForSelector(".files-file[data-path='arith.rs']");
 await page.click(".files-file[data-path='arith.rs']");
 rmSync(log, { force: true });
 await page.keyboard.press("Control+e");
 await within("Mod+E opens the repository at the selected file of the Files tab", async () => opened().startsWith(`${repo}\n--goto\n${repo}/arith.rs:1`));
-await page.click(".lp-tab:has-text('Changes')");
+await page.click(".lp-tab[aria-label^='Changes']");
 
 // The Review window has the IDE button too, and Shift+F4 works there.
-await page.click(".lp-tab:text-is('Branches')");
+await page.click(".lp-tab[aria-label^='Branches']");
 await page.click(".sidebar .branch:has(.branch-name:text-is('feature/cli')) >> nth=0", { button: "right" });
 await page.waitForTimeout(400);
 await page.click(".menu-item:has-text('Review Branch')");
@@ -157,7 +157,7 @@ await page.keyboard.press("Escape");
 await page.waitForSelector(".review-window", { state: "detached" });
 
 // topic/readme changes README.md, which is in the working tree: the IDE opens at that file.
-await page.click(".lp-tab:text-is('Branches')");
+await page.click(".lp-tab[aria-label^='Branches']");
 await page.click(".sidebar .branch:has(.branch-name:text-is('topic/readme')) >> nth=0", { button: "right" });
 await page.waitForTimeout(400);
 await page.click(".menu-item:has-text('Review Branch')");
@@ -169,7 +169,7 @@ await page.click(".review-window .review-ide");
 await within("the IDE button of a review opens the repository at the file of the review", async () => opened().startsWith(`${repo}\n--goto\n${repo}/README.md:`));
 await page.keyboard.press("Escape");
 await page.waitForSelector(".review-window", { state: "detached" });
-await page.click(".lp-tab:text-is('Changes')");
+await page.click(".lp-tab[aria-label^='Changes']");
 
 // A program that does not exist shows an error.
 await setEditor("no-such-editor-xyz {file}");

@@ -121,7 +121,7 @@ await within("Undo creates fix/readme again", async () => has("fix/readme"));
 
 // A merged branch in another worktree shows with its worktree, unchecked; when checked, the worktree goes.
 git("worktree", "add", "-q", "-b", "wt-done", `${repo}-wt2`, "main");
-await page.click(".tb-button:has-text('Refresh')");
+await page.click(".tb-button[aria-label='Refresh']");
 await page.click(".group-header:has-text('Local')", { button: "right" });
 await page.click(".menu-item:has-text('Delete Merged Branches')");
 await within("the worktree branch shows", async () => (await rows()) === "fix/readme,wt-done");
