@@ -5,7 +5,7 @@ import { api, type BranchInfo, inTauri, type LogFilter, openWindow, pickFolder, 
 import { showMenu } from "./context-menu";
 import { h, icon } from "./dom";
 import { emptyFilter } from "./filter-bar";
-import { loadFavorites } from "./remotes";
+import { loadFavorites, loadStale } from "./remotes";
 import { clearCompare } from "./selection";
 import { addRecent, save, setRecentProject, settings } from "./settings";
 import { authors, banner, centerHooks, commitPanel, repoLabel, details, fetchBtn, filterBar, ideBtn, localHistoryBtn, terminalBtn, log, mod, pushBtn, refreshBtn, remoteBtn, reviewPanel, sidebar, stashPanel, statusActivity, submodulePanel, tabBar, tabScroll, tabsInTitleBar, tabCommit, tabReviews, tabStash, tabWorktrees, task, worktreePanel, updateBtn, updateStatus } from "./shell";
@@ -312,7 +312,7 @@ export async function loadRefs(background = false) {
     sidebar.setRefs(app.refs);
     sidebar.setRecent(app.recent);
     showWorktrees();
-    await loadFavorites();
+    await Promise.all([loadFavorites(), loadStale()]);
     // The tooltip of the tab names the branch; a checkout changes it.
     if (app.view) void refreshTabInfo(app.view.root);
     banner.update(app.repoState);

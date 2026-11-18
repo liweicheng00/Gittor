@@ -16,8 +16,6 @@ class RowList {
 }
 
 
-/** A local branch without a commit for this many days is stale. */
-const STALE_DAYS = 90;
 export class Sidebar {
   readonly el: HTMLElement;
   private list: HTMLElement;
@@ -29,6 +27,8 @@ export class Sidebar {
   /** Favorite branches and tags, by full ref name. */
   private favorites = new Set<string>();
   private onlyFavorites = false;
+  /** The local branches that the user marked as stale, by full ref name. */
+  private stale = new Set<string>();
   /** Branches with a prefix ("feature/a") show in a folder of the prefix, as IntelliJ's Group by Directory. */
   private groupByPrefix = false;
   private favBtn: HTMLButtonElement;
@@ -104,6 +104,17 @@ export class Sidebar {
     this.render();
   }
 
+  setStale(full: Iterable<string>) {
+    const next = new Set(full);
+    if (same([...next].sort(), [...this.stale].sort())) return;
+    this.stale = next;
+    this.render();
+  }
+
+  isStale(b: BranchInfo): boolean {
+    return this.stale.has(b.full);
+  }
+
   isFavorite(b: BranchInfo): boolean {
     return this.favorites.has(b.full);
   }
@@ -160,12 +171,12 @@ export class Sidebar {
     const current = this.refs.filter((b) => b.current);
     const recent = this.recent
       .map((r) => this.refs.find((b) => b.kind === "local" && b.name === r.name))
-      .filter((b): b is BranchInfo => !!b && match(b));
+      .filter((b): b is BranchInfo => !!b && match(b) && !this.stale.has(b.full));
     if (recent.length) groups.push(["Recent", recent]);
     const locals = this.refs.filter((b) => b.kind === "local" && match(b));
-    groups.push(["Local", locals]);
-    const old = Date.now() / 1000 - STALE_DAYS * 24 * 60 * 60;
-    groups.push(["Stale", locals.filter((b) => !b.current && (b.gone || (b.time > 0 && b.time < old)))]);
+    // A stale branch shows in the Stale group only, not in Local.
+    groups.push(["Local", locals.filter((b) => !this.stale.has(b.full))]);
+    groups.push(["Stale", locals.filter((b) => this.stale.has(b.full))]);
     const remotes = new Map<string, BranchInfo[]>();
     for (const b of this.refs.filter((b) => b.kind === "remote" && match(b))) {
       const remote = b.name.split("/")[0];
@@ -209,7 +220,7 @@ export class Sidebar {
           this.onTagsMenu(e);
         });
       }
-      if (title === "Stale") header.title = `Local branches without a commit for ${STALE_DAYS} days, or with a tracked branch that is gone from the remote`;
+      if (title === "Stale") header.title = "Branches that you marked as stale. Mark as Stale in the menu of a branch puts it here";
       if (title === "Local") {
         header.addEventListener("contextmenu", (e) => {
           e.preventDefault();

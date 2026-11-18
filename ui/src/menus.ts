@@ -10,7 +10,7 @@ import { openInEditor } from "./editor-flow";
 import { keymap } from "./keyboard";
 import { toast } from "./notify";
 import { addWorktree, checkoutBranch, checkoutCommit, currentBranch, deleteBranch, deleteRefs, deleteMergedBranches, interactiveRebase, mergeIntoCurrent, newBranch, newTag, rebaseCurrentOnto, renameBranch, resetTo, rewriteSelected, runOp } from "./operations";
-import { compareBranches, fetchRemote, manageRemotes, openOnRemote, pushTag, remoteRefItems, toggleFavorite } from "./remotes";
+import { compareBranches, fetchRemote, manageRemotes, openOnRemote, pushTag, remoteRefItems, setStale, toggleFavorite } from "./remotes";
 import { tagNotOn } from "./ref-label";
 import { allowRewrite } from "./protected";
 import { openRepoBrowser } from "./repo-browser";
@@ -196,6 +196,7 @@ sidebar.onContextMenu = (b, e) => {
           },
         ]),
     { label: sidebar.isFavorite(b) ? "Remove from Favorites" : "Add to Favorites", action: () => toggleFavorite(b) },
+    ...(b.kind === "local" ? [{ label: sidebar.isStale(b) ? "Remove from Stale" : "Mark as Stale", action: () => setStale([b], !sidebar.isStale(b)) }] : []),
     { label: "Copy Name", action: () => void copyText(b.name) },
     { label: "Copy Revision Number", action: () => void copyText(b.oid) },
   ]);
@@ -227,6 +228,14 @@ sidebar.onMultiMenu = (refs, e) => {
         for (const b of refs) if (sidebar.isFavorite(b) === allFavorite) toggleFavorite(b);
       },
     },
+    ...(locals.length
+      ? [
+          {
+            label: locals.every((b) => sidebar.isStale(b)) ? "Remove from Stale" : "Mark as Stale",
+            action: () => setStale(locals, !locals.every((b) => sidebar.isStale(b))),
+          },
+        ]
+      : []),
     { label: "Copy Names", action: () => void copyText(names.join("\n")) },
   );
   showMenu(e.clientX, e.clientY, items);

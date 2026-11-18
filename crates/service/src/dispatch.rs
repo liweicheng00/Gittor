@@ -3,6 +3,7 @@
 use crate::{err, Result, Service};
 use serde::Deserialize;
 
+/// A list of full ref names: the favorites, or the stale branches.
 #[derive(Deserialize)]
 struct FavoritesArgs {
     refs: Vec<String>,
@@ -39,6 +40,8 @@ impl Service {
             "ui_settings" => serde_json::to_string(&self.ui_settings()?),
             "favorites" => serde_json::to_string(&self.favorites()?),
             "set_favorites" => serde_json::to_string(&self.set_favorites(parse::<FavoritesArgs>(body)?.refs)?),
+            "stale_branches" => serde_json::to_string(&self.stale_branches()?),
+            "set_stale_branches" => serde_json::to_string(&self.set_stale_branches(parse::<FavoritesArgs>(body)?.refs)?),
             "activate" => serde_json::to_string(&self.activate(parse(body)?)?),
             "close" => serde_json::to_string(&self.close(parse(body)?)?),
             "fetch" => serde_json::to_string(&self.fetch()?),

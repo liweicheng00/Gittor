@@ -95,17 +95,36 @@ impl Service {
     /// The favorite branches and tags of the repository, as full ref names. None until the user chooses
     /// favorites. They are in the common git dir, so all worktrees share them.
     pub fn favorites(&self) -> Result<Option<Vec<String>>> {
+        self.ref_list("favorites.json")
+    }
+
+    pub fn set_favorites(&self, refs: Vec<String>) -> Result<()> {
+        self.set_ref_list("favorites.json", refs)
+    }
+
+    /// The branches that the user marked as stale, as full ref names. They are in the common git dir, so
+    /// all worktrees share them.
+    pub fn stale_branches(&self) -> Result<Vec<String>> {
+        Ok(self.ref_list("stale-branches.json")?.unwrap_or_default())
+    }
+
+    pub fn set_stale_branches(&self, refs: Vec<String>) -> Result<()> {
+        self.set_ref_list("stale-branches.json", refs)
+    }
+
+    /// Reads a list of refs from a file of the app in the common git dir. None when the file is missing.
+    fn ref_list(&self, file: &str) -> Result<Option<Vec<String>>> {
         self.with_repo(|r| {
-            let path = gittor_git::app_dir(&r.common_dir()).join("favorites.json");
+            let path = gittor_git::app_dir(&r.common_dir()).join(file);
             Ok(std::fs::read(path).ok().and_then(|b| serde_json::from_slice(&b).ok()))
         })
     }
 
-    pub fn set_favorites(&self, refs: Vec<String>) -> Result<()> {
+    fn set_ref_list(&self, file: &str, refs: Vec<String>) -> Result<()> {
         self.with_repo(|r| {
             let dir = gittor_git::app_dir(&r.common_dir());
             std::fs::create_dir_all(&dir).map_err(err)?;
-            std::fs::write(dir.join("favorites.json"), serde_json::to_vec_pretty(&refs).map_err(err)?).map_err(err)
+            std::fs::write(dir.join(file), serde_json::to_vec_pretty(&refs).map_err(err)?).map_err(err)
         })
     }
 

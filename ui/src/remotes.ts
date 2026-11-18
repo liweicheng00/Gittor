@@ -138,6 +138,23 @@ export function toggleFavorite(b: BranchInfo) {
 }
 sidebar.onToggleFavorite = toggleFavorite;
 
+/** The local branches that the user marked as stale, in the active repository. */
+let stale: string[] = [];
+
+export async function loadStale() {
+  stale = await api.staleBranches().catch(() => []);
+  sidebar.setStale(stale);
+}
+
+/** Marks branches as stale, or removes the mark. A stale branch shows in the Stale group, not in Local. */
+export function setStale(branches: BranchInfo[], on: boolean) {
+  if (!app.view) return;
+  const full = new Set(branches.map((b) => b.full));
+  stale = on ? [...new Set([...stale, ...full])] : stale.filter((x) => !full.has(x));
+  sidebar.setStale(stale);
+  void api.setStaleBranches(stale).catch((e) => toast(String(e).replace(/^Error: /, ""), "error"));
+}
+
 sidebar.onRemoteMenu = (remote, e) =>
   showMenu(e.clientX, e.clientY, [
     { label: `Fetch ${remote}`, action: () => void fetchRemote(remote) },
