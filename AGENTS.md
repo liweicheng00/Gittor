@@ -69,7 +69,9 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   `ui/test` runs the source with Node, which needs the `.ts` extension: a module there cannot import
   another module of `ui/src` without it, so `rebase-plan.ts` imports nothing at run time.
 - Undo (`crates/git/src/undo.rs`): `Reset`, `Checkout`, `CreateRef`, `DeleteRef`, `MoveRef`,
-  `RenameBranch`, `StashStore`, `SetConfig`. Each step checks that nothing moved since.
+  `RenameBranch`, `StashStore`, `SetConfig`, `RestoreLocalChanges`. Each step checks that nothing moved
+  since. `RestoreLocalChanges` serves an operation that changes only files (Cherry-Pick without Commit):
+  it keeps commits of `git stash create` from before and after, and compares their trees.
 - Files of the app in a git dir: always `app_dir(git_dir)`.
 - Changelists (`crates/git/src/changelist.rs`): ".ignore" (`IGNORE_ID`) and "Changes" (`DEFAULT_ID`) are
   always the first two and cannot be removed or renamed. Every new change goes to "Changes"; there is
