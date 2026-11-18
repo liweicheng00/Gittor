@@ -451,16 +451,19 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .files-dir-hint { overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
 .leftpane > [hidden] { display: none !important; }
 .leftpane .sidebar > .pane-title { display: none; }
-.lp-tabs { display: flex; overflow: hidden; border-bottom: 1px solid var(--border); padding: 0 2px; gap: 0; }
+/* The tabs sit on the color of the list under them, so they belong to the panel and not to the toolbar. */
+.lp-tabs { display: flex; overflow: hidden; border-bottom: 1px solid var(--border); padding: 5px 6px; gap: 2px; background: var(--panel-2); }
 /* The left tabs: an icon each, with the name in the tooltip. The name stays out of view for screen readers. */
-.lp-tab { flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 3px; white-space: nowrap; overflow: hidden; padding: 7px 2px 6px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; }
+.lp-tab { flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 3px; white-space: nowrap; overflow: hidden; padding: 5px 2px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; }
 .lp-tab .lp-icon { width: 19px; height: 19px; vertical-align: 0; }
 /* A name for screen readers and for the scenarios, out of view. */
 .sr-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .tb-icon-only .icon:not(.icon-caret) { width: 16px; height: 16px; }
-.lp-tab:hover { color: var(--fg); }
+.lp-tab:hover { color: var(--fg); background: var(--hover); }
 .lp-count { padding: 0 4px; border-radius: 8px; background: var(--select); color: var(--fg); font-size: 10.5px; font-weight: 600; line-height: 15px; }
-.lp-tab.on { color: var(--fg); border-bottom-color: var(--accent); }
+/* The active tab is a filled block with the icon in the accent color. */
+.lp-tab.on { color: var(--accent); background: var(--select); }
+.lp-tab.on .lp-count { background: var(--bg); }
 
 /* commit panel */
 .commit-panel { display: flex; flex-direction: column; min-height: 0; }

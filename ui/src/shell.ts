@@ -101,7 +101,7 @@ export const tabBranches = lpTab("branch", "Branches", "Branches");
 export const tabCommit = lpTab("changes", "Changes", "Changes: the local changes and the commit");
 export const tabStash = lpTab("stash", "Stash", "Stash: the stashes");
 export const tabReviews = lpTab("review", "Reviews", "Reviews: the reviews of branches");
-export const tabFiles = lpTab("files", "Files", "Files: the files of the working tree");
+export const tabFiles = lpTab("folder", "Files", "Files: the files of the working tree");
 export const tabWorktrees = lpTab("worktree", "Worktrees", "Worktrees: the worktrees of the repository");
 // The submodules show under the commit message, so that their changes show together with the files.
 commitPanel.el.append(submodulePanel.el);
