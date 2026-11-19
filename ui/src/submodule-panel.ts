@@ -1,6 +1,7 @@
 // The Submodules section under the changelists of the Changes tab: the submodules of the repository and,
 // for the selected one, the commits between the recorded commit and the checked-out commit.
 
+import { copySource, repoPath } from "./copy";
 import type { OutgoingCommit, Submodule, SubmoduleRange } from "./api";
 import { h, icon } from "./dom";
 import { twisty } from "./icons";
@@ -46,6 +47,7 @@ export class SubmodulePanel {
       this.setCollapsed(!settings.submodulesCollapsed);
     });
     this.list = h("div", { class: "sm-list", tabIndex: 0 });
+    copySource(this.list, () => this.selected && repoPath(this.selected));
     this.list.addEventListener("keydown", (e) => {
       if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
       e.preventDefault();

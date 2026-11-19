@@ -1,5 +1,6 @@
 // Push and Update, and the context menu of local files.
 
+import { repoPaths } from "./copy";
 import { openInEditor } from "./editor-flow";
 import { keymap } from "./keyboard";
 import { api, IGNORE_LIST } from "./api";
@@ -126,7 +127,8 @@ commitPanel.onFileMenu = (files, e) => {
     label: "Stash Selected Files…",
     action: () => void stashChanges(files.flatMap((f) => (f.change.old_path ? [f.change.path, f.change.old_path] : [f.change.path])), untracked.length > 0, ""),
   });
-  items.push({ separator: true }, { label: files.length > 1 ? "Copy Paths" : "Copy Path", action: () => void copyText(files.map((f) => f.change.path).join("\n")) });
+  items.push({ separator: true }, { label: files.length > 1 ? "Copy Paths" : "Copy Path", action: () => void copyText(repoPaths(files.map((f) => f.change.path))) },
+    { label: files.length > 1 ? "Copy Relative Paths" : "Copy Relative Path", action: () => void copyText(files.map((f) => f.change.path).join("\n")) });
   showMenu(e.clientX, e.clientY, items);
 };
 commitPanel.onListMenu = (l, e) =>

@@ -9,6 +9,7 @@ compare-branches 3
 compare-refresh 5
 compare-revert 9
 compare-tree 5
+copy-text 14
 credentials 9
 delete-merged 8
 demo-repo 20

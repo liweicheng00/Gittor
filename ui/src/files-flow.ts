@@ -4,6 +4,7 @@
 // notes with Copy All, and a note on the whole file. Show Diff in the menu shows the diff of a change in
 // the diff panel.
 
+import { repoPath } from "./copy";
 import { api } from "./api";
 import { setFileViewReload, showLocalDiff } from "./commit-flow";
 import { DiffView } from "./diff-view";
@@ -188,6 +189,7 @@ filesPanel.onMenu = (path, e) => {
       },
     },
     { separator: true },
-    { label: "Copy Path", action: () => void copyText(path) },
+    { label: "Copy Path", action: () => void copyText(repoPath(path)) },
+    { label: "Copy Relative Path", action: () => void copyText(path) },
   ]);
 };

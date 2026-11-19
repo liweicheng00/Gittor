@@ -218,6 +218,29 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   full ref names, and "!" before a name keeps an old branch out. The query `stale_branches` keeps them
   in `stale-branches.json` of the common git dir, as the favorites. A stale branch shows in the Stale
   group only, not in Local or Recent. The current branch is never stale by the rule.
+- Text selection and copy (`copy.ts`, `abs-path.ts`; the guards are `ui/test/user-select.test.ts` and the
+  scenario `copy-text.mjs`). The user can select each text of the app with the mouse, and Mod+C copies it.
+  - `user-select: none` is only for a control without text to copy: a header that a click opens and
+    closes, a drag handle, the project tabs, the rows of the Changes tab (they are `draggable`), and the
+    page while a splitter moves. Each selector is in `ALLOWED` of `user-select.test.ts` with its reason.
+  - A custom drag starts on a handle (`.rebase-grip`) or on an element without text to copy (a project
+    tab). Only that element calls `preventDefault()` on `mousedown`, so the text next to it stays
+    selectable. Do not add `preventDefault()` on `mousedown` to a row that shows text.
+  - A row keeps its element when the selection changes: change the class `selected`, and keep the
+    selection out of the signature of `reconcile()`. A new element under the mouse loses the text
+    selection. The log rows are the exception: they draw again and prevent the press, so the mouse does
+    not select their text. The details panel shows the same text, and it is selectable.
+  - Mod+C is the keymap action `copyHash`. Its `when` is `itemCopyText`, which gives "" in a text field,
+    in Monaco, and when `hasTextSelection()` is true. The browser then copies the text: a text selection
+    always wins. A dialog (`.overlay`) gets no keymap action at all.
+  - Without a text selection, Mod+C copies the selected items of the list that the user used last (a
+    press, a key or the focus). A list registers with `copySource(list, () => text)`: the log gives the
+    revision numbers, a list of files the absolute paths (`repoPaths`: the root of the repository of the
+    window and the path, one line for each file), the Branches tab the names, the Worktrees tab the path,
+    the Stash tab the message, the History window the revision number. A new list needs a `copySource`.
+  - "Copy Path" in a menu copies the absolute path. "Copy Relative Path" copies the path in the repository.
+  - `copy.ts` removes the text selection on each press outside a text field. A row that prevents the
+    press, or a `draggable` row, would keep an old selection, and Mod+C would copy that old text.
 - Icons: add the Lucide file name to the glob and to `NAMES` in `ui/src/icons.ts`.
 - Trees of files: `buildTree`, `treeOrder`, `walkTree` in `file-tree.ts`.
   Unique short names of folders: `pathLabels` in `path-labels.ts`.

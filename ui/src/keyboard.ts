@@ -1,6 +1,7 @@
 // The keymap actions and the key handler.
 
 import { back, forward } from "./nav";
+import { copySource, itemCopyText } from "./copy";
 import { copyText } from "./dom";
 import { openInEditorHere, openProjectInEditor } from "./editor-flow";
 import { openInTerminal } from "./terminal-flow";
@@ -10,7 +11,7 @@ import { newBranchHere, undoLast } from "./operations";
 import { askForRepo, closeActiveTab, fetchAll, refresh, switchTab } from "./repo";
 import { settings } from "./settings";
 import { openSettings } from "./settings-flow";
-import { changes, commitPanel, diff, filesPanel, filterBar, worktreePanel, openBtn, showLeftTab, statusActivity, submodulePanel, toggleDiff } from "./shell";
+import { changes, commitPanel, diff, filesPanel, filterBar, log, worktreePanel, openBtn, showLeftTab, statusActivity, submodulePanel, toggleDiff } from "./shell";
 import { app } from "./state";
 import { pushBranch, updateBranch } from "./sync";
 import { resetZoom, zoomBy } from "./zoom";
@@ -100,13 +101,11 @@ for (const a of [
   { id: "previousFile", label: "Previous File", defaults: ["Alt+ArrowUp"], run: () => (app.diffSource === "local" ? commitPanel.move(-1) : changes.move(-1)) },
   {
     id: "copyHash",
-    label: "Copy the Revision Number",
+    label: "Copy (the revision number, the path or the name of the selection)",
     defaults: ["Mod+C"],
-    run: () => {
-      void copyText(app.selected.map((s) => s.oid).join(" "));
-      statusActivity.textContent = "Copied the revision number";
-    },
-    when: (t: HTMLElement) => !typing(t) && !!t.closest(".log") && app.selected.length > 0,
+    run: (t: HTMLElement) => void copyText(itemCopyText(t)),
+    // A text selection and a text field keep the key: the browser copies the text.
+    when: (t: HTMLElement) => !!itemCopyText(t),
   },
   { id: "navigateBack", label: "Back (the file before)", defaults: isMac ? ["Mod+[", "Mod+Alt+ArrowLeft"] : ["Mod+Alt+ArrowLeft"], run: () => void navigate(-1) },
   { id: "navigateForward", label: "Forward (the next file)", defaults: isMac ? ["Mod+]", "Mod+Alt+ArrowRight"] : ["Mod+Alt+ArrowRight"], run: () => void navigate(1) },
@@ -116,6 +115,9 @@ for (const a of [
   { id: "settings", label: "Settings", defaults: [isMac ? "Mod+Comma" : "Mod+Alt+S"], run: () => void openSettings() },
 ] as KeyAction[]) keymap.add(a);
 
+// Mod+C in the log copies the revision numbers of the selected commits.
+copySource(log.el, () => app.selected.map((s) => s.oid).join(" "));
+
 /** The dialogs and windows that were open when the key came. A window can close on the key (Esc) before
  * the handler below runs; the key still belongs to that window then. The capture phase of the window
  * comes before all other handlers. */
@@ -123,7 +125,7 @@ let openAtKey = { dialog: false, window: false };
 window.addEventListener("keydown", () => (openAtKey = { dialog: !!document.querySelector(".overlay"), window: !!document.querySelector(".merge-overlay") }), true);
 
 /** The actions whose keys work in a window such as Compare or Review. */
-const inWindow = (id: string) => id === "openInEditor" || id === "openProjectInEditor" || id.startsWith("zoom") || id.startsWith("navigate");
+const inWindow = (id: string) => id === "copyHash" || id === "openInEditor" || id === "openProjectInEditor" || id.startsWith("zoom") || id.startsWith("navigate");
 
 /** The key of an action works at this element now: the same rules as the key handler below. */
 export function keyWorksAt(id: string, target: HTMLElement): boolean {

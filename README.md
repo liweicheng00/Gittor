@@ -37,7 +37,7 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | `Ctrl/Cmd+E`, `Shift+F4` | Open the repository in the editor of Settings › Editor, with the selected file or the file of the diff (the IDE button) |
 | `Alt+F12` | Open a terminal in the folder of the repository (Settings › Terminal sets the app) |
 | `Ctrl/Cmd+Z` | Undo the last operation (outside a text field) |
-| `Ctrl/Cmd+C` | Copy the hash |
+| `Ctrl/Cmd+C` | Copy the selected text. Without a text selection: the hash of a commit, the absolute path of a file, the name of a branch |
 | `Ctrl/Cmd+M` | Recent commit messages (in the message field) |
 | `F7`, `Shift+F7` | Next and previous change |
 | `Alt+Down`, `Alt+Up` | Next and previous file |

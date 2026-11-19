@@ -1,5 +1,6 @@
 // The context menus of the log, the branches and the changed files.
 
+import { repoPaths } from "./copy";
 import { api, type BranchInfo, type Change, type Row } from "./api";
 import { WORKTREE } from "./compare-view";
 import { menuBelow, type MenuItem, showMenu } from "./context-menu";
@@ -301,7 +302,8 @@ changes.onContextMenu = (files, e) => {
     { label: `Drop Selected Changes${plural}…`, disabled: !oneOwnCommit, action: () => void rewriteFilesOf(files, false) },
     { label: `Extract Selected Changes to Separate Commit${plural}…`, disabled: !oneOwnCommit, action: () => void rewriteFilesOf(files, true) },
     { separator: true },
-    { label: files.length > 1 ? "Copy Paths" : "Copy Path", action: () => void copyText(files.map((f) => f.path).join("\n")) },
+    { label: files.length > 1 ? "Copy Paths" : "Copy Path", action: () => void copyText(repoPaths(files.map((f) => f.path))) },
+    { label: files.length > 1 ? "Copy Relative Paths" : "Copy Relative Path", action: () => void copyText(files.map((f) => f.path).join("\n")) },
     { label: "Copy File Name", disabled: files.length !== 1, action: () => void copyText(c.path.split("/").pop() ?? c.path) },
   ]);
 };

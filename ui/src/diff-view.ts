@@ -1,5 +1,6 @@
 // Monaco diff of one file, with a toolbar for navigation and diff options.
 
+import { repoPath } from "./copy";
 import { revertChange } from "./revert-change";
 import { diffLines } from "./diff3";
 import { lineAfter, lineHunks, rangeEdits } from "./text-edit";
@@ -136,7 +137,7 @@ export class DiffView {
     this.title = h("span", { class: "diff-title" });
     this.sides = h("span", { class: "diff-sides" });
     this.stats = h("span", { class: "diff-stats" });
-    const copyPath = btn(icon("copy"), "Copy the file path", () => this.path && void copyText(this.path));
+    const copyPath = btn(icon("copy"), "Copy the absolute path of the file", () => this.path && void copyText(repoPath(this.path)));
     this.annotateBox = h("input", { type: "checkbox" });
     this.annotateBox.addEventListener("change", () => void this.annotate());
     const annotate = h("label", { class: "diff-option", title: "Show the commit that last changed each line (git blame). Click an annotation to go to its commit." }, this.annotateBox, "Annotate");

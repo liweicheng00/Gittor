@@ -1,6 +1,7 @@
 // Show Repository at Revision, as in IntelliJ: all files of a commit as a tree of folders, and the content
 // of the selected file. The window only reads; it changes no file.
 
+import { copySource, repoPath } from "./copy";
 import { visit } from "./nav";
 import { registerWindow } from "./windows";
 import type { FileContent } from "./api";
@@ -26,6 +27,7 @@ export async function openRepoBrowser(oid: string, label: string, cb: RepoBrowse
   const open = new Set<string>();
   const search = h("input", { class: "dialog-input repo-browser-search", type: "search", placeholder: "Find a file by its path", spellcheck: false });
   const list = h("div", { class: "history-list repo-browser-files", tabIndex: 0 });
+  copySource(list, () => selected && repoPath(selected));
   const count = h("span", { class: "muted-inline" }, "Loading…");
   const title = h("div", { class: "repo-browser-file" }, "Select a file.");
   const host = h("div", { class: "repo-browser-editor" });
@@ -34,8 +36,8 @@ export async function openRepoBrowser(oid: string, label: string, cb: RepoBrowse
   const editor = monaco.editor.create(host, { readOnly: true, automaticLayout: true, minimap: { enabled: false }, scrollBeyondLastLine: false, renderLineHighlight: "none", ...editorFont() });
   const historyBtn = h("button", { class: "tb-button", title: "Show the history of the selected file", disabled: true }, "Show History");
   historyBtn.addEventListener("click", () => selected && cb.showHistory(selected));
-  const copyBtn = h("button", { class: "tb-button", title: "Copy the path of the selected file", disabled: true }, "Copy Path");
-  copyBtn.addEventListener("click", () => selected && cb.copyText(selected));
+  const copyBtn = h("button", { class: "tb-button", title: "Copy the absolute path of the selected file", disabled: true }, "Copy Path");
+  copyBtn.addEventListener("click", () => selected && cb.copyText(repoPath(selected)));
   const closeBtn = h("button", { class: "tb-button" }, "Close");
   const grip = h("div", { class: "vgrip" });
   const side = h("div", { class: "compare-side" }, search, list);

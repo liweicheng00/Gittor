@@ -1,5 +1,6 @@
 // Changed files between two revisions, as a flat list or a directory tree.
 
+import { copySource, repoPaths } from "./copy";
 import type { Change } from "./api";
 import { fileIcon } from "./file-icon";
 import { h, icon, twisty } from "./dom";
@@ -45,6 +46,10 @@ export class ChangesPanel {
     const swap = h("button", { class: "icon-button", title: "Swap left and right sides" }, icon("swap"));
     swap.addEventListener("click", () => this.onSwap());
     this.list = h("div", { class: "changes", tabIndex: 0 });
+    copySource(this.list, () => {
+      const picked = this.selected.size ? [...this.selected].sort((a, b) => a - b) : this.active >= 0 ? [this.active] : [];
+      return repoPaths(picked.map((i) => this.changes[i]?.path).filter(Boolean));
+    });
     this.list.addEventListener("keydown", (e) => {
       if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
       e.preventDefault();
