@@ -90,7 +90,11 @@ export const centerTabs = h("div", { class: "center-tabs", role: "tablist", hidd
 /** The place of the open file, in place of the log. */
 export const fileHost = h("div", { class: "file-host", hidden: true });
 /** Called when another repository shows: its files are not open. */
-export const centerHooks = { reset: () => {} };
+export const centerHooks = {
+  reset: () => {},
+  /** Closes the active file of the center panel, or the last file while the log shows. False without a file. */
+  closeFile: (): boolean => false,
+};
 const center = h("section", { class: "center" }, centerTabs, banner.el, filterBar.el, log.el, fileHost);
 const right = h("section", { class: "right" }, changes.el, detailsGrip, details.el);
 /** A left tab: an icon, and a tooltip with its name. The name also stays in the tab for screen readers, out

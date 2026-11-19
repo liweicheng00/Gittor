@@ -120,7 +120,10 @@ await within("README.md shows its preview", async () => await page.isVisible(".f
 check("the preview has one column", (await page.$$(".file-host .md-col")).length === 1);
 check("the preview has no column label", (await page.$$(".file-host .md-col-label")).length === 0);
 await shot("ft4-markdown");
-await page.click(".center-tab:has-text('README.md') .center-tab-close");
+// Mod+W closes the active file, not the project. The next file shows.
+await page.keyboard.press("Control+w");
+await within("Mod+W closes README.md, and arith.rs shows", async () => !(await page.$(".center-tab:has-text('README.md')")) && ((await page.textContent(".center-tab.on").catch(() => "")) ?? "").includes("arith.rs"));
+check("Mod+W keeps the project open", !(await page.isVisible(".welcome-card")));
 // The last tab of a file closes: the log shows again, and the tabs hide.
 await page.click(".center-tab:has-text('arith.rs') .center-tab-close");
 await within("the log shows when no file is open", async () => (await page.isVisible(".log-row >> nth=0")) && !(await page.isVisible(".center-tabs")));

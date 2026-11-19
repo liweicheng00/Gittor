@@ -11,7 +11,7 @@ import { newBranchHere, undoLast } from "./operations";
 import { askForRepo, closeActiveTab, fetchAll, refresh, switchTab } from "./repo";
 import { settings } from "./settings";
 import { openSettings } from "./settings-flow";
-import { changes, commitPanel, diff, filesPanel, filterBar, log, worktreePanel, openBtn, showLeftTab, statusActivity, submodulePanel, toggleDiff } from "./shell";
+import { centerHooks, changes, commitPanel, diff, filesPanel, filterBar, log, worktreePanel, openBtn, showLeftTab, statusActivity, submodulePanel, toggleDiff } from "./shell";
 import { app } from "./state";
 import { pushBranch, updateBranch } from "./sync";
 import { resetZoom, zoomBy } from "./zoom";
@@ -80,7 +80,15 @@ for (const a of [
   },
   { id: "diffPanel", label: "Diff Panel (show or hide)", defaults: [], run: () => toggleDiff() },
   { id: "hideDiff", label: "Hide the Diff Panel", defaults: ["Escape"], run: () => toggleDiff(false), when: (t: HTMLElement) => !typing(t) && settings.showDiff },
-  { id: "closeProject", label: "Close the Project Tab", defaults: ["Mod+W"], run: () => void closeActiveTab() },
+  {
+    id: "closeProject",
+    label: "Close the File, or the Project Tab",
+    defaults: ["Mod+W"],
+    // An open file of the center panel closes first. Without one, the project tab closes.
+    run: () => {
+      if (!centerHooks.closeFile()) void closeActiveTab();
+    },
+  },
   { id: "switchProject", label: "Switch Project", defaults: ["Alt+`"], run: () => switchProject(1) },
   { id: "switchProjectBack", label: "Switch Project (back)", defaults: ["Alt+Shift+`"], run: () => switchProject(-1) },
   ...projectKeys,

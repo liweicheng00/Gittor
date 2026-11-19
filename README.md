@@ -44,7 +44,7 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | `Ctrl/Cmd+PageDown`, `Ctrl/Cmd+PageUp` | Next and previous tab |
 | ``Alt+` ``, ``Alt+Shift+` `` | Next and previous project (with one project, the Open menu) |
 | `Alt+1` … `Alt+9` | Project tab 1 to 8, and the last project tab |
-| `Ctrl/Cmd+W` | Close the project tab (`Cmd+Shift+W` closes the window on macOS) |
+| `Ctrl/Cmd+W` | Close the open file of the center panel; without one, close the project tab (`Cmd+Shift+W` closes the window on macOS) |
 | `Ctrl/Cmd+Alt+Left`, `Ctrl/Cmd+Alt+Right` | Back and Forward (also `Cmd+[` and `Cmd+]` on macOS) |
 | `Esc` | Hide the diff panel |
 | `Alt+Left`, `Alt+Right`, `Alt+Down` | In the merge window: take yours, theirs, or both for the current conflict |

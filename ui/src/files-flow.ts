@@ -83,7 +83,8 @@ function renderTabs() {
       if (e.button === 0 && !(e.target as HTMLElement).closest(".center-tab-close")) select();
     });
     if (close) {
-      const x = h("button", { class: "center-tab-close", title: "Close the file" }, icon("close"));
+      // Mod+W closes the active file, so its button names the key.
+      const x = h("button", { class: "center-tab-close", title: "Close the file", "data-key-action": on ? "closeProject" : undefined }, icon("close"));
       x.addEventListener("click", (e) => {
         e.stopPropagation();
         close();
@@ -106,6 +107,13 @@ function showLog() {
   log.redraw();
   renderTabs();
 }
+
+centerHooks.closeFile = () => {
+  const path = active ?? openFiles[openFiles.length - 1];
+  if (!path) return false;
+  closeFile(path);
+  return true;
+};
 
 function closeFile(path: string) {
   const at = openFiles.indexOf(path);
