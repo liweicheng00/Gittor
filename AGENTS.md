@@ -130,8 +130,11 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
 - Videos: `scripts/video`. `stage.mjs` has the overlay (cursor, click rings, a fake window, a fake
   terminal), the `Director` and the loop that records a scene with Playwright. `run.sh` makes the intro
   video (`record.mjs`, `build.mjs`). `shorts.sh` makes the short videos for social posts
-  (`shorts-record.mjs`, `shorts-build.mjs`): 1080x1920 for a phone, with the caption above the app.
-  The page is 1000x1250 (4:5). A scene calls `d.cam(target, { zoom, align })` to point the camera at
+  (`shorts-record.mjs`, `shorts-build.mjs`): 1080x1920 for a phone (the owner chose 9:16), with a
+  small caption above the app. The page is 1000x1500 (2:3), recorded with two times the pixels and 4
+  times slower (`scale` and `slow` of `recordScenes`): the video of Playwright is not sharp, and the
+  browser draws only about 6 large frames in a second. The recording of the eight scenes takes long:
+  run it in the background. A scene calls `d.cam(target, { zoom, align })` to point the camera at
   some elements, and `d.mark(name)` for a caption; the build moves the camera with `zoompan` and puts
   the captions and soft notes of the music on the marks. `music.py` computes the music with numpy
   (styles `pulse`, `lofi`, `drive`), with no samples and no service. An agent cannot hear it: check the
