@@ -60,91 +60,104 @@ h1 { font-size:16px; margin:0 0 4px; } .sub { color:var(--mute); margin:0 0 16px
 .wide .frame { width:760px; height:420px; }
 .cols { display:grid; grid-template-columns: 230px 1fr; flex:1; overflow:hidden; }
 .cols > div { border-right:1px solid var(--line); padding:6px 8px; overflow:hidden; }
+.itabs { display:flex; gap:4px; padding:5px 8px; border-bottom:1px solid var(--line); }
+.it { position:relative; width:36px; height:28px; border-radius:5px; display:flex; align-items:center; justify-content:center; font-size:15px; color:#555; }
+.it.on { background:var(--ink); color:#fff; }
+.it .bd { position:absolute; top:-3px; right:-3px; background:var(--acc); color:#fff; border-radius:8px; font-size:9px; padding:0 4px; line-height:13px; }
+.it.new { outline:1.5px dashed #e2553a; outline-offset:1px; }
+.split { border-top:3px double var(--line); padding:6px 8px; background:#fcfcfc; }
+.split .t { color:var(--mute); font-weight:600; margin-bottom:4px; }
 </style></head><body>
-<h1>Gittor as a side panel: wireframes at 400 px</h1>
-<p class="sub">One column. Three tabs. The diff and the commit details open as pages over the tab. The numbers show the parts that the panel must keep.</p>
+<h1>Gittor as a side panel: wireframes at 400 px (main of 2026-11-19)</h1>
+<p class="sub">One column. The icon tabs of today stay, with a new Log tab (dashed). The diff and the file viewer open as a page over the tab. The commit info shows under the log; there is no list of changed files. Red numbers mark the parts that the panel must keep.<br>Tab icons: ☰ Log (new) · ▤ Files · ⑂ Branches · ± Changes (badge: count) · ⧉ Worktrees · ▣ Stash · ✎ Reviews. The active tab is a filled block, as today.</p>
 
 <div class="section"><div class="row">
 
-<!-- 1 Changes -->
 <div class="col">
 <p class="cap">1 · Changes tab <small>default view</small></p>
 <div class="frame">
   <div class="top"><span class="call">1</span><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">⋯</span></div>
-  <div class="tabs"><span class="on">Changes 5</span><span>Log</span><span>Branches</span></div>
+  <div class="itabs"><span class="it new" title="Log">☰</span><span class="it" title="Files">▤</span><span class="it" title="Branches">⑂</span><span class="it on" title="Changes">±<span class="bd">5</span></span><span class="it" title="Worktrees">⧉</span><span class="it" title="Stash">▣</span><span class="it" title="Reviews">✎</span></div>
   <div class="body">
-    <div class="f" style="color:var(--mute)">⟳ ↶ ＋ &nbsp;&nbsp;&nbsp;<span style="margin-left:auto">☰ ⇕</span></div>
+    <div class="f" style="color:var(--mute)">⟳ ↶ ＋ ⧉ <span style="margin-left:auto">☰ ⇕ ⇲</span></div>
+    <div class="grp">▸ .ignore · 0</div>
     <div class="grp">▾ <span class="box x"></span> Changes · 4</div>
     <div class="f sel"><span class="box x"></span> arith.rs <span class="m">M</span></div>
     <div class="f"><span class="box x"></span> main.rs <span class="tag">2 notes</span><span class="m">M</span></div>
     <div class="f"><span class="box x"></span> README.md <span class="m">M</span></div>
     <div class="f"><span class="box x"></span> sub.rs <span class="m" style="color:green">A</span></div>
-    <div class="grp">▸ <span class="box"></span> Unversioned · 1</div>
-    <div class="grp">▸ .ignore · 0</div>
-    <div style="height:190px"></div>
+    <div class="grp">▸ <span class="box"></span> Unversioned Files · 1</div>
+    <div style="height:200px"></div>
     <div class="f"><span class="call">2</span><span style="color:var(--mute)">Commit message</span></div>
     <div class="msg">Fix overflow in add</div>
-    <div class="btns"><span class="box"></span> Amend <span style="margin-left:auto"></span><span class="btn pri">Commit</span><span class="btn">Commit and Push</span></div>
+    <div class="btns"><span class="box"></span> Amend <span class="box"></span> Sign-off <span style="margin-left:auto"></span><span class="btn pri">Commit</span><span class="btn">and Push…</span></div>
   </div>
   <div class="status">4 files checked · 14 commits</div>
 </div>
 <div class="legend">
-  <p><span class="call">1</span>Top bar: Update, Push (with the count), branch switcher, menu ⋯. Nothing else.</p>
-  <p><span class="call">2</span>The commit box stays at the bottom of the tab. The list scrolls above it.</p>
+  <p><span class="call">1</span>Top bar: Update, Push (with the count), branch switcher, menu ⋯. Open and Refresh are icons today; they go into ⋯.</p>
+  <p><span class="call">2</span>The commit box stays at the bottom. The list scrolls above it.</p>
 </div>
 </div>
 
 <div class="arrow">→</div>
 
-<!-- 2 Diff page -->
 <div class="col">
-<p class="cap">2 · Diff page <small>a click on a file</small></p>
+<p class="cap">2 · Diff page <small>a click on a file (also the file viewer of Files)</small></p>
 <div class="frame">
   <div class="top"><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">⋯</span></div>
   <div class="pagebar"><span class="call">3</span>←<b>arith.rs</b><span>↑ ↓</span><span>⇤ ⇥</span><span>⋯</span></div>
   <div class="body code">
-    <div><span class="n">1</span>pub fn add(a: i32, b: i32)</div>
-    <div><span class="n">2</span>    -&gt; i32 {</div>
-    <div class="d"><span class="n">3</span>    a.wrapping_add(b)</div>
-    <div class="a"><span class="n">3</span>    a.saturating_add(b)</div>
-    <div class="card"><span class="call" style="display:inline-flex">4</span> <b>Note</b> · Why saturate here? Overflow should be an error. &nbsp;<u>Resolve</u></div>
-    <div><span class="n">4</span>}</div>
-    <div><span class="n">5</span></div>
-    <div><span class="n">6</span>pub fn sub(a: i32, b: i32)</div>
-    <div><span class="n">7</span>    -&gt; i32 {</div>
-    <div class="d"><span class="n">8</span>    a - b</div>
-    <div class="a"><span class="n">8</span>    a.wrapping_sub(b)</div>
-    <div><span class="n">9</span>}</div>
+    <div><span class="n">1</span>pub fn add(a: i32, b: i32) -&gt; i32 {</div>
+    <div class="d"><span class="n">2</span>    a.wrapping_add(b)</div>
+    <div class="a"><span class="n">2</span>    a.saturating_add(b)</div>
+    <div class="card"><span class="call" style="display:inline-flex">4</span> <b>Note</b> · Why saturate here? Overflow should be an error. <u>Resolve</u></div>
+    <div><span class="n">3</span>}</div>
+    <div><span class="n">4</span></div>
+    <div><span class="n">5</span>pub fn sub(a: i32, b: i32) -&gt; i32 {</div>
+    <div class="d"><span class="n">6</span>    a - b</div>
+    <div class="a"><span class="n">6</span>    a.wrapping_sub(b)</div>
+    <div><span class="n">7</span>}</div>
   </div>
-  <div class="pagebar" style="border-top:1px solid var(--line);border-bottom:0"><span style="color:var(--mute)">2 / 4 files</span><span class="sp" style="flex:1"></span><span class="btn">✓ Include</span><span class="btn">Roll back</span></div>
+  <div class="pagebar" style="border-top:1px solid var(--line);border-bottom:0"><span style="color:var(--mute)">2 / 4 files</span><span style="flex:1"></span><span class="btn">Roll back</span></div>
   <div class="status">+2 −2 · 2 changes</div>
 </div>
 <div class="legend">
-  <p><span class="call">3</span>Back (also Escape and the mouse button Back), file name, previous/next change, previous/next file. Annotate and options go to ⋯.</p>
+  <p><span class="call">3</span>Back (also Escape, which hides the diff panel today, and the mouse button Back), file name, previous/next change and file. Annotate and options go to ⋯.</p>
   <p><span class="call">4</span>Inline diff only. A note card goes under its line, not at the right.</p>
 </div>
 </div>
 
-<!-- 3 Menu -->
 <div class="col">
-<p class="cap">3 · Menu ⋯ <small>rare actions</small></p>
+<p class="cap">3 · Log tab <small>the commit info under the log</small></p>
 <div class="frame">
-  <div class="top"><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b" style="background:var(--hi)">⋯</span></div>
-  <div class="tabs"><span class="on">Changes 5</span><span>Log</span><span>Branches</span></div>
-  <div class="body" style="color:#ccc">
-    <div class="f"><span class="box"></span> arith.rs</div><div class="f"><span class="box"></span> main.rs</div><div class="f"><span class="box"></span> README.md</div>
+  <div class="top"><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">⋯</span></div>
+  <div class="itabs"><span class="it on new" title="Log">☰</span><span class="it" title="Files">▤</span><span class="it" title="Branches">⑂</span><span class="it" title="Changes">±<span class="bd">5</span></span><span class="it" title="Worktrees">⧉</span><span class="it" title="Stash">▣</span><span class="it" title="Reviews">✎</span></div>
+  <div class="body" style="flex:none;height:330px">
+    <div class="f"><span class="call">5</span><div class="input" style="flex:1">Text or hash <i>.* Aa</i></div><span class="btn">⚲ 1</span></div>
+    <div style="height:4px"></div>
+    <div class="lr"><span class="g"></span><span class="tag">agent/fix</span> Add a CLI entry point</div>
+    <div class="lr"><span class="g"></span>Print arguments one per line</div>
+    <div class="lr"><span class="g"></span><span class="tag">main</span> <b>Add a binary logo</b></div>
+    <div class="lr"><span class="g side"></span>Document the build</div>
+    <div class="lr sel"><span class="g"></span>Rename math to arith</div>
+    <div class="lr"><span class="g"></span>Merge branch 'feature/parser'</div>
+    <div class="lr"><span class="g side"></span>Parser: split on commas</div>
+    <div class="lr"><span class="g"></span>Greet the world</div>
+    <div class="lr"><span class="g"></span><span class="tag">v0.1.0</span> Add math module</div>
+    <div class="lr"><span class="g"></span>Initial commit</div>
   </div>
-  <div class="dim"></div>
-  <div class="menu">
-    <div>Refresh</div><div>Fetch ▸</div><hr>
-    <div>Stash ▸</div><div>Reviews</div><div>Local History</div><hr>
-    <div>Compare Branches…</div><div>Open in Editor</div><div>Open in Terminal</div><div>Open on the Web</div><hr>
-    <div>View ▸</div><div>Settings…</div>
+  <div class="split" style="flex:1">
+    <div class="t"><span class="call" style="display:inline-flex">6</span> Commit Details <span style="float:right;font-weight:400">⇕ drag</span></div>
+    <b>Rename math to arith and use wrapping add</b>
+    <div class="kv"><span>Hash</span><span>4f9e13c1 ⧉</span><span>Author</span><span>Ada Lovelace</span><span>Date</span><span>2026-11-11 10:00</span><span>Parent</span><span style="color:var(--acc)">2da1556b</span><span>Branches</span><span><span class="tag">main</span> <span class="tag">agent/fix</span></span></div>
+    <div style="color:var(--mute)">The message body shows here, and scrolls.</div>
   </div>
-  <div class="status">&nbsp;</div>
+  <div class="status">14 commits</div>
 </div>
 <div class="legend">
-  <p><span class="call">5</span>Everything that is not a main task of a side panel. Open, Theme and the project tabs do not show in an embed: the host gives them.</p>
+  <p><span class="call">5</span>The text filter stays. Branch, user, path and date go behind ⚲ (the number shows the active filters). Graph and subject only.</p>
+  <p><span class="call">6</span>The Commit Details of today, under the log. No list of changed files. The context menu of a row keeps all commit actions.</p>
 </div>
 </div>
 
@@ -152,126 +165,99 @@ h1 { font-size:16px; margin:0 0 4px; } .sub { color:var(--mute); margin:0 0 16px
 
 <div class="section"><div class="row">
 
-<!-- 4 Log -->
 <div class="col">
-<p class="cap">4 · Log tab</p>
+<p class="cap">4 · Branches tab</p>
 <div class="frame">
   <div class="top"><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">⋯</span></div>
-  <div class="tabs"><span>Changes 5</span><span class="on">Log</span><span>Branches</span></div>
-  <div class="body">
-    <div class="f"><span class="call">6</span><div class="input" style="flex:1">Text or hash <i>.* Aa</i></div><span class="btn">⚲ 1</span></div>
-    <div style="height:6px"></div>
-    <div class="lr"><span class="g"></span><span class="tag">agent/fix</span> Add a CLI entry point</div>
-    <div class="lr"><span class="g"></span>Print arguments one per line</div>
-    <div class="lr sel"><span class="g"></span><span class="tag">main</span> <b>Add a binary logo</b></div>
-    <div class="lr"><span class="g side"></span>Merge branch 'fix/readme'</div>
-    <div class="lr"><span class="g side"></span>Document the build</div>
-    <div class="lr"><span class="g"></span>Rename math to arith</div>
-    <div class="lr"><span class="g"></span>Merge branch 'feature/parser'</div>
-    <div class="lr"><span class="g side"></span>Parser: split on commas</div>
-    <div class="lr"><span class="g"></span>Greet the world</div>
-    <div class="lr"><span class="g"></span><span class="tag">v0.1.0</span> Add math module</div>
-    <div class="lr"><span class="g"></span>Initial commit</div>
-    <div class="f" style="margin-top:6px"><span class="call">7</span><span style="color:var(--mute)">Graph and subject only. Author and date in a tooltip.</span></div>
-  </div>
-  <div class="status">14 commits</div>
-</div>
-<div class="legend">
-  <p><span class="call">6</span>The text filter stays. Branch, user, path and date go behind ⚲ (the number shows the active filters).</p>
-  <p><span class="call">7</span>No author, date and hash columns under the breakpoint.</p>
-</div>
-</div>
-
-<div class="arrow">→</div>
-
-<!-- 5 Commit page -->
-<div class="col">
-<p class="cap">5 · Commit page <small>a click on a commit</small></p>
-<div class="frame">
-  <div class="top"><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">⋯</span></div>
-  <div class="pagebar">←<b>Add a binary logo</b><span>⋯</span></div>
-  <div class="body">
-    <span class="call">8</span>
-    <div class="kv"><span>Hash</span><span>bb2f8898 ⧉</span><span>Author</span><span>Ada Lovelace</span><span>Date</span><span>2026-09-09 10:00</span><span>Parent</span><span style="color:var(--acc)">daea5d10</span></div>
-    <div style="color:var(--mute);margin:6px 0">Add the logo for the README.</div>
-    <div class="grp" style="border-top:1px solid var(--line);padding-top:6px">Changed files · 3 &nbsp;<span style="float:right">☰</span></div>
-    <div class="f">▾ src</div>
-    <div class="f" style="padding-left:14px">arith.rs <span class="m">M</span></div>
-    <div class="f" style="padding-left:14px">main.rs <span class="m">M</span></div>
-    <div class="f">logo.bin <span class="m" style="color:green">A</span></div>
-    <div style="height:150px"></div>
-    <div class="f"><span class="call">9</span><span style="color:var(--mute)">A click on a file opens the diff page (2). Back returns here.</span></div>
-  </div>
-  <div class="status">14 commits</div>
-</div>
-<div class="legend">
-  <p><span class="call">8</span>Commit Details and changed files on one page, in place of the right column.</p>
-  <p><span class="call">9</span>The same diff page as for a local change. The ⋯ of the page has the commit actions (the menu of a log row).</p>
-</div>
-</div>
-
-<!-- 6 Branches -->
-<div class="col">
-<p class="cap">6 · Branches tab <small>and the branch switcher</small></p>
-<div class="frame">
-  <div class="top"><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b" style="background:var(--hi)">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">⋯</span></div>
-  <div class="tabs"><span>Changes 5</span><span>Log</span><span class="on">Branches</span></div>
+  <div class="itabs"><span class="it new" title="Log">☰</span><span class="it" title="Files">▤</span><span class="it on" title="Branches">⑂</span><span class="it" title="Changes">±<span class="bd">5</span></span><span class="it" title="Worktrees">⧉</span><span class="it" title="Stash">▣</span><span class="it" title="Reviews">✎</span></div>
   <div class="body">
     <div class="f"><div class="input" style="flex:1">Search branches and tags</div><span>☆</span></div>
-    <div class="grp"><span class="call" style="display:inline-flex">10</span> ▾ Worktrees · 3 <span style="float:right">＋</span></div>
-    <div class="f sel">▣ <b>demo</b> <span class="tag">agent/fix</span></div>
-    <div class="f">▣ demo-agent2 <span class="tag">agent/ui</span></div>
-    <div class="f">▣ demo-review <span class="tag">main</span></div>
+    <div class="f" style="margin-top:4px"><span class="tag">HEAD</span> <b>agent/fix</b></div>
     <div class="grp">▾ Recent · 3</div>
     <div class="f">⑂ agent/fix <span style="color:green">↑2</span></div>
     <div class="f">⑂ feature/cli <span style="color:green">↑1</span></div>
     <div class="f">⑂ fix/readme</div>
-    <div class="grp">▸ Local · 5</div>
+    <div class="grp">▾ Local · 5</div>
+    <div class="f">⑂ main <span style="color:#c33">↓1</span> <span style="margin-left:auto">★</span></div>
+    <div class="f">⑂ agent/fix</div>
+    <div class="f">⑂ feature/cli</div>
+    <div class="grp">▸ Stale · 2</div>
     <div class="grp">▸ Remote: origin · 4</div>
     <div class="grp">▸ Tags · 2</div>
-    <div style="height:70px"></div>
-    <div class="f"><span class="call">11</span><span style="color:var(--mute)">Row buttons (favorite, show only) show on hover only. The context menu stays.</span></div>
+    <div style="height:90px"></div>
+    <div class="f"><span class="call">7</span><span style="color:var(--mute)">The tree of today, at the full width of the panel. Row buttons show on hover only.</span></div>
   </div>
   <div class="status">14 commits</div>
 </div>
-<div class="legend">
-  <p><span class="call">10</span>Worktrees move to the top: an agent often works in its own worktree.</p>
-  <p><span class="call">11</span>The full width of the panel; no cut buttons.</p>
+<div class="legend"><p><span class="call">7</span>No change of content. A click on a branch can select its commit in the Log tab, with the info of frame 3.</p></div>
 </div>
+
+<div class="col">
+<p class="cap">5 · Worktrees tab</p>
+<div class="frame">
+  <div class="top"><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">⋯</span></div>
+  <div class="itabs"><span class="it new" title="Log">☰</span><span class="it" title="Files">▤</span><span class="it" title="Branches">⑂</span><span class="it" title="Changes">±<span class="bd">5</span></span><span class="it on" title="Worktrees">⧉</span><span class="it" title="Stash">▣</span><span class="it" title="Reviews">✎</span></div>
+  <div class="body">
+    <div class="f"><div class="input" style="flex:1">Search worktrees</div><span>☆</span><span>＋</span></div>
+    <div class="f sel" style="margin-top:4px">▣ <b>demo</b> <span class="tag">agent/fix</span> <span class="m" style="color:var(--mute)">this</span></div>
+    <div class="f">▣ demo-agent2 <span class="tag">agent/ui</span> <span class="m" style="color:var(--mute)">3 changes</span></div>
+    <div class="f">▣ demo-review <span class="tag">main</span></div>
+    <div style="height:300px"></div>
+    <div class="f"><span class="call">8</span><span style="color:var(--mute)">A click opens the worktree in this panel. In an embed the host can also give the worktree.</span></div>
+  </div>
+  <div class="status">14 commits</div>
+</div>
+<div class="legend"><p><span class="call">8</span>The Worktrees tab of today. An agent often works in its own worktree, so this tab stays.</p></div>
+</div>
+
+<div class="col">
+<p class="cap">6 · Menu ⋯ <small>rare actions</small></p>
+<div class="frame">
+  <div class="top"><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b" style="background:var(--hi)">⋯</span></div>
+  <div class="itabs"><span class="it new" title="Log">☰</span><span class="it" title="Files">▤</span><span class="it" title="Branches">⑂</span><span class="it on" title="Changes">±<span class="bd">5</span></span><span class="it" title="Worktrees">⧉</span><span class="it" title="Stash">▣</span><span class="it" title="Reviews">✎</span></div>
+  <div class="body" style="color:#ccc"><div class="f"><span class="box"></span> arith.rs</div><div class="f"><span class="box"></span> main.rs</div></div>
+  <div class="dim"></div>
+  <div class="menu">
+    <div>Refresh</div><div>Fetch ▸</div><div>Local History</div><hr>
+    <div>Compare Branches…</div><div>Open in Editor</div><div>Open in Terminal</div><div>Open on the Web</div><hr>
+    <div>View ▸</div><div>Settings…</div>
+  </div>
+  <div class="status">&nbsp;</div>
+</div>
+<div class="legend"><p><span class="call">9</span>Everything that is not a main task. Stash and Reviews stay as icon tabs: seven icons fit at 320 px. Open, Theme and the project tabs do not show in an embed.</p></div>
 </div>
 
 </div></div>
 
 <div class="section">
-<p class="cap">7 · From 640 to 948 px (here 760 px) <small>two columns: the left pane stays, the right column goes into the commit page</small></p>
+<p class="cap">7 · From 640 to 948 px (here 760 px) <small>two columns: the left pane of today, and the log with the commit info under it</small></p>
 <div class="wide"><div class="frame">
-  <div class="top"><span class="b">⇣ Update</span><span class="b">⇡ Push 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">Compare</span><span class="b">⋯</span></div>
+  <div class="top"><span class="b">⇣ Update</span><span class="b">⇡ Push 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">⋯</span></div>
   <div class="cols">
     <div>
-      <div class="tabs" style="margin:-6px -8px 6px"><span>Branches</span><span class="on">Changes 5</span><span>⋯</span></div>
+      <div style="margin:-6px -8px 6px"><div class="itabs"><span class="it" title="Files">▤</span><span class="it" title="Branches">⑂</span><span class="it on" title="Changes">±<span class="bd">5</span></span><span class="it" title="Worktrees">⧉</span><span class="it" title="Stash">▣</span><span class="it" title="Reviews">✎</span></div></div>
       <div class="f sel"><span class="box x"></span> arith.rs <span class="m">M</span></div>
       <div class="f"><span class="box x"></span> main.rs <span class="m">M</span></div>
       <div class="f"><span class="box x"></span> README.md <span class="m">M</span></div>
       <div class="f"><span class="box x"></span> sub.rs <span class="m">A</span></div>
-      <div style="height:90px"></div>
+      <div style="height:110px"></div>
       <div class="msg" style="height:56px">Commit message</div>
-      <div class="btns"><span class="btn pri">Commit</span><span class="btn">and Push</span></div>
+      <div class="btns"><span class="btn pri">Commit</span><span class="btn">and Push…</span></div>
     </div>
-    <div style="border-right:0">
+    <div style="border-right:0;display:flex;flex-direction:column;padding:0">
+      <div style="padding:6px 8px;flex:1">
       <div class="f"><div class="input" style="flex:1">Text or hash</div><span class="btn">⚲</span></div>
       <div class="lr"><span class="g"></span>Add a CLI entry point <span style="margin-left:auto;color:var(--mute)">Ada · 2d</span></div>
       <div class="lr sel"><span class="g"></span>Add a binary logo <span style="margin-left:auto;color:var(--mute)">Ada · 2d</span></div>
       <div class="lr"><span class="g side"></span>Document the build <span style="margin-left:auto;color:var(--mute)">Linus · 3d</span></div>
-      <div class="code" style="border-top:1px solid var(--line);margin-top:6px;padding-top:4px">
-        <div style="color:var(--mute)">arith.rs · inline</div>
-        <div class="d"><span class="n">3</span>    a.wrapping_add(b)</div>
-        <div class="a"><span class="n">3</span>    a.saturating_add(b)</div>
+      <div class="lr"><span class="g"></span>Rename math to arith <span style="margin-left:auto;color:var(--mute)">Ada · 8d</span></div>
       </div>
+      <div class="split" style="height:140px"><div class="t">Commit Details</div><b>Add a binary logo</b><div class="kv"><span>Hash</span><span>26f9e933 ⧉</span><span>Author</span><span>Ada Lovelace · 2026-11-13</span></div></div>
     </div>
   </div>
   <div class="status">4 files checked · 14 commits</div>
 </div></div>
-<div class="legend" style="width:760px"><p>The log shows the subject and a short author and date. The diff stays under the log, in inline mode. A click on a commit opens the commit page (5) over the right part.</p></div>
+<div class="legend" style="width:760px"><p>The left pane keeps its six icon tabs. The log shows the subject and a short author and date; the commit info is under it. A click on a file opens the diff page (2) over the right column.</p></div>
 </div>
 
 </body></html>
