@@ -106,6 +106,21 @@ await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
 await page.click(".file-host .review-notes-copy");
 await within("Copy All copies the notes of the file", async () => (await page.evaluate(() => navigator.clipboard.readText())) === "arith.rs\nRename this file\n\narith.rs:1\nCheck this add");
 await shot("ft3-file-notes");
+// Annotate shows the commit and the author of each line in the gutter. Two clicks add no message.
+await page.check(".file-host .diff-option:has-text('Annotate') input");
+await within("Annotate shows the authors of the lines", async () => (await page.$$(".file-host .blame-first")).length > 0);
+await page.uncheck(".file-host .diff-option:has-text('Annotate') input");
+await page.check(".file-host .diff-option:has-text('Annotate') input");
+await within("Annotate shows the authors again", async () => (await page.$$(".file-host .blame-first")).length > 0);
+check("Annotate shows no error", (await page.$$(".file-host .blame-error")).length === 0);
+await page.uncheck(".file-host .diff-option:has-text('Annotate') input");
+// A Markdown file shows its preview in one column, without the labels of a comparison.
+await page.click(row("README.md"));
+await within("README.md shows its preview", async () => await page.isVisible(".file-host .md-col .md-body"));
+check("the preview has one column", (await page.$$(".file-host .md-col")).length === 1);
+check("the preview has no column label", (await page.$$(".file-host .md-col-label")).length === 0);
+await shot("ft4-markdown");
+await page.click(".center-tab:has-text('README.md') .center-tab-close");
 // The last tab of a file closes: the log shows again, and the tabs hide.
 await page.click(".center-tab:has-text('arith.rs') .center-tab-close");
 await within("the log shows when no file is open", async () => (await page.isVisible(".log-row >> nth=0")) && !(await page.isVisible(".center-tabs")));

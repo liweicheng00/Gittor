@@ -15,6 +15,7 @@ import { keymap } from "./keyboard";
 import { listLocalNotes, localNoteHandlers } from "./local-notes";
 import { NotesPanel } from "./notes-panel";
 import { visit } from "./nav";
+import { jumpToOid } from "./repo";
 import { settings } from "./settings";
 import { centerHooks, centerTabs, commitPanel, fileHost, filesPanel, filterBar, leftTabHooks, log, showLeftTab } from "./shell";
 
@@ -57,6 +58,12 @@ function theEditor(): DiffView {
   ed.onHide = () => active && closeFile(active);
   ed.onOpenInEditor = (path, line, column) => void openInEditor(path, line, column);
   ed.onHistory = (path) => showHistory(path);
+  // Annotate: the commit and the author of each line. A click on a line shows its commit in the log.
+  ed.onBlame = api.blame;
+  ed.onBlameClick = (oid) => {
+    showLog();
+    void jumpToOid(oid, true);
+  };
   fileHost.append(ed.el, notesPanel.el);
   editor = ed;
   return ed;
