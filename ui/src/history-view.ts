@@ -1,6 +1,7 @@
 // The history of one file, as IntelliJ's Show History: the commits that changed the file, and the
 // change of the file in the selected commit.
 
+import { copySource } from "./copy";
 import { visit } from "./nav";
 import { registerWindow } from "./windows";
 import type { Blame, FileContent, HistoryEntry, RevSpec } from "./api";
@@ -26,6 +27,7 @@ export function sharedDiff(): DiffView {
 export async function openHistory(path: string, cb: HistoryCallbacks, oid?: string) {
   const d = sharedDiff();
   const list = h("div", { class: "history-list", tabIndex: 0 });
+  copySource(list, () => entries[selected]?.oid);
   const count = h("span", { class: "muted-inline" }, "Loading…");
   let entries: HistoryEntry[] = [];
   let selected = -1;

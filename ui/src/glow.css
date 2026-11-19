@@ -126,8 +126,9 @@
 :root[data-style="glow"] .toast-success { border-left-color: var(--added); }
 :root[data-style="glow"] .toast-error { border-left-color: var(--deleted); }
 
-/* The active left tab: the accent line stays; a soft light comes up from it. */
-:root[data-style="glow"] .lp-tab.on { background: linear-gradient(to top, color-mix(in srgb, var(--accent) 16%, transparent), transparent 75%); }
+/* The active left tab: a flat tint of the accent. The count badge gets the text color and the ring of the skin. */
+:root[data-style="glow"] .lp-tab.on { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+:root[data-style="glow"] .lp-count { color: var(--on-accent); box-shadow: 0 0 0 2px var(--bg); }
 
 /* Buttons. */
 :root[data-style="glow"] .tb-button:hover:not(:disabled),

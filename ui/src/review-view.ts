@@ -1,6 +1,7 @@
 // The review window: the changes of a branch from the commit where it started, as in a pull request. The
 // user marks files as viewed, adds notes to lines, and merges the branch from here.
 
+import { copySource, repoPath } from "./copy";
 import { visit } from "./nav";
 import { branchButton, type PickerSection } from "./branch-picker";
 import { onRepoChange, registerWindow } from "./windows";
@@ -98,6 +99,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
     renderFiles();
   });
   const filesEl = h("div", { class: "history-list review-files", tabIndex: 0 });
+  copySource(filesEl, () => rows[selected] && repoPath(rows[selected].path));
   // The notes of the file under the diff, with Copy All and the field for a note on the whole file.
   const notes = new NotesPanel((t) => void copyText(t));
   const side = h("div", { class: "compare-side" });

@@ -2,6 +2,7 @@
 // A file with a local change has the color of its status, and so has each folder above it. A search shows
 // the matching files as a flat list. The folders are closed at first, so a large repository draws fast.
 
+import { copySource, repoPath } from "./copy";
 import { h, twisty } from "./dom";
 import { fileIcon } from "./file-icon";
 import { reconcile, type KeyedItem } from "./keyed";
@@ -37,6 +38,7 @@ export class FilesPanel {
     this.search = h("input", { class: "files-search", type: "search", placeholder: "Find a file", spellcheck: false });
     this.count = h("span", { class: "files-count muted-inline" });
     this.list = h("div", { class: "files-list", tabIndex: 0, role: "tree" });
+    copySource(this.list, () => this.selected && repoPath(this.selected));
     this.el = h("div", { class: "files-panel" }, h("div", { class: "files-head" }, this.search, this.count), this.list);
     this.search.addEventListener("input", () => this.render());
     this.list.addEventListener("keydown", (e) => this.onKey(e));
@@ -114,6 +116,8 @@ export class FilesPanel {
       this.walk(this.root, "", 0, items);
     }
     reconcile(this.list, items);
+    // The selection changes the class only. A new row under the mouse would lose a text selection.
+    for (const r of this.list.querySelectorAll<HTMLElement>(".files-file")) r.classList.toggle("selected", r.dataset.path === this.selected);
   }
 
   private walk(d: Dir, prefix: string, depth: number, items: KeyedItem<HTMLElement>[]) {
@@ -151,14 +155,13 @@ export class FilesPanel {
   private fileItem(path: string, depth: number, withDir: boolean): KeyedItem<HTMLElement> {
     const s = this.status.get(path) ?? "";
     const slash = path.lastIndexOf("/");
-    const sel = path === this.selected;
     return {
       key: `f:${path}`,
-      sig: `${depth}|${withDir}|${s}|${sel}`,
+      sig: `${depth}|${withDir}|${s}`,
       build: () => {
         const row = h(
           "div",
-          { class: "files-row files-file" + (sel ? " selected" : ""), "data-path": path, role: "treeitem", title: path, style: { paddingLeft: `${6 + depth * 14 + 16}px` } },
+          { class: "files-row files-file", "data-path": path, role: "treeitem", title: path, style: { paddingLeft: `${6 + depth * 14 + 16}px` } },
           fileIcon(path),
           h("span", { class: "files-name" + (s ? ` status-text-${s} files-changed` : "") }, path.slice(slash + 1)),
           withDir && slash > 0 ? h("span", { class: "files-dir-hint muted-inline" }, path.slice(0, slash)) : "",

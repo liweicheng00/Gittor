@@ -5,6 +5,9 @@ description: Make a release of Gittor. Write the release notes for the users in 
 
 # Make a release of Gittor
 
+`maintainers.md` in this folder has the details: the kinds of macOS build, the Apple signature, the
+release workflow and its secrets, and the protection of the releases.
+
 The release page and the update notification show the release notes, not the commit messages. The
 notes are for the users of the app. Commit messages are for developers. Do not copy them.
 

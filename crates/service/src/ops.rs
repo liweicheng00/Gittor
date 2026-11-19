@@ -31,6 +31,8 @@ pub enum Op {
     /// commit after it when `extract` holds its message.
     RewriteFiles { oid: String, paths: Vec<String>, #[serde(default)] extract: Option<String> },
     CherryPick { oids: Vec<String> },
+    /// Applies the changes of commits to the local changes, without a commit.
+    CherryPickNoCommit { oids: Vec<String> },
     Revert { oids: Vec<String> },
     Reset { to: String, mode: ResetMode },
     Continue,
@@ -270,6 +272,7 @@ impl Service {
             Op::CheckoutRebase { branch, onto } => repo.checkout_rebase(&branch, &onto),
             Op::RewriteFiles { oid, paths, extract } => repo.rewrite_files(&oid, &paths, extract.as_deref()),
             Op::CherryPick { oids } => repo.cherry_pick(&oids),
+            Op::CherryPickNoCommit { oids } => repo.cherry_pick_no_commit(&oids),
             Op::Revert { oids } => repo.revert(&oids),
             Op::Reset { to, mode } => repo.reset(&to, mode),
             Op::Continue => repo.continue_or_abort(false),

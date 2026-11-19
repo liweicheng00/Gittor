@@ -7,7 +7,7 @@ import { toast } from "./notify";
 import { fetchAll, refresh } from "./repo";
 import { showStale } from "./remotes";
 import { save, settings } from "./settings";
-import { checkNow, updateStatus } from "./update-flow";
+import { checkNow, RELEASES_URL, updateStatus } from "./update-flow";
 import { openSettingsDialog, type Page } from "./settings-dialog";
 import { applyTheme, settingsBtn, statusActivity } from "./shell";
 import { app } from "./state";
@@ -51,8 +51,6 @@ export async function applyBackendSettings() {
 
 /** Opens the Settings dialog, on `page` when it is given. `ignoreAdd` goes into the global ignore file
  * when the user saves it. */
-/** The releases of Gittor on GitHub: the downloads and the release notes. */
-const RELEASES_URL = "https://github.com/liweicheng00/Gittor/releases";
 
 export async function openSettings(page?: Page, ignoreAdd?: string[]) {
   const root = app.view?.root ?? null;

@@ -1,5 +1,6 @@
 // Branches panel: local branches, remote branches grouped by remote, and tags.
 
+import { copySource } from "./copy";
 import type { BranchInfo, RecentBranch } from "./api";
 import { compareTags } from "./version-sort";
 import { isStale } from "./stale";
@@ -57,6 +58,7 @@ export class Sidebar {
     this.search = h("input", { class: "sidebar-search", placeholder: "Search branches and tags", spellcheck: false });
     this.search.addEventListener("input", () => this.render());
     this.list = h("div", { class: "sidebar-list" });
+    copySource(this.list, () => this.selected.map((b) => b.name).join("\n"));
     this.favBtn = h("button", { class: "icon-button fav-filter", title: "Show only the favorite branches" }, icon("star"));
     this.favBtn.addEventListener("click", () => {
       this.onlyFavorites = !this.onlyFavorites;

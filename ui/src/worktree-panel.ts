@@ -1,6 +1,7 @@
 // The Worktrees tab: the worktrees of the repository, with a search and favorites. Favorite worktrees come
 // first. The star filter shows only the favorites and the current worktree.
 
+import { copySource } from "./copy";
 import type { Worktree } from "./api";
 import { h, icon } from "./dom";
 import { type KeyedItem, reconcile } from "./keyed";
@@ -45,6 +46,7 @@ export class WorktreePanel {
     add.addEventListener("click", () => this.onAdd());
     this.count = h("span", { class: "group-count" });
     this.list = h("div", { class: "worktree-list", tabIndex: 0 });
+    copySource(this.list, () => this.selected);
     this.list.addEventListener("keydown", (e) => this.onKey(e));
     this.el = h(
       "div",
@@ -95,7 +97,7 @@ export class WorktreePanel {
       const fav = this.favorites.has(w.path);
       return {
         key: w.path,
-        sig: JSON.stringify([w, label, fav, this.selected === w.path]),
+        sig: JSON.stringify([w, label, fav]),
         build: () => this.row(w, label, fav),
       };
     });
@@ -104,6 +106,8 @@ export class WorktreePanel {
       items.push({ key: "\0empty", sig: text, build: () => h("div", { class: "worktree-empty muted-inline" }, text) });
     }
     reconcile(this.list, items);
+    // The selection changes the class only. A new row under the mouse would lose a text selection.
+    for (const r of this.list.querySelectorAll<HTMLElement>(".worktree")) r.classList.toggle("selected", r.dataset.path === this.selected);
   }
 
   private row(w: Worktree, label: string, fav: boolean): HTMLElement {
@@ -117,7 +121,8 @@ export class WorktreePanel {
     const el = h(
       "div",
       {
-        class: "branch worktree" + (w.current ? " current" : "") + (fav ? " favorite" : "") + (this.selected === w.path ? " selected" : ""),
+        class: "branch worktree" + (w.current ? " current" : "") + (fav ? " favorite" : ""),
+        "data-path": w.path,
         title: `${w.path}${w.locked ? "\nlocked" : ""}${w.prunable ? "\nprunable: the folder is missing" : ""}`,
       },
       h("span", { class: "branch-icon" + (w.current ? " current" : "") }, icon("worktree")),

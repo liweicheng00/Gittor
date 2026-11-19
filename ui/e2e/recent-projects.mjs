@@ -59,6 +59,11 @@ let rows = await menuRows();
 check("the demo repository comes first: the most recent use is a worktree of it", rows[0]?.title === repo && !rows[0].indent);
 check("its worktrees are under it, indented", rows.slice(1, 5).every((r, i) => r.indent && r.title === trees[i]));
 check("the other project follows", rows[5]?.title === lib && !rows[5].indent);
+// The icon of a worktree starts to the right of the name of its project, so the rows show a clear step.
+const lefts = await page.$$eval(".menu .menu-item[title]", (els) => els.map((e) => ({ indent: e.classList.contains("indent"), icon: e.querySelector(".menu-check")?.getBoundingClientRect().left ?? 0, label: e.querySelector(".menu-label")?.getBoundingClientRect().left ?? 0 })));
+const project = lefts.find((r) => !r.indent);
+const tree = lefts.find((r) => r.indent);
+check("the worktree icon starts to the right of the project name", !!project && !!tree && tree.icon > project.label + 8);
 await shot("rp1-open-menu");
 await page.keyboard.press("Escape");
 

@@ -2,7 +2,7 @@
 // icon is a mask, so it takes the color of the text in both themes. Vite copies only the files below.
 
 const files = import.meta.glob<string>(
-  "/node_modules/lucide-static/icons/{folder-open,cloud-download,arrow-down-to-line,arrow-up-from-line,globe,history,sun-moon,settings,git-branch,arrow-up,arrow-down,arrow-left-to-line,arrow-right-to-line,copy,square-pen,x,chevrons-up-down,chevrons-down-up,plus,list,folder-tree,arrow-left-right,star,files,file-diff,archive,git-pull-request,tag,circle-dot,rotate-ccw,message-square,triangle-alert,chevron-right,chevron-down,undo-2,rotate-cw,chevrons-right,lock,funnel,folder-git-2,package,folder,shield,square-terminal,code-xml,circle-check}.svg",
+  "/node_modules/lucide-static/icons/{folder-open,cloud-download,arrow-down-to-line,arrow-up-from-line,globe,history,sun-moon,settings,git-branch,arrow-up,arrow-down,arrow-left-to-line,arrow-right-to-line,copy,square-pen,x,chevrons-up-down,chevrons-down-up,plus,list,folder-tree,arrow-left-right,star,file-diff,archive,git-pull-request,tag,circle-dot,rotate-ccw,message-square,triangle-alert,chevron-right,chevron-down,undo-2,rotate-cw,chevrons-right,lock,funnel,folder-git-2,package,folder,shield,square-terminal,code-xml,circle-check}.svg",
   { query: "?raw", import: "default", eager: true },
 );
 
@@ -51,7 +51,6 @@ const NAMES = {
   folder: "folder",
   protected: "shield",
   // The left tabs.
-  files: "files",
   changes: "file-diff",
   stash: "archive",
   review: "git-pull-request",

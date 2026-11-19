@@ -103,8 +103,9 @@ html.titlebar-tabs .tab { border-top: 2px solid transparent; }
 .tb-split-menu .icon-caret { margin: 0; }
 .tb-repo { margin-left: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tb-branch { color: var(--muted); }
+.icon-button:disabled { opacity: 0.35; cursor: default; }
 .icon-button { border: 1px solid transparent; background: transparent; border-radius: 4px; padding: 0 5px; cursor: pointer; line-height: 20px; min-width: 22px; }
-.icon-button:hover { background: var(--hover); border-color: var(--border); }
+.icon-button:hover:not(:disabled) { background: var(--hover); border-color: var(--border); }
 
 /* status bar */
 .statusbar { overflow: hidden; min-width: 0; display: flex; gap: 16px; align-items: center; padding: 2px 10px; border-top: 1px solid var(--border); background: var(--panel); color: var(--muted); font-size: 12px; min-height: 24px; white-space: nowrap; }
@@ -305,7 +306,7 @@ html.titlebar-tabs .tab { border-top: 2px solid transparent; }
 .menu-check { width: 14px; text-align: center; color: var(--accent); }
 .menu-label { flex: 1; overflow: hidden; text-overflow: ellipsis; max-width: 420px; }
 .menu-detail { margin-left: 10px; color: var(--muted); font-size: 11px; }
-.menu-item.indent { padding-left: 22px; }
+.menu-item.indent { padding-left: 40px; }
 .menu-item.indent .menu-check { color: var(--muted); }
 .menu-shortcut { color: var(--muted); font-size: 11px; margin-left: 16px; }
 .menu-sep { height: 1px; background: var(--border); margin: 4px 0; }
@@ -379,6 +380,7 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .toast-progress.busy .toast-progress-bar { width: 30%; animation: toast-busy 1.2s ease-in-out infinite; }
 @keyframes toast-busy { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
 .toast-action { padding: 2px 10px; border: 1px solid var(--accent); border-radius: 4px; background: transparent; color: var(--accent); cursor: pointer; font-weight: 600; }
+.toast-link { align-self: flex-start; color: var(--accent); font-size: 12px; text-decoration: underline; cursor: pointer; }
 
 /* operation banner */
 .op-banner { padding: 6px 10px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--tag) 16%, var(--bg)); }
@@ -451,16 +453,22 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .files-dir-hint { overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
 .leftpane > [hidden] { display: none !important; }
 .leftpane .sidebar > .pane-title { display: none; }
-.lp-tabs { display: flex; overflow: hidden; border-bottom: 1px solid var(--border); padding: 0 2px; gap: 0; }
+/* The tabs sit on the color of the list under them, so they belong to the panel and not to the toolbar. */
+.lp-tabs { display: flex; overflow: hidden; border-bottom: 1px solid var(--border); padding: 5px 6px; gap: 2px; background: var(--panel-2); }
 /* The left tabs: an icon each, with the name in the tooltip. The name stays out of view for screen readers. */
-.lp-tab { flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 3px; white-space: nowrap; overflow: hidden; padding: 7px 2px 6px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; }
+.lp-tab { flex: 1 1 0; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 3px; white-space: nowrap; overflow: hidden; padding: 5px 2px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-weight: 600; cursor: pointer; }
 .lp-tab .lp-icon { width: 19px; height: 19px; vertical-align: 0; }
 /* A name for screen readers and for the scenarios, out of view. */
 .sr-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .tb-icon-only .icon:not(.icon-caret) { width: 16px; height: 16px; }
-.lp-tab:hover { color: var(--fg); }
-.lp-count { padding: 0 4px; border-radius: 8px; background: var(--select); color: var(--fg); font-size: 10.5px; font-weight: 600; line-height: 15px; }
-.lp-tab.on { color: var(--fg); border-bottom-color: var(--accent); }
+.lp-tab:hover { color: var(--fg); background: var(--hover); }
+/* The count sits on the top right corner of the icon, as a badge. The ring in the color of the bar keeps it
+   apart from the icon. */
+.lp-tab { position: relative; }
+.lp-count { position: absolute; top: 1px; left: calc(50% + 3px); min-width: 15px; box-sizing: border-box; padding: 0 4px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 9.5px; font-weight: 700; line-height: 15px; text-align: center; box-shadow: 0 0 0 2px var(--panel-2); }
+/* The active tab is a filled block with the icon in the accent color. */
+.lp-tab.on { color: var(--accent); background: var(--select); }
+.lp-tab.on .lp-count { box-shadow: 0 0 0 2px var(--select); }
 
 /* commit panel */
 .commit-panel { display: flex; flex-direction: column; min-height: 0; }

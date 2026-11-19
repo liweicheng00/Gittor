@@ -108,12 +108,36 @@ pub fn project_command(template: &str, dir: &Path) -> Result<(String, Vec<String
 /// The project command, then the arguments of the command of a file at a line. Most editors take both
 /// in one call: they open the folder as a project and show the file in it, for example
 /// "code <folder> --goto <file>:<line>:<column>" or "idea <folder> --line <line> <file>".
+///
+/// Xcode is different. `xed` reads its options only before the first path, and a folder opens as a plain
+/// folder, not as the Xcode project in it. So with a file, xed gets the file at the line only; Xcode
+/// shows it in the open project of the file.
 pub fn project_file_command(template: &str, dir: &Path, file: Option<(&Path, u32, u32)>) -> Result<(String, Vec<String>)> {
+    if let Some((file, line, column)) = file {
+        if file_only(template) {
+            return editor_command(template, file, line, column);
+        }
+    }
     let (program, mut args) = project_command(template, dir)?;
     if let Some((file, line, column)) = file {
         args.extend(editor_command(template, file, line, column)?.1);
     }
     Ok((program, args))
+}
+
+/// True for an editor that must not get the folder before the file: Xcode (`xed`).
+fn file_only(template: &str) -> bool {
+    let words = split_command(template).unwrap_or_default();
+    words.first().and_then(|p| Path::new(p).file_name()).is_some_and(|n| n == "xed")
+}
+
+/// The command of Open in Editor: the folder of the project and the file at the line, as the Zed manual
+/// shows ("zed <folder> <file>:<line>:<column>"). Without an editor, the default app opens the file.
+pub fn file_in_project(template: &str, root: &Path, file: &Path, line: u32, column: u32) -> Result<(String, Vec<String>)> {
+    if split_command(template)?.is_empty() {
+        return editor_command(template, file, line, column);
+    }
+    project_file_command(template, root, Some((file, line, column)))
 }
 
 /// A command as one line for the eyes: a word with a space gets quotes.
@@ -126,7 +150,7 @@ pub fn preview(editor: &str, terminal: &str, root: &Path) -> crate::CommandPrevi
     let file = root.join("src").join("main.rs");
     let line = |r: Result<(String, Vec<String>)>| r.map(|(p, a)| shown(&p, &a)).unwrap_or_else(|e| e);
     crate::CommandPreview {
-        open_in_editor: line(editor_command(editor, &file, 12, 5)),
+        open_in_editor: line(file_in_project(editor, root, &file, 12, 5)),
         open_in_ide: line(project_file_command(editor, root, Some((&file, 12, 5)))),
         open_terminal: match crate::terminal::terminal_command(terminal, root) {
             Ok(Some((p, a))) => shown(&p, &a),
@@ -208,12 +232,14 @@ pub(crate) fn find_program(name: &str) -> Option<PathBuf> {
 }
 
 impl Service {
-    /// Opens a file of the working tree at a line in the editor of the settings.
+    /// Opens a file of the working tree at a line in the editor of the settings. The editor also gets the
+    /// folder of the working tree, so it opens the file in that project and not alone. Without an editor
+    /// command, the default app of the system opens the file.
     pub fn open_in_editor(&self, args: EditorArgs) -> Result<()> {
         let root = self.with_repo(|r| Ok(r.root.clone()))?;
         let file = working_tree_file(&root, &args.path)?;
         let template = self.settings.lock().unwrap().editor.clone();
-        let (program, list) = editor_command(&template, &file, args.line.max(1), args.column.max(1))?;
+        let (program, list) = file_in_project(&template, &root, &file, args.line.max(1), args.column.max(1))?;
         start_editor(&program, &list, &root)
     }
 
@@ -280,7 +306,7 @@ mod tests {
     #[test]
     fn preview_shows_the_commands() {
         let p = preview("code --goto {file}:{line}:{column}", "", Path::new("/r/my app"));
-        assert_eq!(p.open_in_editor, "code --goto \"/r/my app/src/main.rs:12:5\"");
+        assert_eq!(p.open_in_editor, "code \"/r/my app\" --goto \"/r/my app/src/main.rs:12:5\"");
         assert_eq!(p.open_in_ide, "code \"/r/my app\" --goto \"/r/my app/src/main.rs:12:5\"");
         assert!(!p.open_terminal.is_empty(), "the terminal of the system, or why there is none");
         let p = preview("", "open -a iTerm {dir}", Path::new("/r/app"));
@@ -299,6 +325,16 @@ mod tests {
         assert_eq!(run("code --goto {file}:{line}:{column}"), "code|/r/app|--goto|/r/app/src/a.rs:12:3");
         assert_eq!(run("idea --line {line} --column {column} {file}"), "idea|/r/app|--line|12|--column|3|/r/app/src/a.rs");
         assert_eq!(run("zed {file}:{line}:{column}"), "zed|/r/app|/r/app/src/a.rs:12:3");
+        assert_eq!(run("subl {file}:{line}:{column}"), "subl|/r/app|/r/app/src/a.rs:12:3");
+        assert_eq!(run("cursor --goto {file}:{line}:{column}"), "cursor|/r/app|--goto|/r/app/src/a.rs:12:3");
+        assert_eq!(run("xed --line {line} {file}"), "xed|--line|12|/r/app/src/a.rs", "xed takes its options before the paths, and no folder");
+        assert_eq!(run("/usr/bin/xed --line {line} {file}"), "/usr/bin/xed|--line|12|/r/app/src/a.rs");
+        let (_, a) = project_file_command("xed --line {line} {file}", d, None).unwrap();
+        assert_eq!(a, ["/r/app"], "without a file, xed opens the folder");
+        let (p, a) = file_in_project("zed {file}:{line}:{column}", d, f, 42, 10).unwrap();
+        assert_eq!((p.as_str(), a), ("zed", vec!["/r/app".to_string(), "/r/app/src/a.rs:42:10".into()]), "Open in Editor opens the file in the project");
+        let (_, a) = file_in_project("", d, f, 1, 1).unwrap();
+        assert_eq!(a.last().map(String::as_str), Some("/r/app/src/a.rs"), "without an editor, the default app opens the file alone");
         let (_, a) = project_file_command("code --goto {file}:{line}:{column}", d, None).unwrap();
         assert_eq!(a, ["/r/app"], "without a file, the folder only");
     }

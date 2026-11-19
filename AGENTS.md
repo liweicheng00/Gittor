@@ -69,14 +69,16 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   `ui/test` runs the source with Node, which needs the `.ts` extension: a module there cannot import
   another module of `ui/src` without it, so `rebase-plan.ts` imports nothing at run time.
 - Undo (`crates/git/src/undo.rs`): `Reset`, `Checkout`, `CreateRef`, `DeleteRef`, `MoveRef`,
-  `RenameBranch`, `StashStore`, `SetConfig`. Each step checks that nothing moved since.
+  `RenameBranch`, `StashStore`, `SetConfig`, `RestoreLocalChanges`. Each step checks that nothing moved
+  since. `RestoreLocalChanges` serves an operation that changes only files (Cherry-Pick without Commit):
+  it keeps commits of `git stash create` from before and after, and compares their trees.
 - Files of the app in a git dir: always `app_dir(git_dir)`.
 - Changelists (`crates/git/src/changelist.rs`): ".ignore" (`IGNORE_ID`) and "Changes" (`DEFAULT_ID`) are
   always the first two and cannot be removed or renamed. Every new change goes to "Changes"; there is
   no active changelist. The UI never checks a file in ".ignore", so no commit takes it.
 - Submodules: `Repo::submodules` reads all of them with three git commands (`.gitmodules`, the index,
   `git status --porcelain=v2`). The Submodules section is `submodule-panel.ts` and `submodule-flow.ts`.
-  It is under the commit message of the Changes tab (`shell.ts` puts it there); `Mod+5` opens it.
+  It is under the commit message of the Changes tab (`shell.ts` puts it there); `Mod+6` opens it.
   `loadSubmodules` in `repo.ts` loads it with the local changes. It hides when there are none.
 - App windows: a tab that the user drags out of the tab bar moves to a new window at the place of the
   mouse (`dragTab` in `tab-drag.ts`; `openWindow` in `api.ts`: the Tauri command `open_window`, or
@@ -114,6 +116,8 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   and started again. The release notes are `docs/releases/v<version>.md`, for the users, not the
   commit messages: follow the `release` skill (`.claude/skills/release/SKILL.md`).
   `scripts/release-notes.mjs` checks them; `release.sh` and the workflow stop without them.
+  The kinds of macOS build, the Apple signature, the secrets of the release workflow and the protection
+  of the releases are in `.claude/skills/release/maintainers.md`, not in the README.
 - Versions: `scripts/version.mjs` (tested in `ui/test/version.test.ts`). A build at a release tag
   without changes has the release version. Any other build is a test build, for example
   `0.2.1-dev.5+a1b2c3d4`; Settings › General marks it "Test build". `build-dmg.sh` writes the version
@@ -222,7 +226,7 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   its own `DiffView` with `showFile` (the text, without colors), the notes on local changes and
   `NotesPanel`. Show Diff in the menu shows the diff in the diff panel. `centerHooks.reset` closes the
   files when another repository shows. ``Alt+` `` switches the project.
-- The Worktrees tab (`worktree-panel.ts`, `worktree-flow.ts`, `Mod+6`, the fourth left tab, after
+- The Worktrees tab (`worktree-panel.ts`, `worktree-flow.ts`, `Mod+3`, the fourth left tab, after
   Changes): the worktrees with a search (name, path, branch; `worktree-filter.ts` has unit tests) and a
   star for each. Favorites come first. The UI setting `favoriteWorktrees` keeps them by the path of the
   main worktree, so each worktree of a repository shows the same favorites. The Branches tab has no
@@ -236,6 +240,32 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   full ref names, and "!" before a name keeps an old branch out. The query `stale_branches` keeps them
   in `stale-branches.json` of the common git dir, as the favorites. A stale branch shows in the Stale
   group only, not in Local or Recent. The current branch is never stale by the rule.
+- Text selection and copy (`copy.ts`, `abs-path.ts`; the guards are `ui/test/user-select.test.ts` and the
+  scenario `copy-text.mjs`). The user can select each text of the app with the mouse, and Mod+C copies it.
+  - `user-select: none` is only for a control without text to copy: a header that a click opens and
+    closes, a drag handle, the project tabs, the rows of the Changes tab (they are `draggable`), and the
+    page while a splitter moves. Each selector is in `ALLOWED` of `user-select.test.ts` with its reason.
+  - A custom drag starts on a handle (`.rebase-grip`) or on an element without text to copy (a project
+    tab). Only that element calls `preventDefault()` on `mousedown`, so the text next to it stays
+    selectable. Do not add `preventDefault()` on `mousedown` to a row that shows text.
+  - A row keeps its element when the selection changes: change the class `selected`, and keep the
+    selection out of the signature of `reconcile()`. A new element under the mouse loses the text
+    selection. The log rows are the exception: they draw again and prevent the press, so the mouse does
+    not select their text. The details panel shows the same text, and it is selectable.
+  - Mod+C is the keymap action `copyHash`. Its `when` is `itemCopyText`, which gives "" in a text field,
+    in Monaco, and when `hasTextSelection()` is true. The browser then copies the text: a text selection
+    always wins. A dialog (`.overlay`) gets no keymap action at all.
+  - Without a text selection, Mod+C copies the selected items of the list that the user used last (a
+    press, a key or the focus). A list registers with `copySource(list, () => text)`: the log gives the
+    revision numbers, a list of files the absolute paths (`repoPaths`: the root of the repository of the
+    window and the path, one line for each file), the Branches tab the names, the Worktrees tab the path,
+    the Stash tab the message, the History window the revision number. A new list needs a `copySource`.
+  - Notes: a mouse selection of two or more lines opens the card of a new note, and its field takes the
+    focus. Mod+C in that field, while the field has no selection, copies the selected lines of the
+    editor (`selectedText` in `note-layer.ts`). A double click adds a note; it does not select a word.
+  - "Copy Path" in a menu copies the absolute path. "Copy Relative Path" copies the path in the repository.
+  - `copy.ts` removes the text selection on each press outside a text field. A row that prevents the
+    press, or a `draggable` row, would keep an old selection, and Mod+C would copy that old text.
 - Icons: add the Lucide file name to the glob and to `NAMES` in `ui/src/icons.ts`.
 - Trees of files: `buildTree`, `treeOrder`, `walkTree` in `file-tree.ts`.
   Unique short names of folders: `pathLabels` in `path-labels.ts`.

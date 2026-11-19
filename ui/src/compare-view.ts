@@ -1,6 +1,7 @@
 // Compare Branches, as IntelliJ's "Compare with Current": the commits that each side has and the other
 // has not, the changed files, and the diff of the selected file.
 
+import { copySource, repoPath } from "./copy";
 import { visit } from "./nav";
 import { onRepoChange, registerWindow } from "./windows";
 import { type KeyedItem, reconcile } from "./keyed";
@@ -71,6 +72,7 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
   const closeBtn = h("button", { class: "tb-button" }, "Close");
   const commitsEl = h("div", { class: "compare-commits" });
   const filesEl = h("div", { class: "history-list compare-files", tabIndex: 0 });
+  copySource(filesEl, () => files[selected] && repoPath(files[selected].path));
   const summary = h("span", { class: "muted-inline" }, "");
   const treeBtn = h("button", { class: "icon-button compare-tree-toggle" });
   const grip = h("div", { class: "vgrip" });
@@ -358,7 +360,8 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
           },
           { label: "Open in Editor", disabled: !worktree || c.status === "D", action: () => cb.openInEditor(c.path) },
           { separator: true },
-          { label: "Copy Path", action: () => cb.copyText(c.path) },
+          { label: "Copy Path", action: () => cb.copyText(repoPath(c.path)) },
+          { label: "Copy Relative Path", action: () => cb.copyText(c.path) },
         ]);
       };
       files = await inScope(await cb.changes(l, r));

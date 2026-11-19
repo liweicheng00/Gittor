@@ -96,8 +96,9 @@ export function openSettingsDialog(ctx: SettingsContext): Promise<Settings | nul
         }
         const key = eventKey(e);
         if (!key) return;
-        const keys = [...ctx.keymap.keysOf(recording.id)];
-        const cur = draft.keymap[recording.id] ?? keys;
+        // The keys of the dialog, not the saved keys: after a reset they are the defaults.
+        const defaults = ctx.keymap.actions.find((a) => a.id === recording?.id)?.defaults ?? [];
+        const cur = draft.keymap[recording.id] ?? defaults;
         const next = [...cur];
         next[recording.index] = key;
         draft.keymap[recording.id] = next;
@@ -510,6 +511,8 @@ export function openSettingsDialog(ctx: SettingsContext): Promise<Settings | nul
         reset.addEventListener("click", (e) => {
           e.preventDefault();
           delete draft.keymap[a.id];
+          // A key that waited for a press goes too, so the default keys show.
+          if (recording?.id === a.id) recording = null;
           render();
         });
         return h("div", { class: "keymap-row" + (changed ? " changed" : "") }, h("span", { class: "keymap-label" }, a.label), h("span", { class: "keymap-keys" }, ...chips, add), reset);
@@ -518,6 +521,7 @@ export function openSettingsDialog(ctx: SettingsContext): Promise<Settings | nul
       resetAll.addEventListener("click", (e) => {
         e.preventDefault();
         draft.keymap = {};
+        recording = null;
         render();
       });
       return [h("div", { class: "keymap-list" }, ...rows), h("div", { class: "dialog-field-row" }, resetAll, conflicts.size ? h("span", { class: "settings-hint error" }, `${conflicts.size} key(s) are used by more than one action. The first action in the list wins.`) : "")];

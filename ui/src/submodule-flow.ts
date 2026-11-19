@@ -1,5 +1,6 @@
 // The Submodules section of the Changes tab.
 
+import { repoPath } from "./copy";
 import { api, type Submodule } from "./api";
 import { showMenu } from "./context-menu";
 import { copyText, formatDate } from "./dom";
@@ -71,6 +72,7 @@ submodulePanel.onMenu = (s, e) =>
     { label: "Open as Repository", disabled: s.state === "uninitialized", action: () => void openRepo(submodulePath(s)) },
     { label: s.state === "uninitialized" ? "Initialize and Update" : "Update to the Recorded Commit", action: () => void updateSubmodules([s.path]) },
     { separator: true },
-    { label: "Copy Path", action: () => void copyText(s.path) },
+    { label: "Copy Path", action: () => void copyText(repoPath(s.path)) },
+    { label: "Copy Relative Path", action: () => void copyText(s.path) },
     { label: "Copy URL", disabled: !s.url, action: () => s.url && void copyText(s.url) },
   ]);

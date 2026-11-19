@@ -1,6 +1,7 @@
 // The keymap actions and the key handler.
 
 import { back, forward } from "./nav";
+import { copySource, itemCopyText } from "./copy";
 import { copyText } from "./dom";
 import { openInEditorHere, openProjectInEditor } from "./editor-flow";
 import { openInTerminal } from "./terminal-flow";
@@ -10,7 +11,7 @@ import { newBranchHere, undoLast } from "./operations";
 import { askForRepo, closeActiveTab, fetchAll, refresh, switchTab } from "./repo";
 import { settings } from "./settings";
 import { openSettings } from "./settings-flow";
-import { changes, commitPanel, diff, filesPanel, filterBar, worktreePanel, openBtn, showLeftTab, statusActivity, submodulePanel, toggleDiff } from "./shell";
+import { centerHooks, changes, commitPanel, diff, filesPanel, filterBar, log, worktreePanel, openBtn, showLeftTab, statusActivity, submodulePanel, toggleDiff } from "./shell";
 import { app } from "./state";
 import { pushBranch, updateBranch } from "./sync";
 import { resetZoom, zoomBy } from "./zoom";
@@ -45,6 +46,16 @@ for (const a of [
   { id: "update", label: "Update the Current Branch", defaults: ["Mod+T"], run: () => app.view && void updateBranch() },
   { id: "push", label: "Push", defaults: ["Mod+Shift+K"], run: () => app.view && void pushBranch() },
   { id: "newBranch", label: "New Branch", defaults: ["Mod+B"], run: () => app.view && void newBranchHere() },
+  { id: "undo", label: "Undo the Last Operation", defaults: ["Mod+Z"], run: () => app.view && void undoLast(), when: (t: HTMLElement) => !typing(t) },
+  { id: "filter", label: "Find in the Log (filter)", defaults: ["Mod+F"], run: () => { filterBar.text.focus(); filterBar.text.select(); }, when: (t: HTMLElement) => !t.closest(".monaco-editor") },
+  { id: "files", label: "Files Tab", defaults: ["Mod+`"], run: () => { showLeftTab("files"); filesPanel.focus(); } },
+  {
+    id: "branches",
+    label: "Branches Tab",
+    defaults: ["Mod+1"],
+    // A second press stays on the tab. View › Sidebar hides the left panel.
+    run: () => showLeftTab("branches"),
+  },
   {
     id: "commit",
     label: "Changes Tab (and the commit message)",
@@ -54,23 +65,13 @@ for (const a of [
       commitPanel.focusMessage();
     },
   },
-  { id: "undo", label: "Undo the Last Operation", defaults: ["Mod+Z"], run: () => app.view && void undoLast(), when: (t: HTMLElement) => !typing(t) },
-  { id: "filter", label: "Find in the Log (filter)", defaults: ["Mod+F"], run: () => { filterBar.text.focus(); filterBar.text.select(); }, when: (t: HTMLElement) => !t.closest(".monaco-editor") },
-  {
-    id: "branches",
-    label: "Branches Tab",
-    defaults: ["Mod+1"],
-    // A second press stays on the tab. View › Sidebar hides the left panel.
-    run: () => showLeftTab("branches"),
-  },
-  { id: "stash", label: "Stash Tab", defaults: ["Mod+3"], run: () => showLeftTab("stash") },
-  { id: "reviews", label: "Reviews Tab", defaults: ["Mod+4"], run: () => showLeftTab("reviews") },
-  { id: "worktrees", label: "Worktrees Tab", defaults: ["Mod+6"], run: () => { showLeftTab("worktrees"); worktreePanel.focus(); } },
-  { id: "files", label: "Files Tab", defaults: ["Mod+`"], run: () => { showLeftTab("files"); filesPanel.focus(); } },
+  { id: "worktrees", label: "Worktrees Tab", defaults: ["Mod+3"], run: () => { showLeftTab("worktrees"); worktreePanel.focus(); } },
+  { id: "stash", label: "Stash Tab", defaults: ["Mod+4"], run: () => showLeftTab("stash") },
+  { id: "reviews", label: "Reviews Tab", defaults: ["Mod+5"], run: () => showLeftTab("reviews") },
   {
     id: "submodules",
     label: "Submodules (in the Changes tab)",
-    defaults: ["Mod+5"],
+    defaults: ["Mod+6"],
     run: () => {
       if (submodulePanel.el.hidden) return;
       showLeftTab("commit");
@@ -79,7 +80,15 @@ for (const a of [
   },
   { id: "diffPanel", label: "Diff Panel (show or hide)", defaults: [], run: () => toggleDiff() },
   { id: "hideDiff", label: "Hide the Diff Panel", defaults: ["Escape"], run: () => toggleDiff(false), when: (t: HTMLElement) => !typing(t) && settings.showDiff },
-  { id: "closeProject", label: "Close the Project Tab", defaults: ["Mod+W"], run: () => void closeActiveTab() },
+  {
+    id: "closeProject",
+    label: "Close the File, or the Project Tab",
+    defaults: ["Mod+W"],
+    // An open file of the center panel closes first. Without one, the project tab closes.
+    run: () => {
+      if (!centerHooks.closeFile()) void closeActiveTab();
+    },
+  },
   { id: "switchProject", label: "Switch Project", defaults: ["Alt+`"], run: () => switchProject(1) },
   { id: "switchProjectBack", label: "Switch Project (back)", defaults: ["Alt+Shift+`"], run: () => switchProject(-1) },
   ...projectKeys,
@@ -100,13 +109,11 @@ for (const a of [
   { id: "previousFile", label: "Previous File", defaults: ["Alt+ArrowUp"], run: () => (app.diffSource === "local" ? commitPanel.move(-1) : changes.move(-1)) },
   {
     id: "copyHash",
-    label: "Copy the Revision Number",
+    label: "Copy (the revision number, the path or the name of the selection)",
     defaults: ["Mod+C"],
-    run: () => {
-      void copyText(app.selected.map((s) => s.oid).join(" "));
-      statusActivity.textContent = "Copied the revision number";
-    },
-    when: (t: HTMLElement) => !typing(t) && !!t.closest(".log") && app.selected.length > 0,
+    run: (t: HTMLElement) => void copyText(itemCopyText(t)),
+    // A text selection and a text field keep the key: the browser copies the text.
+    when: (t: HTMLElement) => !!itemCopyText(t),
   },
   { id: "navigateBack", label: "Back (the file before)", defaults: isMac ? ["Mod+[", "Mod+Alt+ArrowLeft"] : ["Mod+Alt+ArrowLeft"], run: () => void navigate(-1) },
   { id: "navigateForward", label: "Forward (the next file)", defaults: isMac ? ["Mod+]", "Mod+Alt+ArrowRight"] : ["Mod+Alt+ArrowRight"], run: () => void navigate(1) },
@@ -116,6 +123,9 @@ for (const a of [
   { id: "settings", label: "Settings", defaults: [isMac ? "Mod+Comma" : "Mod+Alt+S"], run: () => void openSettings() },
 ] as KeyAction[]) keymap.add(a);
 
+// Mod+C in the log copies the revision numbers of the selected commits.
+copySource(log.el, () => app.selected.map((s) => s.oid).join(" "));
+
 /** The dialogs and windows that were open when the key came. A window can close on the key (Esc) before
  * the handler below runs; the key still belongs to that window then. The capture phase of the window
  * comes before all other handlers. */
@@ -123,7 +133,7 @@ let openAtKey = { dialog: false, window: false };
 window.addEventListener("keydown", () => (openAtKey = { dialog: !!document.querySelector(".overlay"), window: !!document.querySelector(".merge-overlay") }), true);
 
 /** The actions whose keys work in a window such as Compare or Review. */
-const inWindow = (id: string) => id === "openInEditor" || id === "openProjectInEditor" || id.startsWith("zoom") || id.startsWith("navigate");
+const inWindow = (id: string) => id === "copyHash" || id === "openInEditor" || id === "openProjectInEditor" || id.startsWith("zoom") || id.startsWith("navigate");
 
 /** The key of an action works at this element now: the same rules as the key handler below. */
 export function keyWorksAt(id: string, target: HTMLElement): boolean {

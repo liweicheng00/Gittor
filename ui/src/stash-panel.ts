@@ -1,5 +1,6 @@
 // Stash tab: the stashes of the repository, newest first.
 
+import { copySource } from "./copy";
 import type { Stash } from "./api";
 import { formatDate, h, icon } from "./dom";
 
@@ -19,6 +20,7 @@ export class StashPanel {
     const refresh = h("button", { class: "icon-button", title: "Refresh" }, icon("refresh"));
     refresh.addEventListener("click", () => this.onRefresh());
     this.list = h("div", { class: "stash-list", tabIndex: 0 });
+    copySource(this.list, () => (this.selected === null ? "" : this.stashes[this.selected]?.message));
     this.list.addEventListener("keydown", (e) => {
       if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
       e.preventDefault();
@@ -56,7 +58,8 @@ export class StashPanel {
 
   private select(i: number) {
     this.selected = i;
-    this.render();
+    // The selection changes the class only. A new row under the mouse would lose a text selection.
+    [...this.list.querySelectorAll(".stash-row")].forEach((r, n) => r.classList.toggle("selected", n === i));
     this.list.querySelector(".stash-row.selected")?.scrollIntoView({ block: "nearest" });
     this.onSelect(this.stashes[i]);
   }

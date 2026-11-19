@@ -194,12 +194,12 @@ await page.keyboard.press("Escape");
 await page.waitForSelector(".review-window", { state: "detached" });
 
 // A second review from the Reviews tab, then switch between the two.
-// The tabs of the left pane: Mod+1 to Mod+4.
-for (const [key, panel] of [["2", ".commit-panel"], ["3", ".stash-panel"], ["1", ".sidebar"]]) {
+// The tabs of the left pane: Mod+1 to Mod+5.
+for (const [key, panel] of [["2", ".commit-panel"], ["3", ".worktree-panel"], ["4", ".stash-panel"], ["1", ".sidebar"]]) {
   await page.keyboard.press(`Control+${key}`);
   await within(`Mod+${key} shows ${panel}`, async () => !(await page.$eval(panel, (e) => e.hidden)));
 }
-await page.keyboard.press("Control+4");
+await page.keyboard.press("Control+5");
 await page.waitForSelector(".review-panel:not([hidden])");
 await page.click(".review-panel button:has-text('New Review')");
 await page.click(".dialog .dialog-branch >> nth=0");
@@ -259,7 +259,7 @@ execFileSync("git", ["-C", repo, "worktree", "remove", "--force", tmp]);
 await page.click(".tb-button[aria-label='Refresh']");
 await page.keyboard.press("Control+1");
 await page.waitForSelector(".sidebar .branch:has-text('feature/tree')");
-await page.keyboard.press("Control+4");
+await page.keyboard.press("Control+5");
 await page.click(".review-panel button:has-text('New Review')");
 await page.waitForSelector(".dialog:has-text('Review Branch')");
 await pickBranch(0, "feature/tree");

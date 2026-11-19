@@ -1,5 +1,6 @@
 // The context menus of the log, the branches and the changed files.
 
+import { repoPaths } from "./copy";
 import { api, type BranchInfo, type Change, type Row } from "./api";
 import { WORKTREE } from "./compare-view";
 import { menuBelow, type MenuItem, showMenu } from "./context-menu";
@@ -62,6 +63,10 @@ async function rowMenu(r: Row, e: MouseEvent) {
   items.push({ separator: true }, { header: "Commits" });
   items.push(
     { label: multi ? `Cherry-Pick ${rows.length} Commits` : "Cherry-Pick", action: () => void runOp({ op: "cherryPick", oids: [...rows].reverse().map((s) => s.oid) }, "Cherry-picking") },
+    {
+      label: multi ? `Cherry-Pick ${rows.length} Commits without Commit` : "Cherry-Pick without Commit",
+      action: () => void runOp({ op: "cherryPickNoCommit", oids: [...rows].reverse().map((s) => s.oid) }, "Cherry-picking without a commit"),
+    },
     { label: multi ? `Revert ${rows.length} Commits` : "Revert Commit", action: () => void runOp({ op: "revert", oids: rows.map((s) => s.oid) }, "Reverting") },
     { label: "Edit Commit Message…", disabled: multi, action: () => void rewriteSelected("reword", [r]) },
     { label: "Fixup…", disabled: multi || !r.onHead, action: () => fixupInto(r, "fixup") },
@@ -297,7 +302,8 @@ changes.onContextMenu = (files, e) => {
     { label: `Drop Selected Changes${plural}…`, disabled: !oneOwnCommit, action: () => void rewriteFilesOf(files, false) },
     { label: `Extract Selected Changes to Separate Commit${plural}…`, disabled: !oneOwnCommit, action: () => void rewriteFilesOf(files, true) },
     { separator: true },
-    { label: files.length > 1 ? "Copy Paths" : "Copy Path", action: () => void copyText(files.map((f) => f.path).join("\n")) },
+    { label: files.length > 1 ? "Copy Paths" : "Copy Path", action: () => void copyText(repoPaths(files.map((f) => f.path))) },
+    { label: files.length > 1 ? "Copy Relative Paths" : "Copy Relative Path", action: () => void copyText(files.map((f) => f.path).join("\n")) },
     { label: "Copy File Name", disabled: files.length !== 1, action: () => void copyText(c.path.split("/").pop() ?? c.path) },
   ]);
 };

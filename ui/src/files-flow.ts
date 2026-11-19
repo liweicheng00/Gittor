@@ -4,6 +4,7 @@
 // notes with Copy All, and a note on the whole file. Show Diff in the menu shows the diff of a change in
 // the diff panel.
 
+import { repoPath } from "./copy";
 import { api } from "./api";
 import { setFileViewReload, showLocalDiff } from "./commit-flow";
 import { DiffView } from "./diff-view";
@@ -15,6 +16,7 @@ import { keymap } from "./keyboard";
 import { listLocalNotes, localNoteHandlers } from "./local-notes";
 import { NotesPanel } from "./notes-panel";
 import { visit } from "./nav";
+import { jumpToOid } from "./repo";
 import { settings } from "./settings";
 import { centerHooks, centerTabs, commitPanel, fileHost, filesPanel, filterBar, leftTabHooks, log, showLeftTab } from "./shell";
 
@@ -57,6 +59,12 @@ function theEditor(): DiffView {
   ed.onHide = () => active && closeFile(active);
   ed.onOpenInEditor = (path, line, column) => void openInEditor(path, line, column);
   ed.onHistory = (path) => showHistory(path);
+  // Annotate: the commit and the author of each line. A click on a line shows its commit in the log.
+  ed.onBlame = api.blame;
+  ed.onBlameClick = (oid) => {
+    showLog();
+    void jumpToOid(oid, true);
+  };
   fileHost.append(ed.el, notesPanel.el);
   editor = ed;
   return ed;
@@ -75,7 +83,8 @@ function renderTabs() {
       if (e.button === 0 && !(e.target as HTMLElement).closest(".center-tab-close")) select();
     });
     if (close) {
-      const x = h("button", { class: "center-tab-close", title: "Close the file" }, icon("close"));
+      // Mod+W closes the active file, so its button names the key.
+      const x = h("button", { class: "center-tab-close", title: "Close the file", "data-key-action": on ? "closeProject" : undefined }, icon("close"));
       x.addEventListener("click", (e) => {
         e.stopPropagation();
         close();
@@ -98,6 +107,13 @@ function showLog() {
   log.redraw();
   renderTabs();
 }
+
+centerHooks.closeFile = () => {
+  const path = active ?? openFiles[openFiles.length - 1];
+  if (!path) return false;
+  closeFile(path);
+  return true;
+};
 
 function closeFile(path: string) {
   const at = openFiles.indexOf(path);
@@ -181,6 +197,7 @@ filesPanel.onMenu = (path, e) => {
       },
     },
     { separator: true },
-    { label: "Copy Path", action: () => void copyText(path) },
+    { label: "Copy Path", action: () => void copyText(repoPath(path)) },
+    { label: "Copy Relative Path", action: () => void copyText(path) },
   ]);
 };

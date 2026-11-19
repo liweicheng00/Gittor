@@ -2,6 +2,7 @@
 // The checked files go into the commit. By default the new files in Changes are checked; the files in
 // .ignore cannot be checked.
 
+import { copySource, repoPaths } from "./copy";
 import { type Change, type ChangeListView, DEFAULT_LIST, IGNORE_LIST, type LocalChanges } from "./api";
 import { statusName } from "./changes-panel";
 import { fileIcon } from "./file-icon";
@@ -145,6 +146,7 @@ export class CommitPanel {
       this.render();
     });
     this.tree = h("div", { class: "commit-tree", tabIndex: 0 });
+    copySource(this.tree, () => repoPaths([...new Set(this.selectedFiles().map((f) => f.change.path))]));
     this.tree.addEventListener("keydown", (e) => this.onKey(e));
     this.message = h("textarea", { class: "commit-message", placeholder: "Commit message", spellcheck: true, rows: 5 });
     this.message.addEventListener("input", () => {

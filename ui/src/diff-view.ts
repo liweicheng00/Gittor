@@ -1,5 +1,6 @@
 // Monaco diff of one file, with a toolbar for navigation and diff options.
 
+import { repoPath } from "./copy";
 import { revertChange } from "./revert-change";
 import { diffLines } from "./diff3";
 import { lineAfter, lineHunks, rangeEdits } from "./text-edit";
@@ -70,7 +71,7 @@ export class DiffView {
   private previewHost: HTMLElement;
   private previewBtn: HTMLButtonElement;
   /** The texts of a Markdown file on show; null for other files. */
-  private markdown: { left: string; right: string; kind: "diff" | "added" | "deleted" } | null = null;
+  private markdown: { left: string; right: string; kind: "diff" | "added" | "deleted" | "view" } | null = null;
   /** The editor that shows the file when the preview is off. */
   private editorMode: "diff" | "single" = "diff";
   /** In one column: the blocks of the old text, which a diff puts between the new blocks. */
@@ -136,7 +137,7 @@ export class DiffView {
     this.title = h("span", { class: "diff-title" });
     this.sides = h("span", { class: "diff-sides" });
     this.stats = h("span", { class: "diff-stats" });
-    const copyPath = btn(icon("copy"), "Copy the file path", () => this.path && void copyText(this.path));
+    const copyPath = btn(icon("copy"), "Copy the absolute path of the file", () => this.path && void copyText(repoPath(this.path)));
     this.annotateBox = h("input", { type: "checkbox" });
     this.annotateBox.addEventListener("change", () => void this.annotate());
     const annotate = h("label", { class: "diff-option", title: "Show the commit that last changed each line (git blame). Click an annotation to go to its commit." }, this.annotateBox, "Annotate");
@@ -571,6 +572,8 @@ export class DiffView {
 
   private clearBlame() {
     this.blameRequest++;
+    // The message of an earlier Annotate that failed goes; each click must not add one more.
+    for (const e of this.stats.querySelectorAll(".blame-error")) e.remove();
     if (this.blameEditor) {
       this.blameEditor.updateOptions({ lineNumbers: "on", lineNumbersMinChars: 5 });
       this.blameDeco = this.blameEditor.deltaDecorations(this.blameDeco, []);
@@ -589,7 +592,7 @@ export class DiffView {
     try {
       blame = await this.onBlame(this.source.path, this.source.rev);
     } catch (e) {
-      if (req === this.blameRequest) this.stats.append(h("span", { class: "muted-inline" }, ` · annotate: ${String(e).replace(/^Error: /, "")}`));
+      if (req === this.blameRequest) this.stats.append(h("span", { class: "muted-inline blame-error" }, ` · annotate: ${String(e).replace(/^Error: /, "")}`));
       return;
     }
     if (req !== this.blameRequest) return;
@@ -697,8 +700,8 @@ export class DiffView {
     this.notice.hidden = true;
     const lang = languageFor(change.path);
     const kind = view ? "view" : left.missing === right.missing ? "diff" : right.missing ? "deleted" : "added";
-    // A file without changes shows as a diff of the same text in the preview: no marks.
-    this.markdown = lang === "markdown" ? (kind === "view" ? { left: right.text ?? "", right: right.text ?? "", kind: "diff" } : { left: left.text ?? "", right: right.text ?? "", kind }) : null;
+    // A file of the Files tab shows in one column without a label: there is nothing to compare.
+    this.markdown = lang === "markdown" ? { left: left.text ?? "", right: right.text ?? "", kind } : null;
     if (kind !== "diff") this.showSingle(kind === "deleted" ? left.text ?? "" : right.text ?? "", lang, kind);
     else this.setModels(left.text ?? "", right.text ?? "", lang);
     this.renderPreview(same);
@@ -742,7 +745,8 @@ export class DiffView {
     const m = this.markdown;
     // The columns: the text and the label of each.
     let texts: [string, string][];
-    if (m.kind !== "diff") texts = [[m.kind === "deleted" ? m.left : m.right, m.kind === "deleted" ? "Deleted file" : "New file"]];
+    if (m.kind === "view") texts = [[m.right, ""]];
+    else if (m.kind !== "diff") texts = [[m.kind === "deleted" ? m.left : m.right, m.kind === "deleted" ? "Deleted file" : "New file"]];
     else if (settings.sideBySide) texts = [[m.left, this.sideNames[0] || "Before"], [m.right, this.sideNames[1] || "After"]];
     else texts = [[m.right, this.sideNames[1] || "After"]];
     // In one column, the old blocks that a change removed show between the new blocks.
@@ -757,7 +761,7 @@ export class DiffView {
       const cols = texts.map(([text, label]) => {
         const doc = renderMarkdown(text, ctx);
         updateDoc(doc, doc, text);
-        return h("div", { class: "md-col" }, h("div", { class: "md-col-label" }, label), doc);
+        return h("div", { class: "md-col" }, label ? h("div", { class: "md-col-label" }, label) : "", doc);
       });
       this.previewHost.replaceChildren(h("div", { class: `md-cols md-cols-${cols.length}` }, ...cols));
       this.previewHost.scrollTop = top;
