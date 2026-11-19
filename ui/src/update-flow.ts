@@ -3,7 +3,8 @@
 // Only the main window checks. A build without the public key of the updater (a local build) does
 // not check.
 
-import { appVersion, checkForUpdate, restartApp, updatesEnabled, type UpdateInfo } from "./api";
+import { api, appVersion, checkForUpdate, restartApp, updatesEnabled, type UpdateInfo } from "./api";
+import { h } from "./dom";
 import { toast, type ToastHandle } from "./notify";
 import { settings, soloWindow } from "./settings";
 import { statusActivity } from "./shell";
@@ -45,7 +46,15 @@ export async function checkNow(manual: boolean): Promise<string> {
   return `Gittor ${update.version} is available.`;
 }
 
-/** The notification shows this many lines of the release notes. Settings links to all of them. */
+/** The releases of Gittor on GitHub: the downloads and the release notes. */
+export const RELEASES_URL = "https://github.com/liweicheng00/Gittor/releases";
+
+/** The page of the release notes of a version. */
+export function releaseNotesUrl(version: string): string {
+  return `${RELEASES_URL}/tag/v${version.replace(/^v/, "")}`;
+}
+
+/** The notification shows this many lines of the release notes, and a link to all of them. */
 const NOTE_LINES = 3;
 
 function offer(update: UpdateInfo) {
@@ -54,6 +63,14 @@ function offer(update: UpdateInfo) {
   const notes = lines.slice(0, NOTE_LINES).join("\n") + (lines.length > NOTE_LINES ? "\n…" : "");
   const card = toast(`Gittor ${update.version} is available.${notes ? `\n${notes}` : ""}`, "info", undefined, STAY_MS);
   card.setAction({ label: "Update", keep: true, run: () => void install(update, card) });
+  // The link stays on the card while the update downloads, and after it.
+  const url = releaseNotesUrl(update.version);
+  const link = h("a", { class: "toast-link", href: url, title: url }, "Release notes");
+  link.addEventListener("click", (e) => {
+    e.preventDefault();
+    void api.openUrl(url);
+  });
+  card.el.querySelector(".toast-body")?.append(link);
 }
 
 /**

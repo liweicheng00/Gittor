@@ -37,6 +37,7 @@ const toastWith = (page, text) => page.$(`.toast:has-text("${text}")`);
 const page = await open({ version: "9.9.9", notes: "Better reviews.", stepMs: 600, failures: 1 });
 await within(page, "the notification offers the new version", async () => (await toastWith(page, "Gittor 9.9.9 is available.")) !== null, 15000);
 check("the notification has the release notes", ((await page.textContent(".toast:has-text('9.9.9')")) ?? "").includes("Better reviews."));
+check("the notification links to the release notes of the version", (await page.getAttribute(".toast:has-text('9.9.9') .toast-link", "href")) === "https://github.com/liweicheng00/Gittor/releases/tag/v9.9.9");
 await shot(page, "up1-available");
 // The card of the offer shows the download: the text with the percent, and a bar.
 const card = await toastWith(page, "Gittor 9.9.9 is available.");

@@ -379,6 +379,7 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .toast-progress.busy .toast-progress-bar { width: 30%; animation: toast-busy 1.2s ease-in-out infinite; }
 @keyframes toast-busy { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
 .toast-action { padding: 2px 10px; border: 1px solid var(--accent); border-radius: 4px; background: transparent; color: var(--accent); cursor: pointer; font-weight: 600; }
+.toast-link { align-self: flex-start; color: var(--accent); font-size: 12px; text-decoration: underline; cursor: pointer; }
 
 /* operation banner */
 .op-banner { padding: 6px 10px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--tag) 16%, var(--bg)); }
