@@ -103,8 +103,9 @@ html.titlebar-tabs .tab { border-top: 2px solid transparent; }
 .tb-split-menu .icon-caret { margin: 0; }
 .tb-repo { margin-left: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tb-branch { color: var(--muted); }
+.icon-button:disabled { opacity: 0.35; cursor: default; }
 .icon-button { border: 1px solid transparent; background: transparent; border-radius: 4px; padding: 0 5px; cursor: pointer; line-height: 20px; min-width: 22px; }
-.icon-button:hover { background: var(--hover); border-color: var(--border); }
+.icon-button:hover:not(:disabled) { background: var(--hover); border-color: var(--border); }
 
 /* status bar */
 .statusbar { overflow: hidden; min-width: 0; display: flex; gap: 16px; align-items: center; padding: 2px 10px; border-top: 1px solid var(--border); background: var(--panel); color: var(--muted); font-size: 12px; min-height: 24px; white-space: nowrap; }
