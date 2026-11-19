@@ -80,9 +80,9 @@ async function addNote(d, line, text) {
 
 // The status bar shows the path of the work dir, which is long and says nothing to a viewer.
 const HIDE_PATH = ".statusbar .sb-left, .statusbar .sb-mid { visibility: hidden; }";
-// The page has the form of the place of the app in a video for a phone (4:5). The build shows all of it
+// The page has the form of the place of the app in a video for a phone (2:3). The build shows all of it
 // or a part of it: d.cam(...) says which part.
-const VIEW = { width: 1000, height: 1250 };
+const VIEW = { width: 1000, height: 1500 };
 
 const DIFF = ".diff .editor.modified";
 const term = (d, fn, arg) => d.page.evaluate(([f, a]) => window.__vidTerm[f](a), [fn, arg]);
@@ -535,4 +535,4 @@ const scenes = [
   },
 ];
 
-await recordScenes({ scenes, work, out, only, makeRepos: join(here, "make-shorts-repo.sh"), settings: presetSettings, css: HIDE_PATH, view: VIEW });
+await recordScenes({ scenes, work, out, only, makeRepos: join(here, "make-shorts-repo.sh"), settings: presetSettings, css: HIDE_PATH, view: VIEW, scale: 2, slow: 4 });

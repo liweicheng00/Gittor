@@ -1,5 +1,5 @@
 // Makes the short videos for social posts from the scenes of shorts-record.mjs. Each short is an MP4 for
-// a phone (1080x1920) with sound: the name of the app, a caption, the app in a frame, and an end card.
+// a phone (1080x1920) with sound: a caption, the app in a frame, and an end card.
 // A camera shows all of the page or a part of it and moves between the places that the scene set.
 //   node scripts/video/shorts-build.mjs <rec-dir> <out-dir> [style] [scene ...]
 // <rec-dir> has the <scene>.webm files and scenes.json. The style of the music is pulse (the default),
@@ -7,7 +7,7 @@
 // on the PATH. Set CHROMIUM to a Chromium binary when Playwright has no downloaded browser.
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -41,8 +41,9 @@ const FADE = 0.4; // The cross fade to the end card.
 const FPS = 30;
 const W = 1080;
 const H = 1920;
-// The place of the app in the video. It has the form of the page (4:5).
-const SLOT = { x: 28, y: 540, w: 1024, h: 1280 };
+// The place of the app in the video. It has the form of the page (2:3). The caption is in the 170
+// pixels above it: the owner wants most of the height for the app.
+const SLOT = { x: 20, y: 256, w: 1040, h: 1560 };
 const MOVE = 0.7; // The time of a move of the camera.
 const MAX_ZOOM = 2.6;
 
@@ -57,11 +58,8 @@ const page = (body) => `<!doctype html><html><head><meta charset="utf-8"><style>
     box-shadow: 0 0 0 3000px #14161a; }
   .edge { position: absolute; left: ${SLOT.x}px; top: ${SLOT.y}px; width: ${SLOT.w}px; height: ${SLOT.h}px; border-radius: 26px;
     box-sizing: border-box; border: 2px solid rgba(255, 255, 255, 0.14); }
-  .brand { position: absolute; left: 0; right: 0; top: 120px; display: flex; align-items: center; justify-content: center; gap: 18px;
-    font-size: 46px; font-weight: 700; color: #c3c8d0; }
-  .brand img { width: 64px; height: 64px; }
-  .cap { position: absolute; left: 60px; right: 60px; top: 220px; height: 290px; display: flex; align-items: center; justify-content: center;
-    text-align: center; font-size: 76px; line-height: 1.16; font-weight: 750; letter-spacing: -0.015em; color: #fff; }
+  .cap { position: absolute; left: 40px; right: 40px; top: 76px; height: 170px; display: flex; align-items: center; justify-content: center;
+    text-align: center; font-size: 58px; line-height: 1.14; font-weight: 750; letter-spacing: -0.015em; color: #fff; }
   .card { position: absolute; inset: 0; background: radial-gradient(circle at 50% 42%, #2a2f3a 0%, #14161a 70%); display: flex;
     flex-direction: column; align-items: center; justify-content: center; gap: 30px; text-align: center; }
   .card img { width: 220px; height: 220px; }
@@ -77,7 +75,7 @@ const render = async (html, file, transparent = true) => {
   await tab.screenshot({ path: file, omitBackground: transparent });
 };
 const img = `<img src="data:image/png;base64,${icon}">`;
-await render(`<div class="hole"></div><div class="edge"></div><div class="brand">${img}Gittor</div>`, join(tmp, "frame.png"));
+await render(`<div class="hole"></div><div class="edge"></div>`, join(tmp, "frame.png"));
 await render(`<div class="card">${img}<div class="name">Gittor</div><div class="tag">The git client for<br>reviewing your agents</div>
   <div class="small">Download for macOS<br>liweicheng00.github.io/Gittor</div></div>`, join(tmp, "short-end.png"), false);
 for (const s of shorts) {
@@ -97,7 +95,7 @@ function eased(keys, pick, time) {
   return expr;
 }
 
-const enc = ["-c:v", "libx264", "-preset", "slow", "-crf", "19", "-pix_fmt", "yuv420p", "-r", String(FPS)];
+const enc = ["-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p", "-r", String(FPS)];
 for (const [n, s] of shorts.entries()) {
   if (only.length && !only.includes(s.scene)) continue;
   const { start, duration, marks, cams, view } = meta[s.scene];
@@ -125,7 +123,9 @@ for (const [n, s] of shorts.entries()) {
   const cy = eased(keys, (k) => k.cy, "it");
   // The time of each caption in the video.
   const at = s.captions.map(([mark]) => (mark ? marks[mark] / SPEED : 0));
-  const inputs = ["-ss", String(start), "-t", String(duration), "-i", join(rec, `${s.scene}.webm`), "-loop", "1", "-t", total.toFixed(2), "-i", join(tmp, "frame.png")];
+  // A recording with a scale is an MP4 with two times the pixels; else it is the WebM of Playwright.
+  const source = [".mp4", ".webm"].map((ext) => join(rec, s.scene + ext)).find((f) => existsSync(f));
+  const inputs = ["-ss", String(start), "-t", String(duration), "-i", source, "-loop", "1", "-t", total.toFixed(2), "-i", join(tmp, "frame.png")];
   // The page at two times its size, so the camera moves in steps of half a pixel.
   let chain = `[0:v]setpts=PTS/${SPEED},fps=${FPS},scale=${view.width * 2}:${view.height * 2}:flags=lanczos,` +
     `zoompan=z='${zoom}':x='(${cx})*2-iw/zoom/2':y='(${cy})*2-ih/zoom/2':d=1:s=${SLOT.w}x${SLOT.h}:fps=${FPS},` +

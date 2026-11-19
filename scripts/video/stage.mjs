@@ -5,6 +5,7 @@
 import { createRequire } from "node:module";
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -58,7 +59,8 @@ export const overlayScript = () => {
   const arrow = `<svg viewBox="0 0 22 22" width="22" height="22"><path d="M3 2 L3 18 L7.5 14 L10.5 20.5 L13.5 19.2 L10.6 12.8 L16.5 12.8 Z" fill="#fff" stroke="#000" stroke-width="1.3" stroke-linejoin="round"/></svg>`;
   const install = () => {
     const style = document.createElement("style");
-    style.textContent = css;
+    const k = window.__vidSlow ?? 1;
+    style.textContent = css.replace(/(\d*\.?\d+)s\b/g, (all, n) => `${n * k}s`);
     document.head.append(style);
     const cursor = document.createElement("div");
     cursor.id = "vid-cursor";
@@ -147,12 +149,16 @@ export class Director {
     this.x = view.width / 2;
     this.y = view.height / 2;
     this.t0 = Date.now();
+    /** The recording runs this many times slower than the video. */
+    this.slow = 1;
     /** Seconds from the start of the scene, by name. The build places captions and music on them. */
     this.marks = {};
     /** The places of the camera, in order. */
     this.cams = [];
   }
-  mark(name) { this.marks[name] = (Date.now() - this.t0) / 1000; }
+  /** Seconds of the video from the start of the scene. */
+  now() { return (Date.now() - this.t0) / 1000 / this.slow; }
+  mark(name) { this.marks[name] = this.now(); }
   /**
    * Points the camera of the build at the page ("full") or at the box around some elements. The build
    * moves from the last place to this one. `zoom` sets the scale; without it the box fills the frame.
@@ -170,9 +176,9 @@ export class Director {
       }
     }
     const round = (v) => Math.round(v);
-    this.cams.push({ t: +((Date.now() - this.t0) / 1000).toFixed(2), zoom, align, box: box && { x: round(box.x1 - pad), y: round(box.y1 - pad), w: round(box.x2 - box.x1 + 2 * pad), h: round(box.y2 - box.y1 + 2 * pad) } });
+    this.cams.push({ t: +this.now().toFixed(2), zoom, align, box: box && { x: round(box.x1 - pad), y: round(box.y1 - pad), w: round(box.x2 - box.x1 + 2 * pad), h: round(box.y2 - box.y1 + 2 * pad) } });
   }
-  wait(ms) { return this.page.waitForTimeout(ms); }
+  wait(ms) { return this.page.waitForTimeout(ms * this.slow); }
   async point(target, dx = 0, dy = 0) {
     if (typeof target !== "string") return target;
     const loc = this.page.locator(target).first();
@@ -189,7 +195,7 @@ export class Director {
     // themes blur what is behind a dialog).
     const begin = Date.now();
     for (;;) {
-      const t = Math.min(1, (Date.now() - begin) / time);
+      const t = Math.min(1, (Date.now() - begin) / (time * this.slow));
       const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
       await this.page.mouse.move(this.x + (p.x - this.x) * e, this.y + (p.y - this.y) * e);
       if (t >= 1) break;
@@ -221,7 +227,7 @@ export class Director {
     await this.page.keyboard.press(combo);
   }
   async type(text, delay = 55) {
-    await this.page.keyboard.type(text, { delay });
+    await this.page.keyboard.type(text, { delay: delay * this.slow });
   }
   async drag(from, to, { ms = 1200 } = {}) {
     await this.move(from);
@@ -240,13 +246,19 @@ export const row = (subject) => `.log-row:has(.subject-text:text-is("${subject}"
  * and its own video file: the server keeps the data of an open repository.
  * `out` gets <scene>.webm and scenes.json (the start, the duration and the marks of each scene).
  * `prep` of a scene changes the repositories before the page opens. `setup` prepares the page.
- * `css` is a style sheet for the page of each scene. `view` is the size of the page.
+ * `css` is a style sheet for the page of each scene. `view` is the size of the page. `scale` is the
+ * number of device pixels for each CSS pixel: with 2, the file is <scene>.mp4 with two times the pixels.
+ * `slow` runs the scene and the timers of the page that many times slower, and the video at the usual
+ * speed: the browser draws only about 6 large frames in a second.
  */
-export async function recordScenes({ scenes, work, out, only = [], makeRepos, settings: preset, css = "", view = VIEW }) {
+export async function recordScenes({ scenes, work, out, only = [], makeRepos, settings: preset, css = "", view = VIEW, scale = 1, slow = 1 }) {
   mkdirSync(out, { recursive: true });
   const port = process.env.VIDEO_PORT ?? "5191";
   const base = `http://127.0.0.1:${port}`;
-  const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
+  // The screencast has device pixels only with a real scale factor of the browser, not with the
+  // emulation of Playwright. The window is 87 pixels higher than its page.
+  const args = scale > 1 ? [`--force-device-scale-factor=${scale}`, `--window-size=${view.width},${view.height + 87}`] : [];
+  const browser = await chromium.launch({ args, ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) });
   const meta = existsSync(join(out, "scenes.json")) ? JSON.parse(readFileSync(join(out, "scenes.json"), "utf8")) : {};
   for (const scene of scenes) {
     if (only.length && !only.includes(scene.name)) continue;
@@ -263,12 +275,26 @@ export async function recordScenes({ scenes, work, out, only = [], makeRepos, se
     scene.prep?.();
     const tmp = join(out, `tmp-${scene.name}`);
     rmSync(tmp, { recursive: true, force: true });
-    const context = await browser.newContext({ viewport: view, recordVideo: { dir: tmp, size: view } });
+    mkdirSync(tmp);
+    // The video of Playwright has the CSS pixels of the page and a low bit rate. With a scale, the
+    // frames come from the screencast of the browser, in device pixels.
+    const context = await browser.newContext(scale > 1 ? { viewport: null } : { viewport: view, recordVideo: { dir: tmp, size: view } });
     await context.addInitScript((s) => {
       if (sessionStorage.getItem("vid-init")) return;
       sessionStorage.setItem("vid-init", "1");
       localStorage.setItem("gittor.settings.v1", JSON.stringify(s));
     }, preset(scene.settings?.() ?? {}));
+    // The timers of the page run `slow` times slower, as the Director does, so a toast stays for the
+    // same time of the video. The overlay reads the number for the times of its own CSS.
+    if (slow > 1) {
+      await context.addInitScript((k) => {
+        const timeout = window.setTimeout;
+        const interval = window.setInterval;
+        window.setTimeout = (fn, ms = 0, ...rest) => timeout(fn, ms * k, ...rest);
+        window.setInterval = (fn, ms = 0, ...rest) => interval(fn, ms * k, ...rest);
+        window.__vidSlow = k;
+      }, slow);
+    }
     await context.addInitScript(overlayScript);
     if (css) {
       await context.addInitScript((text) => addEventListener("DOMContentLoaded", () => {
@@ -282,12 +308,29 @@ export async function recordScenes({ scenes, work, out, only = [], makeRepos, se
     page.on("pageerror", (e) => console.log(`[${scene.name}] pageerror: ${e}`));
     await page.goto(`${base}/`);
     await page.waitForSelector(".log-row", { timeout: 30000 });
-    await page.waitForTimeout(1200);
+    await page.waitForTimeout(1200 * slow);
+    const frames = [];
+    const writes = [];
+    let cast = null;
+    if (scale > 1) {
+      cast = await context.newCDPSession(page);
+      cast.on("Page.screencastFrame", ({ data, metadata, sessionId }) => {
+        const file = join(tmp, `${String(frames.length).padStart(6, "0")}.jpg`);
+        frames.push({ t: metadata.timestamp, file });
+        writes.push(writeFile(file, Buffer.from(data, "base64")));
+        cast.send("Page.screencastFrameAck", { sessionId }).catch(() => {});
+      });
+      const size = await page.evaluate(() => [innerWidth, innerHeight]);
+      if (size[0] !== view.width || size[1] !== view.height) throw new Error(`the page is ${size.join("x")}, not ${view.width}x${view.height}`);
+      await cast.send("Page.startScreencast", { format: "jpeg", quality: 93, everyNthFrame: 1 });
+    }
     const d = new Director(page, view);
+    d.slow = slow;
     await page.mouse.move(d.x, d.y);
     // `setup` runs before the part of the recording that the video shows.
     await scene.setup?.(d);
-    const start = (Date.now() - t0) / 1000;
+    let start = (Date.now() - t0) / 1000 / slow;
+    const began = Date.now() / 1000;
     d.t0 = Date.now();
     try {
       await scene.run(d);
@@ -295,10 +338,26 @@ export async function recordScenes({ scenes, work, out, only = [], makeRepos, se
       await page.screenshot({ path: join(out, `${scene.name}-error.png`) });
       throw e;
     }
-    const duration = (Date.now() - t0) / 1000 - start;
-    const video = page.video();
-    await context.close();
-    renameSync(await video.path(), join(out, `${scene.name}.webm`));
+    const duration = (Date.now() - d.t0) / 1000 / slow;
+    if (cast) {
+      const ended = Date.now() / 1000;
+      await cast.send("Page.stopScreencast");
+      await Promise.all(writes);
+      await context.close();
+      // Each frame stays until the time of the next one: the browser sends a frame only when the page
+      // changes. The last frame stays until the end of the scene.
+      const lines = ["ffconcat version 1.0"];
+      for (const [i, f] of frames.entries()) lines.push(`file '${f.file}'`, `duration ${Math.max(0.001, ((frames[i + 1]?.t ?? ended) - f.t) / slow).toFixed(4)}`);
+      lines.push(`file '${frames.at(-1).file}'`);
+      writeFileSync(join(tmp, "frames.txt"), lines.join("\n"));
+      execFileSync("ffmpeg", ["-loglevel", "error", "-y", "-f", "concat", "-safe", "0", "-i", join(tmp, "frames.txt"), "-vf", "fps=30", "-c:v", "libx264", "-preset", "veryfast", "-crf", "12", "-pix_fmt", "yuv420p", join(out, `${scene.name}.mp4`)], { stdio: "inherit" });
+      start = (began - frames[0].t) / slow;
+      console.log(`${scene.name}: ${frames.length} frames, ${((frames.length * slow) / (ended - frames[0].t)).toFixed(1)} per second of the video`);
+    } else {
+      const video = page.video();
+      await context.close();
+      renameSync(await video.path(), join(out, `${scene.name}.webm`));
+    }
     rmSync(tmp, { recursive: true, force: true });
     const exited = new Promise((r) => server.once("exit", r));
     server.kill("SIGKILL");
