@@ -238,6 +238,9 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
     revision numbers, a list of files the absolute paths (`repoPaths`: the root of the repository of the
     window and the path, one line for each file), the Branches tab the names, the Worktrees tab the path,
     the Stash tab the message, the History window the revision number. A new list needs a `copySource`.
+  - Notes: a mouse selection of two or more lines opens the card of a new note, and its field takes the
+    focus. Mod+C in that field, while the field has no selection, copies the selected lines of the
+    editor (`selectedText` in `note-layer.ts`). A double click adds a note; it does not select a word.
   - "Copy Path" in a menu copies the absolute path. "Copy Relative Path" copies the path in the repository.
   - `copy.ts` removes the text selection on each press outside a text field. A row that prevents the
     press, or a `draggable` row, would keep an old selection, and Mod+C would copy that old text.

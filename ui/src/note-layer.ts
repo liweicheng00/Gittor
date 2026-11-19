@@ -4,7 +4,7 @@
 // it its notes and handlers.
 
 import * as monaco from "./monaco";
-import { formatDate, h, icon } from "./dom";
+import { copyText, formatDate, h, icon } from "./dom";
 import { lineRange } from "./note-format";
 
 export interface NoteItem {
@@ -227,6 +227,15 @@ export class NoteLayer {
     for (const layer of this.layers.values()) layer.render(this.notes, this.draftLine, this.draftEnd);
   }
 
+  /** The text that the user selected in an editor of the notes, or "". */
+  private selectedText(): string {
+    for (const ed of this.layers.keys()) {
+      const sel = ed.getSelection();
+      if (sel && !sel.isEmpty()) return ed.getModel()?.getValueInRange(sel) ?? "";
+    }
+    return "";
+  }
+
   /** A resolved note: its icon at the right of its line. A click shows the whole note. */
   chip(n: NoteItem): HTMLElement {
     const el = h("button", { class: "note-chip", "data-line": n.line, title: `Resolved note on L${lineRange(n)}: ${n.text}\nClick to show it` }, icon("resolved"));
@@ -288,6 +297,16 @@ export class NoteLayer {
     };
     text.addEventListener("keydown", (e) => {
       e.stopPropagation();
+      // A selection of lines opens this card and moves the focus here. Mod+C still copies those lines,
+      // while the field has no selection of its own.
+      if (e.key.toLowerCase() === "c" && (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && text.selectionStart === text.selectionEnd) {
+        const lines = this.selectedText();
+        if (lines) {
+          e.preventDefault();
+          void copyText(lines);
+        }
+        return;
+      }
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         void save();

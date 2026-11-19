@@ -154,7 +154,21 @@ await within("Copy Path of the Files tab copies the absolute path", async () => 
 await page.locator(".file-host .view-line:visible").first().click();
 await page.keyboard.press("Control+A");
 check("Mod+C in the editor copies the text of the file", (await copy()).includes("wrapping_add"));
+// A selection of two lines opens the card of a new note, and the card takes the focus. Mod+C still
+// copies the selected lines.
+const lineBox = (n) => page.locator(".file-host .view-line:visible").nth(n).boundingBox();
+const [first, second] = [await lineBox(0), await lineBox(1)];
+await page.mouse.move(first.x + 2, first.y + first.height / 2);
+await page.mouse.down();
+await page.mouse.move(second.x + 30, second.y + second.height / 2, { steps: 6 });
+await page.mouse.up();
+await within("the selection of lines opens the card of a new note", async () => (await page.$$(".file-host .note-card.draft")).length === 1);
+await within("the card has the focus", async () => await page.evaluate(() => document.activeElement?.classList.contains("note-card-input")));
+const lines = await copy();
+check("Mod+C copies the selected lines while the card of the note is open", lines.includes("pub fn add") && lines.includes("\n"));
 await shot("copy3-files");
+await page.keyboard.press("Escape");
+await within("Esc closes the card", async () => (await page.$$(".file-host .note-card.draft")).length === 0);
 await page.click(".center-tab >> nth=0");
 
 // A dialog and a toast: their text is selectable.
