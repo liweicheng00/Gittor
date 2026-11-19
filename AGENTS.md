@@ -115,6 +115,8 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   `.github/workflows/release.yml`. The owner checked on a Mac that 0.1.0 updated itself to 0.1.1
   and started again. The release notes are `docs/releases/v<version>.md`, for the users, not the
   commit messages: follow the `release` skill (`.claude/skills/release/SKILL.md`).
+  The kinds of macOS build, the Apple signature, the secrets of the release workflow and the protection
+  of the releases are in `.claude/skills/release/maintainers.md`, not in the README.
   `scripts/release-notes.mjs` checks them; `release.sh` and the workflow stop without them.
 - Versions: `scripts/version.mjs` (tested in `ui/test/version.test.ts`). A build at a release tag
   without changes has the release version. Any other build is a test build, for example

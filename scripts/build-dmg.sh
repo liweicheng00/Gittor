@@ -19,7 +19,7 @@
 # to the release Gittor, with its own settings in "gittor-dev". At its first start it copies the
 # settings of the release.
 #
-# A signed build needs these variables (see README, "Sign and notarize"):
+# A signed build needs these variables (see .claude/skills/release/maintainers.md, "Signature"):
 #   APPLE_SIGNING_IDENTITY  "Developer ID Application: Name (TEAMID)", from: security find-identity -v -p codesigning
 #   APPLE_ID                the Apple ID of the developer account
 #   APPLE_PASSWORD          an app-specific password of that Apple ID
