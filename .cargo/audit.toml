@@ -11,4 +11,9 @@ ignore = [
     # proc-macro-error 1.0.4: unmaintained. A proc macro of glib-macros, so it runs only in the
     # compiler and is not in the app. Linux only. It goes away with the GTK 3 stack.
     "RUSTSEC-2024-0370",
+    # chrono 0.4: unmaintained, not a vulnerability. It is in Cargo.lock only as an optional dependency
+    # of serde_with (through tauri-utils), and no feature of the build turns it on: `cargo tree -i chrono
+    # --target all` prints nothing, so no code of chrono is in the app. Remove the entry when chrono
+    # leaves Cargo.lock.
+    "RUSTSEC-2026-0543",
 ]
