@@ -36,7 +36,7 @@ export class WorktreePanel {
         if (first && !first.current) this.onOpen(first);
       }
     });
-    this.favBtn = h("button", { class: "icon-button fav-filter", title: "Show only the favorite worktrees" }, icon("star"));
+    this.favBtn = h("button", { class: "icon-button fav-filter", title: "Favorites Only" }, icon("star"));
     this.favBtn.addEventListener("click", () => {
       this.onlyFavorites = !this.onlyFavorites;
       this.favBtn.classList.toggle("on", this.onlyFavorites);

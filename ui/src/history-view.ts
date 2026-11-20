@@ -42,7 +42,7 @@ export async function openHistory(path: string, cb: HistoryCallbacks, oid?: stri
     close();
     cb.showInLog(entries[selected].oid);
   };
-  const logBtn = h("button", { class: "tb-button", title: "Select the commit in the log and close" }, "Show in Log");
+  const logBtn = h("button", { class: "tb-button", title: "Show in Log" }, "Show in Log");
   logBtn.addEventListener("click", jump);
   const closeBtn = h("button", { class: "tb-button" }, "Close");
   closeBtn.addEventListener("click", close);

@@ -50,7 +50,7 @@ export class NotesPanel {
     this.input.disabled = this.addBtn.disabled = false;
     // Copy All takes the open notes: a resolved note is done.
     const open = notes.filter((n) => !n.resolved);
-    const copyAll = h("button", { class: "tb-button review-notes-copy", title: "Copy the open notes of the file, with the file and the lines", disabled: !open.length }, icon("copy"), "Copy All");
+    const copyAll = h("button", { class: "tb-button review-notes-copy", title: "Copy All", disabled: !open.length }, icon("copy"), "Copy All");
     copyAll.addEventListener("click", () => this.copyText(formatNotes(path, open)));
     this.title.replaceChildren(h("span", {}, heading), h("span", { class: "spacer" }), copyAll);
     const button = (iconName: "copy" | "close", title: string, run: () => void) => {
@@ -75,7 +75,7 @@ export class NotesPanel {
           n.outdated ? h("span", { class: "muted-inline" }, "outdated") : "",
           n.resolved ? h("span", { class: "review-note-resolved", title: "Resolved" }, icon("resolved")) : "",
           h("span", { class: "muted-inline" }, formatDate(n.time)),
-          button("copy", "Copy the file, the line and the note", () => this.copyText(formatNote(path, n))),
+          button("copy", "Copy", () => this.copyText(formatNote(path, n))),
           button("close", "Delete the note", () => void handlers.remove(n.id)),
         );
         if (!onFile) row.addEventListener("click", () => handlers.reveal(n.line));

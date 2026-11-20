@@ -75,7 +75,7 @@ git(origin, "checkout", "-q", "main");
 await switchTo("feature/cli");
 await page.click(".lp-tab[aria-label^='Changes']");
 execFileSync("sh", ["-c", `echo "// more" >> "${repo}/cli.rs"`]);
-await page.click("button[title='Refresh the local changes']");
+await page.click(".commit-toolbar button[title^='Refresh']");
 await page.waitForSelector(".cl-file:has-text('cli.rs')");
 await page.click(".cl-header:has-text('Changes') .cl-check");
 await page.click(".cl-header:has-text('Changes') .cl-check");

@@ -44,24 +44,24 @@ export const banner = new OpBanner();
 export const authors = new Set<string>();
 
 // Open and Refresh show their icon only; the name is in the tooltip, and out of view for screen readers.
-export const openBtn = h("button", { class: "tb-button tb-icon-only", title: "Open a repository", "aria-label": "Open" }, icon("open"), h("span", { class: "sr-label" }, "Open"), icon("chevron-down", "icon-caret"));
-export const refreshBtn = h("button", { class: "tb-button tb-icon-only", title: "Reload commits and branches", "aria-label": "Refresh", disabled: true }, icon("refresh"), h("span", { class: "sr-label" }, "Refresh"));
+export const openBtn = h("button", { class: "tb-button tb-icon-only", title: "Open", "aria-label": "Open" }, icon("open"), h("span", { class: "sr-label" }, "Open"), icon("chevron-down", "icon-caret"));
+export const refreshBtn = h("button", { class: "tb-button tb-icon-only", title: "Refresh", "aria-label": "Refresh", disabled: true }, icon("refresh"), h("span", { class: "sr-label" }, "Refresh"));
 /** The menu part of the Update button: Fetch of all remotes or of one remote. */
-export const fetchBtn = h("button", { class: "tb-button tb-split-menu", title: "Fetch all remotes, or one remote", "aria-label": "Fetch", disabled: true }, icon("chevron-down", "icon-caret"));
-export const updateBtn = h("button", { class: "tb-button", title: `Update the current branch: fetch, then fast-forward. A branch with commits of its own asks for Merge or Rebase (${mod}T)`, disabled: true }, icon("update"), "Update");
-export const pushBtn = h("button", { class: "tb-button tb-keep", title: `Push the current branch (${mod}⇧K)`, disabled: true }, icon("push"), "Push");
-export const remoteBtn = h("button", { class: "tb-button tb-icon tb-remote", title: "Open the current branch on the web page of its remote", "aria-label": "Remote", disabled: true }, icon("remote"));
-export const localHistoryBtn = h("button", { class: "tb-button", title: "Local History: the recent versions of changed files", disabled: true }, icon("history"), "Local History");
-export const ideBtn = h("button", { class: "tb-button tb-icon tb-ide", title: "Open the repository in the editor of Settings › Editor", "aria-label": "IDE", disabled: true }, icon("ide"));
-export const terminalBtn = h("button", { class: "tb-button tb-icon tb-terminal", title: "Open a terminal in the folder of the repository", "aria-label": "Terminal", disabled: true }, icon("terminal"));
+export const fetchBtn = h("button", { class: "tb-button tb-split-menu", title: "Fetch", "aria-label": "Fetch", disabled: true }, icon("chevron-down", "icon-caret"));
+export const updateBtn = h("button", { class: "tb-button", title: "Update the Current Branch", disabled: true }, icon("update"), "Update");
+export const pushBtn = h("button", { class: "tb-button tb-keep", title: "Push", disabled: true }, icon("push"), "Push");
+export const remoteBtn = h("button", { class: "tb-button tb-icon tb-remote", title: "Open on the Remote", "aria-label": "Remote", disabled: true }, icon("remote"));
+export const localHistoryBtn = h("button", { class: "tb-button", title: "Local History", disabled: true }, icon("history"), "Local History");
+export const ideBtn = h("button", { class: "tb-button tb-icon tb-ide", title: "Open in IDE", "aria-label": "IDE", disabled: true }, icon("ide"));
+export const terminalBtn = h("button", { class: "tb-button tb-icon tb-terminal", title: "Open in Terminal", "aria-label": "Terminal", disabled: true }, icon("terminal"));
 /** The name of the repository. It hides while the tab bar shows, because the tab names it. */
 export const repoLabel = h("span", { class: "tb-repo" });
-export const branchBtn = h("button", { class: "tb-button tb-branch-button tb-keep", title: "Switch branch (recent branches first)", hidden: true }, icon("branch"), icon("chevron-down", "icon-caret"));
-export const viewBtn = h("button", { class: "tb-button", title: "View options" }, "View", icon("chevron-down", "icon-caret"));
+export const branchBtn = h("button", { class: "tb-button tb-branch-button tb-keep", title: "Switch Branch", hidden: true }, icon("branch"), icon("chevron-down", "icon-caret"));
+export const viewBtn = h("button", { class: "tb-button", title: "View" }, "View", icon("chevron-down", "icon-caret"));
 const themeBtn = h("button", { class: "tb-button tb-icon", title: "Theme" }, icon("theme"));
 export const settingsBtn = h("button", { class: "tb-button tb-icon", title: "Settings" }, icon("settings"));
 /** The narrow layout: the button that shows the other buttons of the toolbar in a second row. */
-export const moreBtn = h("button", { class: "tb-button tb-icon tb-more tb-keep", title: "More actions", "aria-label": "More", "aria-expanded": "false" }, icon("more"));
+export const moreBtn = h("button", { class: "tb-button tb-icon tb-more tb-keep", title: "More", "aria-label": "More", "aria-expanded": "false" }, icon("more"));
 export const toolbar = h("header", { class: "toolbar" }, openBtn, refreshBtn, h("span", { class: "tb-split tb-keep" }, updateBtn, fetchBtn), pushBtn, localHistoryBtn, repoLabel, branchBtn, h("span", { class: "spacer" }), remoteBtn, ideBtn, terminalBtn, viewBtn, themeBtn, settingsBtn, moreBtn);
 
 export const tabBar = h("nav", { class: "tabbar", hidden: true });
@@ -107,13 +107,13 @@ const right = h("section", { class: "right" }, changes.el, detailsGrip, details.
 const lpTab = (name: IconName, label: string, title: string) =>
   h("button", { class: "lp-tab", title, "aria-label": label }, icon(name, "lp-icon"), h("span", { class: "sr-label" }, label));
 export const tabBranches = lpTab("branch", "Branches", "Branches");
-export const tabCommit = lpTab("changes", "Changes", "Changes: the local changes and the commit");
-export const tabStash = lpTab("stash", "Stash", "Stash: the stashes");
-export const tabReviews = lpTab("review", "Reviews", "Reviews: the reviews of branches");
-export const tabFiles = lpTab("folder", "Files", "Files: the files of the working tree");
-export const tabWorktrees = lpTab("worktree", "Worktrees", "Worktrees: the worktrees of the repository");
+export const tabCommit = lpTab("changes", "Changes", "Changes");
+export const tabStash = lpTab("stash", "Stash", "Stash");
+export const tabReviews = lpTab("review", "Reviews", "Reviews");
+export const tabFiles = lpTab("folder", "Files", "Files");
+export const tabWorktrees = lpTab("worktree", "Worktrees", "Worktrees");
 /** The narrow layout only: the log, with the details of the selected commit under it. */
-export const tabLog = lpTab("log", "Log", "Log: the commits, and the details of the selected one");
+export const tabLog = lpTab("log", "Log", "Log");
 tabLog.classList.add("lp-tab-log");
 // The submodules show under the commit message, so that their changes show together with the files.
 commitPanel.el.append(submodulePanel.el);

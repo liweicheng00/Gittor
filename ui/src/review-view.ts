@@ -83,7 +83,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
   const info = h("span", { class: "muted-inline review-info" });
   const finishBtn = h("button", { class: "tb-button primary review-merge" }, "Merge…");
   const closeBtn = h("button", { class: "tb-button" }, "Close");
-  const ideBtn = h("button", { class: "tb-button tb-icon review-ide", title: "Open the repository in the editor of Settings › Editor, at the file of the review", "data-key-action": "openProjectInEditor" }, icon("ide"));
+  const ideBtn = h("button", { class: "tb-button tb-icon review-ide", title: "Open in IDE", "data-key-action": "openProjectInEditor" }, icon("ide"));
   ideBtn.addEventListener("click", () => cb.openInIde());
   const status = h("div", { class: "review-status" });
   const commitsEl = h("div", { class: "review-commits" });
@@ -105,7 +105,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
   const side = h("div", { class: "compare-side" });
   const sideGrip = rowSplitter(side, commitsEl, () => settings.reviewCommitsHeight, (px) => (settings.reviewCommitsHeight = px), save);
   // Interactive Rebase of the commits of the review: all of them, or from a commit (its menu).
-  const rebaseBtn = h("button", { class: "tb-button review-rebase", title: "Interactively rebase the commits of the review" }, "Rebase…");
+  const rebaseBtn = h("button", { class: "tb-button review-rebase", title: "Interactive Rebase" }, "Rebase…");
   rebaseBtn.addEventListener("click", () => {
     const oldest = detail?.commitList.at(-1)?.oid;
     if (oldest) cb.rebase(current, oldest);
@@ -236,7 +236,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
       const p = progressOf(c.oid);
       const done = !!p && p.files > 0 && p.viewed.length >= p.files;
       // The box marks all files of the commit as viewed, or as not viewed.
-      const box = h("input", { type: "checkbox", class: "review-viewed", checked: done, disabled: !p?.files, title: "Viewed: all files of this commit" });
+      const box = h("input", { type: "checkbox", class: "review-viewed", checked: done, disabled: !p?.files, title: "Viewed" });
       box.indeterminate = !!p && p.viewed.length > 0 && !done;
       box.addEventListener("mousedown", (e) => e.stopPropagation());
       box.addEventListener("change", () => void setCommitViewed(c.oid, box.checked));
@@ -247,7 +247,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
         h("code", { class: "rebase-hash" }, c.oid.slice(0, 8)),
         h("span", { class: "rebase-subject" }, c.subject),
         p?.comments ? h("span", { class: "review-file-notes", title: `${p.comments} note(s)` }, icon("note"), ` ${p.comments}`) : "",
-        h("span", { class: "review-commit-progress", title: "Viewed files of the commit" }, p ? `${p.viewed.length}/${p.files}` : ""),
+        h("span", { class: "review-commit-progress", title: "Viewed Files" }, p ? `${p.viewed.length}/${p.files}` : ""),
         h("span", { class: "rebase-author" }, formatDate(c.time)),
       );
       row.addEventListener("mousedown", () => setScope(c.oid));
@@ -306,7 +306,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
     walkTree(tree, collapsed, {
       dir: (label, full, depth, open, count, viewed, files) => {
         // The box of a folder marks all of its files as viewed, or as not viewed.
-        const box = h("input", { type: "checkbox", class: "review-viewed", checked: count > 0 && viewed === count, title: "Viewed: all files in this folder" });
+        const box = h("input", { type: "checkbox", class: "review-viewed", checked: count > 0 && viewed === count, title: "Viewed" });
         box.indeterminate = viewed > 0 && viewed < count;
         box.addEventListener("mousedown", (e) => e.stopPropagation());
         box.addEventListener("click", (e) => e.stopPropagation());

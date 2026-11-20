@@ -32,7 +32,7 @@ export async function openLocalHistory(path: string, cb: LocalHistoryCallbacks) 
     overlay.remove();
     document.removeEventListener("keydown", onKey, true);
   };
-  const revertBtn = h("button", { class: "tb-button", title: "Write the selected version back to the file", disabled: true }, "Revert");
+  const revertBtn = h("button", { class: "tb-button", disabled: true }, "Revert");
   revertBtn.addEventListener("click", async () => {
     if (selected < 0) return;
     if (await cb.revert(entries[selected])) await load();

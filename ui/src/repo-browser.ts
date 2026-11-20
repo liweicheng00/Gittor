@@ -34,9 +34,9 @@ export async function openRepoBrowser(oid: string, label: string, cb: RepoBrowse
   const note = h("div", { class: "muted-inline repo-browser-note" });
   const viewer = h("div", { class: "repo-browser-viewer" }, title, note, host);
   const editor = monaco.editor.create(host, { readOnly: true, automaticLayout: true, minimap: { enabled: false }, scrollBeyondLastLine: false, renderLineHighlight: "none", ...editorFont() });
-  const historyBtn = h("button", { class: "tb-button", title: "Show the history of the selected file", disabled: true }, "Show History");
+  const historyBtn = h("button", { class: "tb-button", title: "Show History", disabled: true }, "Show History");
   historyBtn.addEventListener("click", () => selected && cb.showHistory(selected));
-  const copyBtn = h("button", { class: "tb-button", title: "Copy the absolute path of the selected file", disabled: true }, "Copy Path");
+  const copyBtn = h("button", { class: "tb-button", title: "Copy Path", disabled: true }, "Copy Path");
   copyBtn.addEventListener("click", () => selected && cb.copyText(repoPath(selected)));
   const closeBtn = h("button", { class: "tb-button" }, "Close");
   const grip = h("div", { class: "vgrip" });

@@ -51,8 +51,8 @@ export class FilterBar {
     this.clear = h("button", { class: "filter-clear", title: "Clear all filters", hidden: true }, icon("close"), "Clear");
     this.info = h("span", { class: "filter-info" });
     // The options of the text: a regular expression and the same case. They stay after Clear.
-    this.regexBtn = h("button", { class: "filter-opt", title: "Regex: the text is a regular expression" }, ".*");
-    this.caseBtn = h("button", { class: "filter-opt", title: "Match Case: the text and the user match with the same case only" }, "Aa");
+    this.regexBtn = h("button", { class: "filter-opt", title: "Regex" }, ".*");
+    this.caseBtn = h("button", { class: "filter-opt", title: "Match Case" }, "Aa");
     this.regexBtn.addEventListener("click", () => this.update({ regex: !this.value.regex }));
     this.caseBtn.addEventListener("click", () => this.update({ matchCase: !this.value.matchCase }));
     for (const input of [this.text, this.author, this.path]) {
@@ -80,7 +80,7 @@ export class FilterBar {
     this.clear.addEventListener("click", () => this.set({ ...emptyFilter(), regex: this.value.regex, matchCase: this.value.matchCase }, true));
     const textBox = h("span", { class: "filter-text-box" }, this.text, this.regexBtn, this.caseBtn);
     // The narrow layout shows the text field only. This button shows the other filters too.
-    const more = h("button", { class: "icon-button filter-more", title: "More filters: branch, user, path, date", "aria-label": "More filters", "aria-expanded": "false" }, icon("filter"));
+    const more = h("button", { class: "icon-button filter-more", title: "More Filters", "aria-label": "More Filters", "aria-expanded": "false" }, icon("filter"));
     more.addEventListener("click", () => more.setAttribute("aria-expanded", String(this.el.classList.toggle("show-all"))));
     this.el = h("div", { class: "filter-bar" }, textBox, more, this.branchBtn, this.author, this.authors, this.path, this.since, this.clear, this.info);
   }

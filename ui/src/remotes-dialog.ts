@@ -51,7 +51,7 @@ export async function openRemotesDialog(cb: RemotesCallbacks) {
                 "div",
                 { class: "remote-actions" },
                 button("Fetch", `Fetch ${r.name}`, () => cb.fetch(r)),
-                button("Edit…", "Change the name or the URLs", () => cb.edit(r)),
+                button("Edit…", "", () => cb.edit(r)),
                 button("Remove…", `Remove ${r.name} and its remote branches`, () => cb.remove(r)),
               ),
             ),

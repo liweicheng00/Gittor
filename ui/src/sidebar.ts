@@ -59,7 +59,7 @@ export class Sidebar {
     this.search.addEventListener("input", () => this.render());
     this.list = h("div", { class: "sidebar-list" });
     copySource(this.list, () => this.selected.map((b) => b.name).join("\n"));
-    this.favBtn = h("button", { class: "icon-button fav-filter", title: "Show only the favorite branches" }, icon("star"));
+    this.favBtn = h("button", { class: "icon-button fav-filter", title: "Favorites Only" }, icon("star"));
     this.favBtn.addEventListener("click", () => {
       this.onlyFavorites = !this.onlyFavorites;
       this.favBtn.classList.toggle("on", this.onlyFavorites);
@@ -337,7 +337,7 @@ export class Sidebar {
       {
         class: `branch branch-${b.kind}` + (b.current ? " current" : "") + (filtered ? " filtered" : "") + (fav ? " favorite" : "") + (this.selection.has(b.full) ? " selected" : ""),
         "data-ref": b.full,
-        title: `${b.name}\n${b.subject}\nCtrl+click or Shift+click: select more than one`,
+        title: `${b.name}\n${b.subject}`,
       },
       h("span", { class: "branch-icon", title: b.current ? "The current branch" : "" }, icon(b.kind === "tag" ? "tag" : b.current ? "current" : "branch")),
       h("span", { class: "branch-name" }, label),

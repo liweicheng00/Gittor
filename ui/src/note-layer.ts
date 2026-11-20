@@ -260,7 +260,7 @@ export class NoteLayer {
       this.opened.delete(n.id);
       this.render();
     });
-    const copy = h("button", { class: "icon-button note-card-copy", title: "Copy the file, the line and the note" }, icon("copy"));
+    const copy = h("button", { class: "icon-button note-card-copy", title: "Copy" }, icon("copy"));
     copy.addEventListener("click", () => this.handlers?.copy(n));
     return h(
       "div",
