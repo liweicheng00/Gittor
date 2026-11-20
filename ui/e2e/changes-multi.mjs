@@ -72,7 +72,7 @@ check("a plain click selects one file", (await selected()) === "main.rs");
 mkdirSync(`${repo}/src/app`, { recursive: true });
 for (const f of ["src/app/one.rs", "src/app/two.rs"]) writeFileSync(`${repo}/${f}`, "fn x() {}\n");
 execFileSync("git", ["-C", repo, "add", "src"]);
-await page.click(".commit-toolbar button[title='Refresh the local changes']");
+await page.click(".commit-toolbar button[title^='Refresh']");
 const dir = ".cl-dir:has-text('src/app')";
 await within("one row for the folder chain", async () => (await page.$$(dir)).length === 1);
 const indent = (sel) => page.$eval(sel, (e) => parseFloat(getComputedStyle(e).paddingLeft));

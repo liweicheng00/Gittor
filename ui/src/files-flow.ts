@@ -84,7 +84,7 @@ function renderTabs() {
     });
     if (close) {
       // Mod+W closes the active file, so its button names the key.
-      const x = h("button", { class: "center-tab-close", title: "Close the file", "data-key-action": on ? "closeProject" : undefined }, icon("close"));
+      const x = h("button", { class: "center-tab-close", title: "Close", "data-key-action": on ? "closeProject" : undefined }, icon("close"));
       x.addEventListener("click", (e) => {
         e.stopPropagation();
         close();
@@ -94,7 +94,7 @@ function renderTabs() {
     return el;
   };
   centerTabs.replaceChildren(
-    tab("Log", active === null, "The log of the commits", () => showLog()),
+    tab("Log", active === null, "", () => showLog()),
     ...openFiles.map((p) => tab(p.slice(p.lastIndexOf("/") + 1), p === active, p, () => void openFile(p), () => closeFile(p))),
   );
 }

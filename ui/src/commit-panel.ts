@@ -111,11 +111,11 @@ export class CommitPanel {
   private historyBtn: HTMLButtonElement;
 
   constructor() {
-    const copyNotes = h("button", { class: "icon-button commit-copy-notes", title: "Copy the open notes of all changed files" }, icon("copy"));
+    const copyNotes = h("button", { class: "icon-button commit-copy-notes", title: "Copy All Notes" }, icon("copy"));
     copyNotes.addEventListener("click", () => this.onCopyNotes());
-    const refresh = h("button", { class: "icon-button", title: "Refresh the local changes" }, icon("refresh"));
+    const refresh = h("button", { class: "icon-button", title: "Refresh" }, icon("refresh"));
     refresh.addEventListener("click", () => this.onRefresh());
-    const rollback = h("button", { class: "icon-button", title: "Roll back the selected files" }, icon("revert"));
+    const rollback = h("button", { class: "icon-button", title: "Rollback" }, icon("revert"));
     rollback.addEventListener("click", () => {
       const sel = this.selectedFiles().filter((f) => f.list !== null);
       if (sel.length) this.onRollback(sel);
@@ -166,7 +166,7 @@ export class CommitPanel {
         this.onMessageHistory(this.historyBtn);
       }
     });
-    this.historyBtn = h("button", { class: "icon-button commit-history", title: "Recent commit messages (Ctrl+M in the message)" }, icon("history"));
+    this.historyBtn = h("button", { class: "icon-button commit-history", title: "Recent Messages (Ctrl+M)" }, icon("history"));
     this.historyBtn.addEventListener("click", () => this.onMessageHistory(this.historyBtn));
     this.signOff = h("input", { type: "checkbox", checked: settings.signOff });
     this.signOff.addEventListener("change", () => {
@@ -175,7 +175,7 @@ export class CommitPanel {
     });
     this.amend = h("input", { type: "checkbox" });
     this.amend.addEventListener("change", () => void this.toggleAmend());
-    this.commitBtn = h("button", { class: "primary commit-button", title: "Commit the checked files", "data-key-hint": "Mod+Enter" }, "Commit");
+    this.commitBtn = h("button", { class: "primary commit-button", title: "Commit", "data-key-hint": "Mod+Enter" }, "Commit");
     this.commitBtn.addEventListener("click", () => this.commit(false));
     this.pushBtn = h("button", { class: "commit-push", title: "Commit and Push", "data-key-hint": "Mod+Alt+K" }, "and Push…");
     this.pushBtn.addEventListener("click", () => this.commit(true));
@@ -193,7 +193,7 @@ export class CommitPanel {
         h(
           "div",
           { class: "commit-actions" },
-          h("label", { class: "commit-amend", title: "Change the last commit" }, this.amend, "Amend"),
+          h("label", { class: "commit-amend", title: "Amend" }, this.amend, "Amend"),
           h("label", { class: "commit-amend", title: "Add \"Signed-off-by\" with your name, as git commit -s" }, this.signOff, "Sign-off"),
           this.historyBtn,
           this.summary,

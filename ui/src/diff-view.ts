@@ -147,13 +147,13 @@ export class DiffView {
     this.title = h("span", { class: "diff-title" });
     this.sides = h("span", { class: "diff-sides" });
     this.stats = h("span", { class: "diff-stats" });
-    const copyPath = btn(icon("copy"), "Copy the absolute path of the file", () => this.path && void copyText(repoPath(this.path)));
+    const copyPath = btn(icon("copy"), "Copy Path", () => this.path && void copyText(repoPath(this.path)));
     this.annotateBox = h("input", { type: "checkbox" });
     this.annotateBox.addEventListener("change", () => void this.annotate());
-    const annotate = h("label", { class: "diff-option", title: "Show the commit that last changed each line (git blame). Click an annotation to go to its commit." }, this.annotateBox, "Annotate");
-    this.historyBtn = btn(icon("history"), "Show the history of this file", () => this.source && this.onHistory(this.source.path));
-    const editBtn = btn(icon("edit"), "Open in the editor (F4)", () => this.openInEditor(), "openInEditor");
-    const findBtn = btn(icon("search"), "Find in the file", () => this.find(), "filter");
+    const annotate = h("label", { class: "diff-option", title: "git blame. Click an annotation to go to its commit." }, this.annotateBox, "Annotate");
+    this.historyBtn = btn(icon("history"), "Show History", () => this.source && this.onHistory(this.source.path));
+    const editBtn = btn(icon("edit"), "Open in Editor", () => this.openInEditor(), "openInEditor");
+    const findBtn = btn(icon("search"), "Find", () => this.find(), "filter");
     findBtn.classList.add("diff-find");
     editBtn.classList.add("diff-open-editor");
     this.previewBtn = h("button", { class: "tb-button diff-preview-toggle", hidden: true }, "Preview");
@@ -179,9 +179,9 @@ export class DiffView {
       this.sides,
       this.previewBtn,
       annotate,
-      toggle("Side by side", "sideBySide", "Show the two versions side by side, or in one column"),
-      toggle("Ignore whitespace", "ignoreWhitespace", "Ignore leading and trailing whitespace changes"),
-      toggle("Collapse unchanged", "collapseUnchanged", "Hide unchanged regions"),
+      toggle("Side by side", "sideBySide", ""),
+      toggle("Ignore whitespace", "ignoreWhitespace", ""),
+      toggle("Collapse unchanged", "collapseUnchanged", ""),
       btn(icon("close"), "Hide the diff panel", () => this.onHide(), "hideDiff"),
     );
     this.notice = h("div", { class: "diff-notice" });

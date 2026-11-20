@@ -32,18 +32,18 @@ export class ChangesPanel {
   onParent: (index: number) => void = () => {};
 
   constructor() {
-    this.parentSel = h("select", { class: "changes-parent", title: "A merge commit has more than one parent. Choose the parent to compare with." });
+    this.parentSel = h("select", { class: "changes-parent", title: "Parent to Compare With" });
     this.parentBar = h("div", { class: "changes-parent-bar", hidden: true }, h("span", { class: "muted-inline" }, "Merge commit, changes"), this.parentSel);
     this.parentSel.addEventListener("change", () => this.onParent(Number(this.parentSel.value)));
     this.title = h("span", { class: "changes-title" }, "Changes");
     this.count = h("span", { class: "changes-count" });
-    this.treeBtn = h("button", { class: "icon-button", title: "Show as tree or flat list" });
+    this.treeBtn = h("button", { class: "icon-button", title: "Tree or List" });
     this.treeBtn.addEventListener("click", () => {
       settings.changesAsTree = !settings.changesAsTree;
       save();
       this.render();
     });
-    const swap = h("button", { class: "icon-button", title: "Swap left and right sides" }, icon("swap"));
+    const swap = h("button", { class: "icon-button", title: "Swap Sides" }, icon("swap"));
     swap.addEventListener("click", () => this.onSwap());
     this.list = h("div", { class: "changes", tabIndex: 0 });
     copySource(this.list, () => {

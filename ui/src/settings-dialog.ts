@@ -304,7 +304,7 @@ export function openSettingsDialog(ctx: SettingsContext): Promise<Settings | nul
         e.preventDefault();
         void saveIgnore();
       });
-      const reload = h("button", { title: "Read the file again. Changes that are not saved go." }, "Reload");
+      const reload = h("button", { title: "Reload" }, "Reload");
       reload.addEventListener("click", (e) => {
         e.preventDefault();
         void loadIgnore();

@@ -83,8 +83,8 @@ export class LogView {
       }
       return c;
     };
-    const collapse = h("button", { class: "icon-button", title: "Collapse all linear branches" }, icon("collapse"));
-    const expand = h("button", { class: "icon-button", title: "Expand all linear branches", disabled: !this.collapsed }, icon("expand"));
+    const collapse = h("button", { class: "icon-button", title: "Collapse Linear Branches" }, icon("collapse"));
+    const expand = h("button", { class: "icon-button", title: "Expand Linear Branches", disabled: !this.collapsed }, icon("expand"));
     collapse.addEventListener("click", () => this.onCollapseAll());
     expand.addEventListener("click", () => this.onExpandAll());
     const subject = col("subject", "Subject");

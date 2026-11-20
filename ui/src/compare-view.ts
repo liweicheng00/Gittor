@@ -62,10 +62,10 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
   const option = (name: string, value = name) => h("option", { value }, name);
   const leftSel = h("select", { class: "dialog-input compare-select", title: "The left side" }, ...cb.refs.map((r) => option(r)));
   const rightSel = h("select", { class: "dialog-input compare-select", title: "The right side" }, ...cb.refs.map((r) => option(r)), option("Working tree", WORKTREE));
-  const swap = h("button", { class: "tb-button", title: "Swap the sides" }, icon("swap"));
+  const swap = h("button", { class: "tb-button", title: "Swap Sides" }, icon("swap"));
   const mode = h(
     "select",
-    { class: "dialog-input compare-select", title: "Which file changes to show" },
+    { class: "dialog-input compare-select", title: "Changes to Show" },
     h("option", { value: "tips" }, "Files: left → right"),
     h("option", { value: "base" }, "Files: common ancestor → right"),
   );

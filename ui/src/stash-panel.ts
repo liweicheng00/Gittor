@@ -15,7 +15,7 @@ export class StashPanel {
   onRefresh: () => void = () => {};
 
   constructor() {
-    const stash = h("button", { class: "tb-button stash-all", title: "Stash all local changes" }, "Stash Changes…");
+    const stash = h("button", { class: "tb-button stash-all", title: "Stash Changes" }, "Stash Changes…");
     stash.addEventListener("click", () => this.onStashAll());
     const refresh = h("button", { class: "icon-button", title: "Refresh" }, icon("refresh"));
     refresh.addEventListener("click", () => this.onRefresh());

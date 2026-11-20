@@ -69,7 +69,7 @@ await clearHint();
 
 // The tooltip of a button with a shortcut names its keys, as the keymap has them.
 await refresh.hover();
-await within("the tooltip of Refresh names its keys", async () => (await refresh.getAttribute("title")) === "Reload commits and branches (Ctrl+R, F5)");
+await within("the tooltip of Refresh names its keys", async () => (await refresh.getAttribute("title")) === "Refresh (Ctrl+R, F5)");
 // The tab Files has a hint too.
 await page.click(".lp-tab[aria-label^='Files']");
 await within("the Files tab shows its key", async () => (await hint()) === "Ctrl+`");
@@ -78,7 +78,7 @@ await clearHint();
 await page.click(".lp-tab[aria-label^='Changes']");
 await clearHint();
 await page.hover(".commit-button");
-await within("the tooltip of Commit names Ctrl+Enter", async () => ((await page.getAttribute(".commit-button", "title")) ?? "") === "Commit the checked files (Ctrl+Enter)");
+await within("the tooltip of Commit names Ctrl+Enter", async () => ((await page.getAttribute(".commit-button", "title")) ?? "") === "Commit (Ctrl+Enter)");
 check("the tooltip of and Push names Ctrl+Alt+K", await page.$eval(".commit-push", (e) => { e.dispatchEvent(new MouseEvent("mouseover", { bubbles: true })); return e.title; }) === "Commit and Push (Ctrl+Alt+K)");
 
 // The keys that the user set show, not the default keys.

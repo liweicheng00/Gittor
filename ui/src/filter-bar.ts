@@ -51,8 +51,8 @@ export class FilterBar {
     this.clear = h("button", { class: "filter-clear", title: "Clear all filters", hidden: true }, icon("close"), "Clear");
     this.info = h("span", { class: "filter-info" });
     // The options of the text: a regular expression and the same case. They stay after Clear.
-    this.regexBtn = h("button", { class: "filter-opt", title: "Regex: the text is a regular expression" }, ".*");
-    this.caseBtn = h("button", { class: "filter-opt", title: "Match Case: the text and the user match with the same case only" }, "Aa");
+    this.regexBtn = h("button", { class: "filter-opt", title: "Regex" }, ".*");
+    this.caseBtn = h("button", { class: "filter-opt", title: "Match Case" }, "Aa");
     this.regexBtn.addEventListener("click", () => this.update({ regex: !this.value.regex }));
     this.caseBtn.addEventListener("click", () => this.update({ matchCase: !this.value.matchCase }));
     for (const input of [this.text, this.author, this.path]) {

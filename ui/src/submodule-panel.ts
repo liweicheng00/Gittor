@@ -37,11 +37,11 @@ export class SubmodulePanel {
   onUpdate: (paths: string[]) => void = () => {};
 
   constructor() {
-    const updateAll = h("button", { class: "icon-button sm-update-all", title: "Update All: initialize all submodules and check out their recorded commits" }, icon("update"));
+    const updateAll = h("button", { class: "icon-button sm-update-all", title: "Update All" }, icon("update"));
     updateAll.addEventListener("click", () => this.onUpdate([]));
     this.title = h("span", { class: "sm-title" }, "Submodules");
     this.stats = h("span", { class: "sm-stats" });
-    const head = h("div", { class: "sm-head", title: "Show or hide the submodules" }, (this.twist = twisty(!settings.submodulesCollapsed)), this.title, this.stats, updateAll);
+    const head = h("div", { class: "sm-head" }, (this.twist = twisty(!settings.submodulesCollapsed)), this.title, this.stats, updateAll);
     head.addEventListener("click", (e) => {
       if ((e.target as HTMLElement).closest("button")) return;
       this.setCollapsed(!settings.submodulesCollapsed);
@@ -131,13 +131,13 @@ export class SubmodulePanel {
         const [stateText, stateTitle] = STATE_TEXT[s.state];
         const badges = [
           stateText ? h("span", { class: "sm-badge", title: stateTitle }, stateText) : "",
-          s.dirty || s.untracked ? h("span", { class: "sm-badge", title: "The submodule has uncommitted changes" }, "*") : "",
+          s.dirty || s.untracked ? h("span", { class: "sm-badge", title: "Uncommitted changes" }, "*") : "",
         ];
         const tools: HTMLElement[] = [];
         if (s.state !== "uninitialized") {
           const branch = h(
             "button",
-            { class: "sm-branch" + (s.branch ? "" : " sm-detached"), title: "Check out another branch in the submodule" },
+            { class: "sm-branch" + (s.branch ? "" : " sm-detached"), title: "Switch Branch" },
             icon("branch"),
             h("span", { class: "sm-branch-name" }, s.branch ?? "detached"),
             icon("chevron-down"),

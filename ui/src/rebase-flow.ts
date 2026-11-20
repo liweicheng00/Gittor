@@ -79,7 +79,7 @@ export function openRebaseEditor(range: RewriteRange, repoPath: string, branch: 
             },
           });
         });
-        const select = h("select", { class: "rebase-action", title: "The action for this commit" }, ...ACTIONS.map(([v, label]) => h("option", { value: v, selected: v === l.action }, label))) as HTMLSelectElement;
+        const select = h("select", { class: "rebase-action", title: "Action" }, ...ACTIONS.map(([v, label]) => h("option", { value: v, selected: v === l.action }, label))) as HTMLSelectElement;
         select.addEventListener("change", () => void changeAction(i, select.value as PlanAction));
         const step = stepOf(l.oid);
         const status = l.action === "drop" ? "dropped" : (step?.status ?? "");

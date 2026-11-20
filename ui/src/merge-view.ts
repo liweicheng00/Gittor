@@ -83,7 +83,7 @@ class MergeWindow {
       return b;
     };
     this.status = h("span", { class: "merge-status" });
-    const applyNow = btn("Apply", "Save the result, mark the file resolved, and go to the next file with conflicts", () => void this.apply(), "primary");
+    const applyNow = btn("Apply", "", () => void this.apply(), "primary");
     this.doneBar = h("div", { class: "merge-done", hidden: true, role: "status" }, icon("resolved"), h("span", {}, "All conflicts are resolved. Check the result, then apply it."), applyNow);
     const oursHost = h("div", { class: "merge-editor" });
     const resultHost = h("div", { class: "merge-editor" });
@@ -101,9 +101,9 @@ class MergeWindow {
         btn(icon("down"), "Next change (F7)", () => this.go(1)),
         h("span", { class: "merge-sep" }),
         h("span", { class: "muted-inline" }, "Apply non-conflicting changes:"),
-        btn("« Left", "Apply the non-conflicting changes from yours", () => this.applyNonConflicting("ours")),
-        btn("All", "Apply all non-conflicting changes", () => this.applyNonConflicting("all"), "merge-all"),
-        btn("Right »", "Apply the non-conflicting changes from theirs", () => this.applyNonConflicting("theirs")),
+        btn("« Left", "Non-Conflicting Changes from Yours", () => this.applyNonConflicting("ours")),
+        btn("All", "All Non-Conflicting Changes", () => this.applyNonConflicting("all"), "merge-all"),
+        btn("Right »", "Non-Conflicting Changes from Theirs", () => this.applyNonConflicting("theirs")),
         h("span", { class: "spacer" }),
         this.status,
       ),
@@ -119,11 +119,11 @@ class MergeWindow {
       h(
         "div",
         { class: "merge-footer" },
-        btn("Accept Yours", "Take your whole version and close", () => this.close({ kind: "side", side: "ours" })),
-        btn("Accept Theirs", "Take their whole version and close", () => this.close({ kind: "side", side: "theirs" })),
+        btn("Accept Yours", "", () => this.close({ kind: "side", side: "ours" })),
+        btn("Accept Theirs", "", () => this.close({ kind: "side", side: "theirs" })),
         h("span", { class: "spacer" }),
         btn("Cancel", "Close without changes (Escape)", () => void this.cancel()),
-        btn("Apply", "Save the result, mark the file resolved, and go to the next file with conflicts", () => void this.apply(), "primary merge-apply"),
+        btn("Apply", "", () => void this.apply(), "primary merge-apply"),
       ),
     );
     this.overlay = h("div", { class: "merge-overlay" }, win);
