@@ -2,8 +2,6 @@
 
 import { visit } from "./nav";
 import { api, type ChangeListView, IGNORE_LIST } from "./api";
-import { copyText } from "./dom";
-import { formatNotes } from "./note-format";
 import { type LocalFile } from "./commit-panel";
 import { menuBelow, type MenuItem, showMenu } from "./context-menu";
 import { mergeFile } from "./conflicts";
@@ -19,14 +17,6 @@ import { compareBranches } from "./remotes";
 import { pushBranch } from "./sync";
 
 let localRequest = 0;
-
-/** Copies the open notes on all local changes, file by file. A resolved note is done, so it stays out. */
-commitPanel.onCopyNotes = async () => {
-  const open = (await api.localNotes("").catch(() => [])).filter((n) => !n.resolved);
-  if (!open.length) return void toast("There are no open notes on the local changes.", "info");
-  const paths = [...new Set(open.map((n) => n.path))].sort();
-  void copyText(paths.map((p) => formatNotes(p, open.filter((n) => n.path === p))).join("\n\n"));
-};
 
 /** Loads a file of the Files tab again; files-flow.ts sets it. */
 let reloadFileView: () => Promise<void> = async () => {};

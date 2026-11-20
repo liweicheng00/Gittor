@@ -147,6 +147,11 @@ const lineOf = await page.getAttribute(".review-window .note-card:has-text('Seco
 await within("Copy All copies all notes of the file", async () =>
   (await clipboard()) === `cli.rs\nThe file needs tests\n\ncli.rs:${lineOf}\nSecond note\n\ncli.rs:3\nUse a logger here`
     || (await clipboard()) === `cli.rs\nThe file needs tests\n\ncli.rs:3\nUse a logger here\n\ncli.rs:${lineOf}\nSecond note`);
+// Copy All Notes of the window copies the notes of all files of the review: here cli.rs only.
+const fileCopy = await clipboard();
+await page.evaluate(() => navigator.clipboard.writeText(""));
+await page.click(".review-window .review-copy-notes");
+await within("Copy All Notes copies the notes of all files of the review", async () => (await clipboard()) === fileCopy);
 
 // Resolve a note: only its icon stays in the diff, and Copy All leaves it out.
 await page.locator(".review-window .note-card:has-text('Use a logger here') .note-card-resolve").click();

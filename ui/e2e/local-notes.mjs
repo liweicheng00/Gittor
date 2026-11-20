@@ -82,14 +82,15 @@ await page.waitForTimeout(500);
 check("a branch on the right side has no notes", (await cards()).length === 0 && (await chips()).length === 0);
 await closeCompare();
 
-// The button of the Changes tab copies the open notes of all files.
+// Copy All Notes of the Compare window copies the open notes of all files of the window, by file.
 await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
 const clipboard = () => page.evaluate(() => navigator.clipboard.readText());
-await page.click(".commit-copy-notes");
-await within("the button copies the notes of all files, by file", async () =>
-  (await clipboard()) === "arith.rs:1\nCheck the overflow\n\nmain.rs:2\nAsk the agent to log this");
+check("the Changes tab has no Copy All Notes button", (await page.$(".commit-copy-notes")) === null);
 await compareOf("main.rs");
 await within("main.rs shows its note again", async () => (await cards()).some((t) => t.includes("Ask the agent")));
+await page.click(`${win} .compare-copy-notes`);
+await within("the button copies the notes of all files, by file", async () =>
+  (await clipboard()) === "arith.rs:1\nCheck the overflow\n\nmain.rs:2\nAsk the agent to log this");
 
 // Resolve: only the icon stays at the line.
 await page.click(`${win} .note-card:has-text('Ask the agent') .note-card-resolve`);
@@ -99,9 +100,9 @@ await page.click(`${win} .note-chip`);
 await within("a click on the icon shows the note", async () => (await cards()).some((t) => t.includes("resolved")));
 await page.click(`${win} .note-card .note-card-fold`);
 await within("the fold button shows the icon again", async () => (await cards()).length === 0 && (await chips()).length === 1);
-await closeCompare();
-await page.click(".commit-copy-notes");
+await page.click(`${win} .compare-copy-notes`);
 await within("the button leaves out the resolved note", async () => (await clipboard()) === "arith.rs:1\nCheck the overflow");
+await closeCompare();
 
 // The note stays after a reload, while the file is the same.
 await page.reload();

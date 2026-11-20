@@ -11,7 +11,8 @@ import { copyText, dragResize, formatDate, h, icon, rowSplitter, twisty } from "
 import { fileIcon } from "./file-icon";
 import { buildTree, treeOrder, walkTree } from "./file-tree";
 import { sharedDiff } from "./history-view";
-import { formatNote } from "./note-format";
+import { formatNote, formatNotes } from "./note-format";
+import { toast } from "./notify";
 import { NotesPanel } from "./notes-panel";
 import { showMenu } from "./context-menu";
 import { save, settings } from "./settings";
@@ -97,6 +98,14 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
     else rows.sort((a, b) => a.path.localeCompare(b.path));
     selected = keep ? rows.findIndex((r) => r.path === keep) : -1;
     renderFiles();
+  });
+  // Copy All Notes: the open notes of all files of the review, in the commit or the changes that show.
+  const copyAllBtn = h("button", { class: "icon-button review-copy-notes", title: "Copy All Notes" }, icon("copy"));
+  copyAllBtn.addEventListener("click", () => {
+    const open = (detail?.commentList ?? []).filter((c) => !c.resolved && (c.commit ?? null) === scopeCommit());
+    if (!open.length) return void toast("The review has no open notes.", "info");
+    const paths = [...new Set(open.map((n) => n.path))].sort();
+    void copyText(paths.map((p) => formatNotes(p, open.filter((n) => n.path === p))).join("\n\n"));
   });
   const filesEl = h("div", { class: "history-list review-files", tabIndex: 0 });
   copySource(filesEl, () => rows[selected] && repoPath(rows[selected].path));
@@ -222,6 +231,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
     }
     filesTitle.replaceChildren(
       ...parts2,
+      copyAllBtn,
       treeBtn,
       h("div", { class: "review-progress" }, h("div", { class: "review-progress-bar", style: { width: `${total ? Math.round((seen / total) * 100) : 0}%` } })),
     );

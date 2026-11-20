@@ -11,6 +11,8 @@ import { dragResize, formatDate, h, icon, rowSplitter, twisty } from "./dom";
 import { fileIcon } from "./file-icon";
 import type { NoteHandlers, NoteItem } from "./note-layer";
 import { NotesPanel } from "./notes-panel";
+import { formatNotes } from "./note-format";
+import { toast } from "./notify";
 import { buildTree, treeOrder, walkTree } from "./file-tree";
 import { showMenu } from "./context-menu";
 import { save, settings } from "./settings";
@@ -75,10 +77,19 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
   copySource(filesEl, () => files[selected] && repoPath(files[selected].path));
   const summary = h("span", { class: "muted-inline" }, "");
   const treeBtn = h("button", { class: "icon-button compare-tree-toggle" });
+  // Copy All Notes: the open notes on the files of the window, while the right side is the working tree.
+  const copyNotesBtn = h("button", { class: "icon-button compare-copy-notes", title: "Copy All Notes", hidden: true }, icon("copy"));
+  copyNotesBtn.addEventListener("click", async () => {
+    if (!cb.notes) return;
+    const lists = await Promise.all(files.map(async (f) => ({ path: f.path, notes: (await cb.notes!.list(f.path).catch(() => [])).filter((n) => !n.resolved) })));
+    const open = lists.filter((l) => l.notes.length).sort((a, b) => a.path.localeCompare(b.path));
+    if (!open.length) return void toast("These files have no open notes.", "info");
+    cb.copyText(open.map((l) => formatNotes(l.path, l.notes)).join("\n\n"));
+  });
   const grip = h("div", { class: "vgrip" });
   const side = h("div", { class: "compare-side" });
   const sideGrip = rowSplitter(side, commitsEl, () => settings.compareCommitsHeight, (px) => (settings.compareCommitsHeight = px), save);
-  side.append(commitsEl, sideGrip, h("div", { class: "compare-files-title" }, "Changed files ", summary, h("span", { class: "spacer" }), treeBtn), filesEl);
+  side.append(commitsEl, sideGrip, h("div", { class: "compare-files-title" }, "Changed files ", summary, h("span", { class: "spacer" }), copyNotesBtn, treeBtn), filesEl);
   // The notes of a local change: the list, Copy All and a note on the whole file, under the diff.
   const notesPanel = new NotesPanel((t) => cb.copyText(t));
   notesPanel.el.hidden = true;
@@ -249,6 +260,7 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
   const renderFiles = () => {
     const text = `${files.length} file${files.length === 1 ? "" : "s"}${cb.scope && right === WORKTREE ? ` in ${cb.scope.name}` : ""}`;
     if (summary.textContent !== text) summary.textContent = text;
+    copyNotesBtn.hidden = !cb.notes || right !== WORKTREE;
     if (treeBtn.dataset.tree !== String(settings.compareAsTree)) {
       treeBtn.dataset.tree = String(settings.compareAsTree);
       treeBtn.replaceChildren(icon(settings.compareAsTree ? "list" : "tree"));
