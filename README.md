@@ -33,7 +33,7 @@ the shortcut next to the mouse; Settings › General › Shortcut hints turns th
 | `Ctrl/Cmd+B` | New branch (from the current branch, or another one) |
 | `Ctrl/Cmd+T` | Update |
 | `Ctrl/Cmd+R`, `F5` | Refresh |
-| `Ctrl/Cmd+F` | Filter the log |
+| `Ctrl/Cmd+F` | Find in the open file; without one, filter the log |
 | `Ctrl/Cmd+E`, `Shift+F4` | Open the repository in the editor of Settings › Editor, with the selected file or the file of the diff (the IDE button) |
 | `Alt+F12` | Open a terminal in the folder of the repository (Settings › Terminal sets the app) |
 | `Ctrl/Cmd+Z` | Undo the last operation (outside a text field) |

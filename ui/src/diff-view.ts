@@ -13,6 +13,7 @@ import { copyText, h, icon } from "./dom";
 import { markBlocks, removedAnchors } from "./markdown-model";
 import { blocksOf, renderMarkdown, updateDoc } from "./markdown-preview";
 import { NoteLayer, type NoteHandlers, type NoteItem } from "./note-layer";
+import { PreviewFind } from "./preview-find";
 import { save, settings } from "./settings";
 import { GLOW_MONACO, glowMonacoThemes } from "./glow-monaco";
 
@@ -50,6 +51,13 @@ export function editorFont(): { fontSize: number; fontFamily?: string } {
 
 const views = new Set<DiffView>();
 
+/** The diff view that holds an element, for example the target of a key. */
+export function diffViewAt(el: Element | null): DiffView | undefined {
+  if (!el) return undefined;
+  for (const v of views) if (v.el.contains(el)) return v;
+  return undefined;
+}
+
 /** Applies the diff settings (font, layout options) to every diff view. */
 export function applyDiffSettings() {
   for (const v of views) v.applySettings();
@@ -74,6 +82,8 @@ export class DiffView {
   private markdown: { left: string; right: string; kind: "diff" | "added" | "deleted" | "view" } | null = null;
   /** The editor that shows the file when the preview is off. */
   private editorMode: "diff" | "single" = "diff";
+  /** The find bar of the Markdown preview. The editors use the find widget of Monaco. */
+  private previewFind: PreviewFind;
   /** In one column: the blocks of the old text, which a diff puts between the new blocks. */
   private oldBlocks: { el: HTMLElement; block: [number, number] }[] = [];
   private path = "";
@@ -143,6 +153,8 @@ export class DiffView {
     const annotate = h("label", { class: "diff-option", title: "Show the commit that last changed each line (git blame). Click an annotation to go to its commit." }, this.annotateBox, "Annotate");
     this.historyBtn = btn(icon("history"), "Show the history of this file", () => this.source && this.onHistory(this.source.path));
     const editBtn = btn(icon("edit"), "Open in the editor (F4)", () => this.openInEditor(), "openInEditor");
+    const findBtn = btn(icon("search"), "Find in the file", () => this.find(), "filter");
+    findBtn.classList.add("diff-find");
     editBtn.classList.add("diff-open-editor");
     this.previewBtn = h("button", { class: "tb-button diff-preview-toggle", hidden: true }, "Preview");
     this.previewBtn.addEventListener("click", () => {
@@ -161,6 +173,7 @@ export class DiffView {
       copyPath,
       this.historyBtn,
       editBtn,
+      findBtn,
       this.stats,
       h("span", { class: "spacer" }),
       this.sides,
@@ -175,7 +188,8 @@ export class DiffView {
     this.host = h("div", { class: "diff-host" });
     this.singleHost = h("div", { class: "diff-host", hidden: true });
     this.previewHost = h("div", { class: "diff-host md-preview", hidden: true, tabIndex: 0 });
-    this.el = h("section", { class: "diff" }, toolbar, h("div", { class: "diff-area" }, this.notice, this.host, this.singleHost, this.previewHost));
+    this.previewFind = new PreviewFind(this.previewHost);
+    this.el = h("section", { class: "diff" }, toolbar, h("div", { class: "diff-area" }, this.notice, this.host, this.singleHost, this.previewHost, this.previewFind.el));
     this.editor = monaco.editor.createDiffEditor(this.host, {
       readOnly: true,
       originalEditable: false,
@@ -470,6 +484,15 @@ export class DiffView {
     return { line: first ?? top.startLineNumber, column: 1 };
   }
 
+  /** Opens the find widget of the editor that shows, or the find bar of the Markdown preview. */
+  find() {
+    if (!this.notice.hidden) return;
+    if (!this.previewHost.hidden) return this.previewFind.show();
+    const ed = this.editorMode === "single" ? this.single : this.editor.getModifiedEditor();
+    ed.focus();
+    void ed.getAction("actions.find")?.run();
+  }
+
   openInEditor() {
     if (!this.path) return;
     const p = this.editorPosition();
@@ -721,6 +744,7 @@ export class DiffView {
     if (!on || !this.markdown) {
       const was = !this.previewHost.hidden;
       this.previewHost.hidden = true;
+      if (this.previewFind.open) this.previewFind.close();
       this.previewHost.replaceChildren();
       this.previewLayout = "";
       this.oldBlocks = [];
@@ -767,6 +791,7 @@ export class DiffView {
       this.previewHost.scrollTop = top;
     }
     this.previewLayout = layout;
+    this.previewFind.refresh();
     this.markPreview();
   }
 

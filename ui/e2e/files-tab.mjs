@@ -106,6 +106,11 @@ await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
 await page.click(".file-host .review-notes-copy");
 await within("Copy All copies the notes of the file", async () => (await page.evaluate(() => navigator.clipboard.readText())) === "arith.rs\nRename this file\n\narith.rs:1\nCheck this add");
 await shot("ft3-file-notes");
+// The find button opens the find widget of the editor of the file.
+await page.click(".file-host .diff-find");
+await within("the find button opens the find widget", async () => await page.isVisible(".file-host .find-widget.visible"));
+await page.keyboard.press("Escape");
+await within("Escape closes the find widget", async () => !(await page.isVisible(".file-host .find-widget.visible")));
 // Annotate shows the commit and the author of each line in the gutter. Two clicks add no message.
 await page.check(".file-host .diff-option:has-text('Annotate') input");
 await within("Annotate shows the authors of the lines", async () => (await page.$$(".file-host .blame-first")).length > 0);
@@ -119,7 +124,17 @@ await page.click(row("README.md"));
 await within("README.md shows its preview", async () => await page.isVisible(".file-host .md-col .md-body"));
 check("the preview has one column", (await page.$$(".file-host .md-col")).length === 1);
 check("the preview has no column label", (await page.$$(".file-host .md-col-label")).length === 0);
+// Mod+F finds text in the preview of the open file, also when the focus is in the Files tab.
+await page.click(row("README.md"));
+await page.keyboard.press("Control+f");
+await within("Mod+F shows the find bar of the preview", async () => await page.isVisible(".file-host .preview-find"));
+await page.keyboard.type("build");
+await within("the find bar counts the matches", async () => ((await page.textContent(".file-host .preview-find-count")) ?? "") === "1 of 2");
+await page.keyboard.press("Enter");
+await within("Enter goes to the next match", async () => ((await page.textContent(".file-host .preview-find-count")) ?? "") === "2 of 2");
 await shot("ft4-markdown");
+await page.keyboard.press("Escape");
+await within("Escape closes the find bar", async () => !(await page.isVisible(".file-host .preview-find")));
 // Mod+W closes the active file, not the project. The next file shows.
 await page.keyboard.press("Control+w");
 await within("Mod+W closes README.md, and arith.rs shows", async () => !(await page.$(".center-tab:has-text('README.md')")) && ((await page.textContent(".center-tab.on").catch(() => "")) ?? "").includes("arith.rs"));
