@@ -69,7 +69,7 @@ h1 { font-size:16px; margin:0 0 4px; } .sub { color:var(--mute); margin:0 0 16px
 .split .t { color:var(--mute); font-weight:600; margin-bottom:4px; }
 </style></head><body>
 <h1>Gittor as a side panel: wireframes at 400 px (main of 2026-11-19)</h1>
-<p class="sub">One column. The icon tabs of today stay, with a new Log tab (dashed). The diff and the file viewer open as a page over the tab. The commit info shows under the log; there is no list of changed files. Red numbers mark the parts that the panel must keep.<br>Tab icons: ☰ Log (new) · ▤ Files · ⑂ Branches · ± Changes (badge: count) · ⧉ Worktrees · ▣ Stash · ✎ Reviews. The active tab is a filled block, as today.</p>
+<p class="sub">One column. The icon tabs of today stay, with a new Log tab (dashed). The Files tab does not show. The diff opens as a page over the tab. The commit info shows under the log; there is no list of changed files. Red numbers mark the parts that the panel must keep.<br>Tab icons: ☰ Log (new) · ⑂ Branches · ± Changes (badge: count) · ⧉ Worktrees · ▣ Stash · ✎ Reviews. The active tab is a filled block, as today.</p>
 
 <div class="section"><div class="row">
 
@@ -77,7 +77,7 @@ h1 { font-size:16px; margin:0 0 4px; } .sub { color:var(--mute); margin:0 0 16px
 <p class="cap">1 · Changes tab <small>default view</small></p>
 <div class="frame">
   <div class="top"><span class="call">1</span><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">⋯</span></div>
-  <div class="itabs"><span class="it new" title="Log">☰</span><span class="it" title="Files">▤</span><span class="it" title="Branches">⑂</span><span class="it on" title="Changes">±<span class="bd">5</span></span><span class="it" title="Worktrees">⧉</span><span class="it" title="Stash">▣</span><span class="it" title="Reviews">✎</span></div>
+  <div class="itabs"><span class="it new" title="Log">☰</span><span class="it" title="Branches">⑂</span><span class="it on" title="Changes">±<span class="bd">5</span></span><span class="it" title="Worktrees">⧉</span><span class="it" title="Stash">▣</span><span class="it" title="Reviews">✎</span></div>
   <div class="body">
     <div class="f" style="color:var(--mute)">⟳ ↶ ＋ ⧉ <span style="margin-left:auto">☰ ⇕ ⇲</span></div>
     <div class="grp">▸ .ignore · 0</div>
@@ -103,7 +103,7 @@ h1 { font-size:16px; margin:0 0 4px; } .sub { color:var(--mute); margin:0 0 16px
 <div class="arrow">→</div>
 
 <div class="col">
-<p class="cap">2 · Diff page <small>a click on a file (also the file viewer of Files)</small></p>
+<p class="cap">2 · Diff page <small>a click on a changed file</small></p>
 <div class="frame">
   <div class="top"><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">⋯</span></div>
   <div class="pagebar"><span class="call">3</span>←<b>arith.rs</b><span>↑ ↓</span><span>⇤ ⇥</span><span>⋯</span></div>
@@ -132,7 +132,7 @@ h1 { font-size:16px; margin:0 0 4px; } .sub { color:var(--mute); margin:0 0 16px
 <p class="cap">3 · Log tab <small>the commit info under the log</small></p>
 <div class="frame">
   <div class="top"><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">⋯</span></div>
-  <div class="itabs"><span class="it on new" title="Log">☰</span><span class="it" title="Files">▤</span><span class="it" title="Branches">⑂</span><span class="it" title="Changes">±<span class="bd">5</span></span><span class="it" title="Worktrees">⧉</span><span class="it" title="Stash">▣</span><span class="it" title="Reviews">✎</span></div>
+  <div class="itabs"><span class="it on new" title="Log">☰</span><span class="it" title="Branches">⑂</span><span class="it" title="Changes">±<span class="bd">5</span></span><span class="it" title="Worktrees">⧉</span><span class="it" title="Stash">▣</span><span class="it" title="Reviews">✎</span></div>
   <div class="body" style="flex:none;height:330px">
     <div class="f"><span class="call">5</span><div class="input" style="flex:1">Text or hash <i>.* Aa</i></div><span class="btn">⚲ 1</span></div>
     <div style="height:4px"></div>
@@ -169,7 +169,7 @@ h1 { font-size:16px; margin:0 0 4px; } .sub { color:var(--mute); margin:0 0 16px
 <p class="cap">4 · Branches tab</p>
 <div class="frame">
   <div class="top"><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">⋯</span></div>
-  <div class="itabs"><span class="it new" title="Log">☰</span><span class="it" title="Files">▤</span><span class="it on" title="Branches">⑂</span><span class="it" title="Changes">±<span class="bd">5</span></span><span class="it" title="Worktrees">⧉</span><span class="it" title="Stash">▣</span><span class="it" title="Reviews">✎</span></div>
+  <div class="itabs"><span class="it new" title="Log">☰</span><span class="it on" title="Branches">⑂</span><span class="it" title="Changes">±<span class="bd">5</span></span><span class="it" title="Worktrees">⧉</span><span class="it" title="Stash">▣</span><span class="it" title="Reviews">✎</span></div>
   <div class="body">
     <div class="f"><div class="input" style="flex:1">Search branches and tags</div><span>☆</span></div>
     <div class="f" style="margin-top:4px"><span class="tag">HEAD</span> <b>agent/fix</b></div>
@@ -196,7 +196,7 @@ h1 { font-size:16px; margin:0 0 4px; } .sub { color:var(--mute); margin:0 0 16px
 <p class="cap">5 · Worktrees tab</p>
 <div class="frame">
   <div class="top"><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">⋯</span></div>
-  <div class="itabs"><span class="it new" title="Log">☰</span><span class="it" title="Files">▤</span><span class="it" title="Branches">⑂</span><span class="it" title="Changes">±<span class="bd">5</span></span><span class="it on" title="Worktrees">⧉</span><span class="it" title="Stash">▣</span><span class="it" title="Reviews">✎</span></div>
+  <div class="itabs"><span class="it new" title="Log">☰</span><span class="it" title="Branches">⑂</span><span class="it" title="Changes">±<span class="bd">5</span></span><span class="it on" title="Worktrees">⧉</span><span class="it" title="Stash">▣</span><span class="it" title="Reviews">✎</span></div>
   <div class="body">
     <div class="f"><div class="input" style="flex:1">Search worktrees</div><span>☆</span><span>＋</span></div>
     <div class="f sel" style="margin-top:4px">▣ <b>demo</b> <span class="tag">agent/fix</span> <span class="m" style="color:var(--mute)">this</span></div>
@@ -214,7 +214,7 @@ h1 { font-size:16px; margin:0 0 4px; } .sub { color:var(--mute); margin:0 0 16px
 <p class="cap">6 · Menu ⋯ <small>rare actions</small></p>
 <div class="frame">
   <div class="top"><span class="b">⇣</span><span class="b">⇡ 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b" style="background:var(--hi)">⋯</span></div>
-  <div class="itabs"><span class="it new" title="Log">☰</span><span class="it" title="Files">▤</span><span class="it" title="Branches">⑂</span><span class="it on" title="Changes">±<span class="bd">5</span></span><span class="it" title="Worktrees">⧉</span><span class="it" title="Stash">▣</span><span class="it" title="Reviews">✎</span></div>
+  <div class="itabs"><span class="it new" title="Log">☰</span><span class="it" title="Branches">⑂</span><span class="it on" title="Changes">±<span class="bd">5</span></span><span class="it" title="Worktrees">⧉</span><span class="it" title="Stash">▣</span><span class="it" title="Reviews">✎</span></div>
   <div class="body" style="color:#ccc"><div class="f"><span class="box"></span> arith.rs</div><div class="f"><span class="box"></span> main.rs</div></div>
   <div class="dim"></div>
   <div class="menu">
@@ -224,18 +224,18 @@ h1 { font-size:16px; margin:0 0 4px; } .sub { color:var(--mute); margin:0 0 16px
   </div>
   <div class="status">&nbsp;</div>
 </div>
-<div class="legend"><p><span class="call">9</span>Everything that is not a main task. Stash and Reviews stay as icon tabs: seven icons fit at 320 px. Open, Theme and the project tabs do not show in an embed.</p></div>
+<div class="legend"><p><span class="call">9</span>Everything that is not a main task. Stash and Reviews stay as icon tabs: six icons fit at 320 px. Open, Theme and the project tabs do not show in an embed.</p></div>
 </div>
 
 </div></div>
 
 <div class="section">
-<p class="cap">7 · From 640 to 948 px (here 760 px) <small>two columns: the left pane of today, and the log with the commit info under it</small></p>
+<p class="cap">7 · From 640 to 948 px (here 760 px) <small>two columns: the left pane of today without Files, and the log with the commit info under it</small></p>
 <div class="wide"><div class="frame">
   <div class="top"><span class="b">⇣ Update</span><span class="b">⇡ Push 2</span><b>demo</b><span class="b">⑂ agent/fix ▾</span><span class="sp"></span><span class="b">⋯</span></div>
   <div class="cols">
     <div>
-      <div style="margin:-6px -8px 6px"><div class="itabs"><span class="it" title="Files">▤</span><span class="it" title="Branches">⑂</span><span class="it on" title="Changes">±<span class="bd">5</span></span><span class="it" title="Worktrees">⧉</span><span class="it" title="Stash">▣</span><span class="it" title="Reviews">✎</span></div></div>
+      <div style="margin:-6px -8px 6px"><div class="itabs"><span class="it" title="Branches">⑂</span><span class="it on" title="Changes">±<span class="bd">5</span></span><span class="it" title="Worktrees">⧉</span><span class="it" title="Stash">▣</span><span class="it" title="Reviews">✎</span></div></div>
       <div class="f sel"><span class="box x"></span> arith.rs <span class="m">M</span></div>
       <div class="f"><span class="box x"></span> main.rs <span class="m">M</span></div>
       <div class="f"><span class="box x"></span> README.md <span class="m">M</span></div>
@@ -257,7 +257,7 @@ h1 { font-size:16px; margin:0 0 4px; } .sub { color:var(--mute); margin:0 0 16px
   </div>
   <div class="status">4 files checked · 14 commits</div>
 </div></div>
-<div class="legend" style="width:760px"><p>The left pane keeps its six icon tabs. The log shows the subject and a short author and date; the commit info is under it. A click on a file opens the diff page (2) over the right column.</p></div>
+<div class="legend" style="width:760px"><p>The left pane keeps its icon tabs, without Files. The log shows the subject and a short author and date; the commit info is under it. A click on a file opens the diff page (2) over the right column.</p></div>
 </div>
 
 </body></html>

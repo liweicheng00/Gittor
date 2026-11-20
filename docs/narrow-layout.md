@@ -52,7 +52,7 @@ Branches tab. Right: the Files tab. The log is cut on all three; the diff shows 
 | --- | --- | --- | --- |
 | Toolbar | Needs 748 px; less than half shows. | About half shows: Open, Refresh, Update, Push, part of Local History. | Settings, Theme, View, Terminal and IDE stay out of view. |
 | Project tabs | Scroll without a scroll bar. They work, but show 1 or 2 tabs. | Same. | Same. |
-| Left icon tabs (6) | No icon is cut. The six icons take about 270 px, so seven fit at 320 px. The column is often out of view. | Same. | Same. |
+| Left icon tabs (6) | No icon is cut. The six icons take about 270 px. The column is often out of view. | Same. | Same. |
 | Branches, Worktrees, Files, Changes, Stash, Reviews panels | Each fits in its 280 px column. | Same. | Same. |
 | Log columns | The center column is 300 px. The subject column has width 0; the header "Subject" overlaps "Author". | Same. | Same. |
 | Filter bar | Wraps to 3 rows; branch, path and date are out of view. | Same. | Same. |
@@ -91,10 +91,10 @@ Reviews of branches, interactive rebase, Settings, remotes, open a repository.
 | --- | --- | --- |
 | Changes tab | Keep. Default view. | Tasks 1 and 3. |
 | Diff of a local change | Keep, as a page over the whole panel, with a Back button. Force inline mode. | Task 2. |
-| File viewer of the Files tab | The same page as the diff. | It has no room in a center panel. |
 | Review notes | Keep. Note cards under their lines (view zones). | Task 4. |
 | Branch switcher, Update, Push | Keep in the top bar. | Tasks 5 and 7. |
-| Left icon tabs | Keep all six, and add a Log tab. Seven icons fit at 320 px. | The icons of today already fit. The keys `Mod+1`…`Mod+5` stay. |
+| Left icon tabs | Keep Branches, Changes, Worktrees, Stash and Reviews, and add a Log tab. Six icons fit at 320 px. | The icons of today already fit. The keys `Mod+1`…`Mod+5` stay. |
+| Files tab and its file viewer | Hide under the breakpoint. Turn off its key `` Mod+` ``. | The owner decided: a side panel next to an editor does not need it. The host shows the files. |
 | Worktrees tab | Keep. | Task 5. |
 | Log: graph and subject | Keep, in the Log tab. | Task 6. |
 | Log: author, date, hash | Hide under the breakpoint. | The subject needs the width. |
@@ -113,8 +113,8 @@ Reviews of branches, interactive rebase, Settings, remotes, open a repository.
 ### Idea A (recommended): one column with icon tabs, and pages that slide in
 
 - The top bar holds Update, Push with its count, the repository, the branch switcher and "⋯".
-- The icon tabs of today stay, with a new Log tab at the left.
-- A click on a local change, or on a file of the Files tab, opens a page over the tab. The page has
+- The icon tabs of today stay, without Files, and with a new Log tab at the left.
+- A click on a local change opens a page over the tab. The page has
   Back, the file name and the diff tools. Back, `Escape` (which hides the diff panel today) and the
   mouse button Back close it (`nav.ts` has a stack).
 - In the Log tab, the Commit Details of the selected commit show under the log. There is no list of
@@ -135,7 +135,7 @@ Reviews of branches, interactive rebase, Settings, remotes, open a repository.
 5. **Worktrees tab**. The tab of today. A click opens the worktree in this panel.
 6. **Menu ⋯**. Refresh, Fetch, Local History, Compare Branches, Open in Editor/Terminal/on the
    Web, View, Settings.
-7. **From 640 to 948 px**. Two columns: the left pane of today with its six icon tabs, and the log
+7. **From 640 to 948 px**. Two columns: the left pane of today without the Files tab, and the log
    with the Commit Details under it. A click on a file opens the diff page over the right column.
 
 The CSS-only prototype shows that the panels of today fit in this layout:
@@ -170,11 +170,10 @@ Existing code that helps:
   `shell.ts`. The narrow mode can set the grid in `applyLayout` without a change of the saved
   settings.
 - `lpTab` and `showLeftTab` in `shell.ts`: the icon tabs already switch the panels. A Log tab is one
-  more `lpTab` and one more value of `showLeftTab`.
+  more `lpTab` and one more value of `showLeftTab`. The Files tab can hide with its `hidden` property.
 - `DetailsPanel` (`details-panel.ts`): it fits under the log at 400 px without a change.
 - `settings.showAuthor`, `showDate`, `showHash` and the column code in `log-view.ts`.
 - `settings.sideBySide`: inline mode works at 320 px.
-- `centerTabs` and `fileHost` of the Files tab: the narrow page for a file can reuse `fileHost`.
 - `nav.ts` (`visit`, `navigate`) and the `hideDiff` key (`Escape`) for the Back of a page.
 - `menuBelow` in `context-menu.ts` for the menu "⋯".
 - The windows (`.history-window`) are in the page already, so they work in an iframe.
@@ -190,7 +189,7 @@ Modules that a later change touches:
 | `filter-bar.ts` | Fold the filters behind one button. |
 | `diff-view.ts`, `note-layer.ts` | Inline mode under the breakpoint; a Back button; note cards under the lines. |
 | `changes-panel.ts` | Hide under the breakpoint. |
-| `files-flow.ts` | Open a file as a page under the breakpoint. |
+| `files-flow.ts` | Hide the Files tab and its center tabs under the breakpoint. |
 | `windows.ts`, `compare-view.ts`, `history-view.ts`, `review-view.ts`, `merge-view.ts` | Full panel; one pane at a time. |
 | `settings-dialog.ts` | Section list as a select. |
 | `keyboard.ts` | Embed mode (see below). |
@@ -241,7 +240,7 @@ editor host:
 | `Mod+F` | Filter the log | Find |
 | `Mod+T` | Update | New tab, go to symbol |
 | `Mod+O` | Open repository | Open file |
-| `` Mod+` `` | Files tab | Toggle the terminal |
+| `` Mod+` `` | Files tab (off in the narrow layout) | Toggle the terminal |
 | `Alt+<n>`, `` Alt+` `` | Project tabs, switch project | Menus on Windows and Linux |
 | `Mod+PageUp/PageDown` | Next/previous tab | Next/previous editor |
 | `Mod+=`, `Mod+-`, `Mod+0` | Zoom | Zoom of the host |
