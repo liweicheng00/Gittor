@@ -11,7 +11,7 @@ import { newBranchHere, undoLast } from "./operations";
 import { askForRepo, closeActiveTab, fetchAll, refresh, switchTab } from "./repo";
 import { settings } from "./settings";
 import { openSettings } from "./settings-flow";
-import { centerHooks, changes, commitPanel, diff, fileHost, filesPanel, filterBar, log, worktreePanel, openBtn, showLeftTab, statusActivity, submodulePanel, toggleDiff } from "./shell";
+import { centerHooks, changes, commitPanel, diff, fileHost, filesPanel, filterBar, log, worktreePanel, openBtn, showLeftTab, statusActivity, submodulePanel, toggleDiff, diffShown } from "./shell";
 import { diffViewAt } from "./diff-view";
 import { app } from "./state";
 import { pushBranch, updateBranch } from "./sync";
@@ -92,7 +92,7 @@ for (const a of [
     },
   },
   { id: "diffPanel", label: "Diff Panel (show or hide)", defaults: [], run: () => toggleDiff() },
-  { id: "hideDiff", label: "Hide the Diff Panel", defaults: ["Escape"], run: () => toggleDiff(false), when: (t: HTMLElement) => !typing(t) && settings.showDiff },
+  { id: "hideDiff", label: "Hide the Diff Panel", defaults: ["Escape"], run: () => toggleDiff(false), when: (t: HTMLElement) => !typing(t) && diffShown() },
   {
     id: "closeProject",
     label: "Close the File, or the Project Tab",

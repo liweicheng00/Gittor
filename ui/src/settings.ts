@@ -48,6 +48,8 @@ export interface Settings {
   compareAsTree: boolean;
   reviewCommitsHeight: number;
   detailsRatio: number;
+  /** The height (px) of the commit details under the log, in the medium and narrow layouts. */
+  logDetailsHeight: number;
   /** The largest width of the graph column, in pixels. The subject covers the rest of the graph. 0 shows all of the graph. */
   graphWidth: number;
   authorWidth: number;
@@ -134,6 +136,7 @@ const DEFAULTS: Settings = {
   compareAsTree: true,
   reviewCommitsHeight: 180,
   detailsRatio: 0.55,
+  logDetailsHeight: 220,
   graphWidth: 0,
   authorWidth: 150,
   dateWidth: 125,

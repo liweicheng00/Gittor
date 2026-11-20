@@ -21,7 +21,7 @@ import { openRepo, renderTabs, switchTab } from "./repo";
 import { resetWindowRoots } from "./window-roots";
 import { firstStart, restoreSettings, settings, soloWindow, startSettingsCopy } from "./settings";
 import { applyBackendSettings, scheduleAutoFetch } from "./settings-flow";
-import { applyLayout, applyTheme, showLeftTab } from "./shell";
+import { applyLayout, applyTheme, layout, showLeftTab } from "./shell";
 import { showWorkspace } from "./welcome";
 import { applyZoom } from "./zoom";
 
@@ -55,7 +55,8 @@ if (inTauri && !soloWindow) {
   });
 }
 applyLayout();
-showLeftTab(settings.leftTab);
+// The narrow layout has no Files tab. The start keeps a hidden left pane hidden.
+showLeftTab(layout.mode === "narrow" && settings.leftTab === "files" ? "commit" : settings.leftTab, false);
 applyTheme();
 applyZoom();
 showWorkspace(false);

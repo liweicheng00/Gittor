@@ -161,6 +161,16 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   only with `.view-zones { z-index: 1 }`, and it acts on `mousedown`: Monaco takes the mouse after a press.
   Each side of a change needs a decision: taken (`applied`) or not taken (`rejected`, the ✕ buttons). A
   change is resolved when each side has one; then the bar `.merge-done` shows.
+- Layout modes (`layout-mode.ts`, unit tests): "wide" from 948 px, "medium" from 640 px, "narrow" below
+  (a side panel of another app). `applyLayout` in `shell.ts` places each part of `.top` in the grid with
+  `topGrid`, so a hidden part does not move the others into its cells. `<html data-layout>` names the mode;
+  the CSS of the smaller modes is under `[data-layout=...]` in `style.css`. Medium: no right column, the
+  Commit Details under the log (`logDetailsHeight`), no changed files. Narrow: one column; the left tabs
+  move above the workspace and get a Log tab (`showLogTab`); no Files tab; a click on a local change opens
+  the diff as a page (`layout.diffPage`, Back or Escape closes it) in one column (`DiffView.setInlineOnly`);
+  the toolbar keeps Update, Push, the branch and `tb-more`, which shows the other buttons in a second row.
+  The saved settings do not change with the mode. The `narrow` scenario tests 400, 800 and 1600 px.
+  `showLeftTab(tab, false)` at the start keeps View › Left Panel off after a reload.
 - Windows (Compare, History, Review, Show Repository): `windows.ts`. A window calls
   `registerWindow(close, kind, show)`, and listens with `onRepoChange`. `watch.ts` calls
   `notifyRepoChange("files" | "repo")`.

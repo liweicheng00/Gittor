@@ -1,7 +1,18 @@
 # A narrow layout for Gittor
 
-This report is research only. It changes no layout code. It examines `main` at commit `c1e3f99`
-(after v0.1.10).
+The research examined `main` at commit `c1e3f99` (after v0.1.10).
+
+## Status
+
+The first implementation is on the branch `claude/narrow-layout`. See "Layout modes" in `AGENTS.md`.
+
+- Done: the three modes and their breakpoints; the Log tab with the Commit Details under the log; no
+  changed files and no Files tab in the small modes; the diff page with Back in one column; the toolbar
+  with a second row; the filter bar with one button for the other filters; the Settings dialog in one
+  column; the fix of View › Left Panel (the log no longer gets 0 px, and the setting stays after a reload).
+- Not done yet: note cards under their lines; Compare, History and Review windows one pane at a time; a
+  count of the active filters on the filter button; the embed mode (`?embed=1`, keys, theme); a token and
+  an Origin check in the dev server.
 
 The owner wants to put Gittor into another app as a side panel, for example Orca (an editor for
 coding agents). The panel is narrow: 320, 400 or 480 px wide, about 900 px high. The report answers

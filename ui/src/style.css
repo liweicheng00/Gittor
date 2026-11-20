@@ -125,6 +125,32 @@ html.titlebar-tabs .tab { border-top: 2px solid transparent; }
 .right { display: grid; grid-template-columns: minmax(0, 1fr); }
 .vgrip { background: var(--border); cursor: col-resize; }
 .hgrip-row { background: var(--border); cursor: row-resize; }
+/* The medium and narrow layouts (layout-mode.ts, applyLayout in shell.ts). The grid places each part. */
+.workspace > .top { grid-row: 1; }
+.workspace > .hgrip-row { grid-row: 2; }
+.workspace > .diff { grid-row: 3; }
+.diff-back, .tb-more, .filter-more { display: none; }
+[data-layout="medium"] .right > :not(.details-panel), [data-layout="narrow"] .right > :not(.details-panel) { display: none; }
+[data-layout="medium"] .hcol.author, [data-layout="medium"] .log-row .author, [data-layout="medium"] .hcol.hash, [data-layout="medium"] .log-row .hash { display: none; }
+[data-layout="narrow"] .hcol.author, [data-layout="narrow"] .log-row .author, [data-layout="narrow"] .hcol.date, [data-layout="narrow"] .log-row .date, [data-layout="narrow"] .hcol.hash, [data-layout="narrow"] .log-row .hash { display: none; }
+[data-layout="medium"] .toolbar > .tb-repo { display: none; }
+[data-layout="narrow"] .leftpane { border-right: 0; }
+.lp-tab.lp-tab-log { order: -1; }
+[data-layout="narrow"] .toolbar { flex-wrap: wrap; }
+[data-layout="narrow"] .toolbar:not(.more-open) > :not(.tb-keep), [data-layout="narrow"] .toolbar > .spacer, [data-layout="narrow"] .toolbar > .tb-repo { display: none; }
+[data-layout="narrow"] .tb-more { display: inline-flex; margin-left: auto; }
+[data-layout="narrow"] .tb-branch-button { min-width: 0; max-width: 45vw; overflow: hidden; }
+[data-layout="narrow"] .statusbar .sb-left { display: none; }
+[data-layout="narrow"] .filter-more { display: inline-flex; }
+[data-layout="narrow"] .filter-bar:not(.show-all) > :not(.filter-text-box, .filter-more, .filter-clear, .filter-info) { display: none; }
+[data-layout="narrow"] .filter-bar.show-all .filter-more { color: var(--accent); }
+[data-layout="narrow"] .diff-toolbar { flex-wrap: wrap; height: auto; min-height: 30px; padding: 2px 8px; }
+[data-layout="narrow"] .diff-back { display: inline-flex; }
+[data-layout="narrow"] .diff-toolbar [data-key-action="hideDiff"], [data-layout="narrow"] .diff-option:has(input[data-key="sideBySide"]) { display: none; }
+[data-layout="narrow"] .settings-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 8px; }
+[data-layout="narrow"] .settings-nav { flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--border); padding: 0 0 6px; }
+[data-layout="narrow"] .settings-page { white-space: nowrap; }
+[data-layout="narrow"] .merge-overlay { padding: 0; }
 .pane-title { display: flex; align-items: center; gap: 8px; padding: 0 8px; height: 28px; font-weight: 600; font-size: 12px; background: var(--panel); border-bottom: 1px solid var(--border); white-space: nowrap; }
 
 /* sidebar */

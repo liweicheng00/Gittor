@@ -1,12 +1,13 @@
 // The components of the window, the layout, the theme and the status bar.
 
 import { pathLabels } from "./path-labels";
-import { ApiError, errorHint } from "./api";
+import { ApiError, errorHint, inTauri } from "./api";
 import { ChangesPanel } from "./changes-panel";
 import { CommitPanel } from "./commit-panel";
 import { menuBelow } from "./context-menu";
 import { DetailsPanel } from "./details-panel";
 import { DiffView, setMonacoTheme } from "./diff-view";
+import { layoutModeFor, topGrid, type LayoutMode } from "./layout-mode";
 import { GLOW_MONACO } from "./glow-monaco";
 import { dragResize, h, icon } from "./dom";
 import type { IconName } from "./icons";
@@ -48,18 +49,20 @@ export const refreshBtn = h("button", { class: "tb-button tb-icon-only", title: 
 /** The menu part of the Update button: Fetch of all remotes or of one remote. */
 export const fetchBtn = h("button", { class: "tb-button tb-split-menu", title: "Fetch all remotes, or one remote", "aria-label": "Fetch", disabled: true }, icon("chevron-down", "icon-caret"));
 export const updateBtn = h("button", { class: "tb-button", title: `Update the current branch: fetch, then fast-forward. A branch with commits of its own asks for Merge or Rebase (${mod}T)`, disabled: true }, icon("update"), "Update");
-export const pushBtn = h("button", { class: "tb-button", title: `Push the current branch (${mod}⇧K)`, disabled: true }, icon("push"), "Push");
+export const pushBtn = h("button", { class: "tb-button tb-keep", title: `Push the current branch (${mod}⇧K)`, disabled: true }, icon("push"), "Push");
 export const remoteBtn = h("button", { class: "tb-button tb-icon tb-remote", title: "Open the current branch on the web page of its remote", "aria-label": "Remote", disabled: true }, icon("remote"));
 export const localHistoryBtn = h("button", { class: "tb-button", title: "Local History: the recent versions of changed files", disabled: true }, icon("history"), "Local History");
 export const ideBtn = h("button", { class: "tb-button tb-icon tb-ide", title: "Open the repository in the editor of Settings › Editor", "aria-label": "IDE", disabled: true }, icon("ide"));
 export const terminalBtn = h("button", { class: "tb-button tb-icon tb-terminal", title: "Open a terminal in the folder of the repository", "aria-label": "Terminal", disabled: true }, icon("terminal"));
 /** The name of the repository. It hides while the tab bar shows, because the tab names it. */
 export const repoLabel = h("span", { class: "tb-repo" });
-export const branchBtn = h("button", { class: "tb-button tb-branch-button", title: "Switch branch (recent branches first)", hidden: true }, icon("branch"), icon("chevron-down", "icon-caret"));
+export const branchBtn = h("button", { class: "tb-button tb-branch-button tb-keep", title: "Switch branch (recent branches first)", hidden: true }, icon("branch"), icon("chevron-down", "icon-caret"));
 export const viewBtn = h("button", { class: "tb-button", title: "View options" }, "View", icon("chevron-down", "icon-caret"));
 const themeBtn = h("button", { class: "tb-button tb-icon", title: "Theme" }, icon("theme"));
 export const settingsBtn = h("button", { class: "tb-button tb-icon", title: "Settings" }, icon("settings"));
-export const toolbar = h("header", { class: "toolbar" }, openBtn, refreshBtn, h("span", { class: "tb-split" }, updateBtn, fetchBtn), pushBtn, localHistoryBtn, repoLabel, branchBtn, h("span", { class: "spacer" }), remoteBtn, ideBtn, terminalBtn, viewBtn, themeBtn, settingsBtn);
+/** The narrow layout: the button that shows the other buttons of the toolbar in a second row. */
+export const moreBtn = h("button", { class: "tb-button tb-icon tb-more tb-keep", title: "More actions", "aria-label": "More", "aria-expanded": "false" }, icon("more"));
+export const toolbar = h("header", { class: "toolbar" }, openBtn, refreshBtn, h("span", { class: "tb-split tb-keep" }, updateBtn, fetchBtn), pushBtn, localHistoryBtn, repoLabel, branchBtn, h("span", { class: "spacer" }), remoteBtn, ideBtn, terminalBtn, viewBtn, themeBtn, settingsBtn, moreBtn);
 
 export const tabBar = h("nav", { class: "tabbar", hidden: true });
 /** The tabs, in a part of the tab bar that scrolls without a scroll bar. The + button stays outside it. */
@@ -85,6 +88,8 @@ const sideGrip = h("div", { class: "vgrip" });
 const rightGrip = h("div", { class: "vgrip" });
 const diffGrip = h("div", { class: "hgrip-row" });
 const detailsGrip = h("div", { class: "hgrip-row" });
+/** The grip above the commit details under the log (medium and narrow layouts). */
+const logGrip = h("div", { class: "hgrip-row log-grip" });
 /** The tabs of the center panel: Log and the files that the Files tab opened. They hide without a file. */
 export const centerTabs = h("div", { class: "center-tabs", role: "tablist", hidden: true });
 /** The place of the open file, in place of the log. */
@@ -107,18 +112,29 @@ export const tabStash = lpTab("stash", "Stash", "Stash: the stashes");
 export const tabReviews = lpTab("review", "Reviews", "Reviews: the reviews of branches");
 export const tabFiles = lpTab("folder", "Files", "Files: the files of the working tree");
 export const tabWorktrees = lpTab("worktree", "Worktrees", "Worktrees: the worktrees of the repository");
+/** The narrow layout only: the log, with the details of the selected commit under it. */
+export const tabLog = lpTab("log", "Log", "Log: the commits, and the details of the selected one");
+tabLog.classList.add("lp-tab-log");
 // The submodules show under the commit message, so that their changes show together with the files.
 commitPanel.el.append(submodulePanel.el);
-const leftPane = h("aside", { class: "leftpane" }, h("div", { class: "lp-tabs" }, tabFiles, tabBranches, tabCommit, tabWorktrees, tabStash, tabReviews), sidebar.el, commitPanel.el, stashPanel.el, reviewPanel.el, filesPanel.el, worktreePanel.el);
+/** The left tabs. The narrow layout moves them above the workspace, so they also show with the Log tab. */
+// The Log tab is last in the DOM, so the other tabs keep their order; the CSS shows it first.
+const lpTabs = h("div", { class: "lp-tabs" }, tabFiles, tabBranches, tabCommit, tabWorktrees, tabStash, tabReviews, tabLog);
+const leftPane = h("aside", { class: "leftpane" }, lpTabs, sidebar.el, commitPanel.el, stashPanel.el, reviewPanel.el, filesPanel.el, worktreePanel.el);
 /** Called when the Files tab shows, so that it can load its files. */
 export const leftTabHooks = { files: () => {} };
-export function showLeftTab(tab: "branches" | "commit" | "stash" | "reviews" | "files" | "worktrees") {
+/** Shows a left tab. With `reveal`, a hidden left pane shows again; the start of the app does not reveal it,
+ * so View › Left Panel stays off after a reload. */
+export function showLeftTab(tab: "branches" | "commit" | "stash" | "reviews" | "files" | "worktrees", reveal = true) {
   settings.leftTab = tab;
   save();
-  if (!settings.showSidebar) {
+  const wasLog = layout.logTab;
+  layout.logTab = false;
+  tabLog.classList.remove("on");
+  if (reveal && !settings.showSidebar) {
     settings.showSidebar = true;
     applyLayout();
-  }
+  } else if (wasLog) applyLayout();
   tabBranches.classList.toggle("on", tab === "branches");
   tabCommit.classList.toggle("on", tab === "commit");
   tabStash.classList.toggle("on", tab === "stash");
@@ -133,27 +149,103 @@ export function showLeftTab(tab: "branches" | "commit" | "stash" | "reviews" | "
   worktreePanel.el.hidden = tab !== "worktrees";
   if (tab === "files") leftTabHooks.files();
 }
+/** The narrow layout: shows the Log tab. In the other layouts the log always shows. */
+export function showLogTab() {
+  layout.logTab = true;
+  for (const t of [tabFiles, tabBranches, tabCommit, tabWorktrees, tabStash, tabReviews]) t.classList.remove("on");
+  tabLog.classList.add("on");
+  applyLayout();
+}
+tabLog.addEventListener("click", showLogTab);
 tabBranches.addEventListener("click", () => showLeftTab("branches"));
 tabCommit.addEventListener("click", () => showLeftTab("commit"));
 tabStash.addEventListener("click", () => showLeftTab("stash"));
 tabReviews.addEventListener("click", () => showLeftTab("reviews"));
 tabFiles.addEventListener("click", () => showLeftTab("files"));
 tabWorktrees.addEventListener("click", () => showLeftTab("worktrees"));
-const top = h("div", { class: "top" }, leftPane, sideGrip, center, rightGrip, right);
+const top = h("div", { class: "top" }, leftPane, sideGrip, center, rightGrip, right, logGrip);
 export const workspace = h("main", { class: "workspace" }, top, diffGrip, diff.el);
 export const welcome = h("main", { class: "welcome" });
 const appRoot = document.getElementById("app")!;
 appRoot.append(...(tabsInTitleBar ? [tabBar, toolbar] : [toolbar, tabBar]), welcome, workspace, statusBar);
 
+/** The width of the window in CSS pixels. In a browser the zoom of the app is a CSS zoom of the page. */
+const pageWidth = () => (inTauri ? window.innerWidth : window.innerWidth / (settings.zoom || 1));
+
+/** The layout mode for the width of the window, and the state of the narrow layout. */
+export const layout: { mode: LayoutMode; logTab: boolean; diffPage: boolean } = { mode: layoutModeFor(pageWidth()), logTab: false, diffPage: false };
+/** Called after the layout mode changes. */
+export const layoutHooks: Array<(mode: LayoutMode) => void> = [];
+
 export function applyLayout() {
-  top.style.gridTemplateColumns = `${settings.showSidebar ? `${settings.sidebarWidth}px 4px` : "0 0"} minmax(300px, 1fr) 4px ${settings.rightWidth}px`;
-  leftPane.hidden = !settings.showSidebar;
-  sideGrip.hidden = !settings.showSidebar;
-  workspace.style.gridTemplateRows = settings.showDiff ? `${1 - settings.diffRatio}fr 5px ${settings.diffRatio}fr` : "1fr 0 0";
-  diffGrip.hidden = !settings.showDiff;
-  diff.el.hidden = !settings.showDiff;
-  right.style.gridTemplateRows = `${settings.detailsRatio}fr 5px ${1 - settings.detailsRatio}fr`;
+  const mode = layout.mode;
+  const narrow = mode === "narrow";
+  document.documentElement.dataset.layout = mode;
+  const g = topGrid({
+    mode,
+    showSidebar: settings.showSidebar,
+    sidebarWidth: settings.sidebarWidth,
+    rightWidth: settings.rightWidth,
+    detailsHeight: settings.logDetailsHeight,
+    logTab: layout.logTab,
+  });
+  top.style.gridTemplateColumns = g.columns;
+  top.style.gridTemplateRows = g.rows;
+  const parts: Array<[HTMLElement, keyof typeof g.places]> = [[leftPane, "left"], [sideGrip, "sideGrip"], [center, "center"], [rightGrip, "rightGrip"], [right, "right"], [logGrip, "detailsGrip"]];
+  for (const [el, key] of parts) {
+    const place = g.places[key];
+    el.hidden = !place;
+    el.style.gridColumn = place?.[0] ?? "";
+    el.style.gridRow = place?.[1] ?? "";
+  }
+  // The right column holds the changed files and the details; the smaller layouts show the details only.
+  right.style.gridTemplateRows = mode === "wide" ? `${settings.detailsRatio}fr 5px ${1 - settings.detailsRatio}fr` : "minmax(0, 1fr)";
+  tabLog.hidden = !narrow;
+  if (narrow && lpTabs.parentElement === leftPane) workspace.before(lpTabs);
+  if (!narrow && lpTabs.parentElement !== leftPane) leftPane.prepend(lpTabs);
+  // The diff page has its own Back button; the tabs hide under it.
+  lpTabs.hidden = narrow && layout.diffPage;
+  tabFiles.hidden = narrow;
+  // The diff: a panel under the top part, or in the narrow layout a page in place of the top part.
+  const diffShows = narrow ? layout.diffPage : settings.showDiff;
+  top.hidden = narrow && layout.diffPage;
+  workspace.style.gridTemplateRows = narrow ? (layout.diffPage ? "0 0 minmax(0, 1fr)" : "minmax(0, 1fr) 0 0") : settings.showDiff ? `${1 - settings.diffRatio}fr 5px ${settings.diffRatio}fr` : "1fr 0 0";
+  diffGrip.hidden = narrow || !settings.showDiff;
+  diff.el.hidden = !diffShows;
+  diff.setInlineOnly(narrow);
 }
+
+/** Shows the layout for the new width of the window, when its mode changes. */
+function followWidth() {
+  const mode = layoutModeFor(pageWidth());
+  if (mode === layout.mode) return;
+  layout.mode = mode;
+  layout.diffPage = false;
+  closeMoreRow();
+  // The narrow layout has no Files tab.
+  if (mode === "narrow" && settings.leftTab === "files") showLeftTab("commit", false);
+  applyLayout();
+  for (const f of layoutHooks) f(mode);
+}
+window.addEventListener("resize", followWidth);
+
+/** The narrow layout: the other buttons of the toolbar show in a second row while it is open. */
+function closeMoreRow() {
+  toolbar.classList.remove("more-open");
+  moreBtn.setAttribute("aria-expanded", "false");
+}
+moreBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const open = toolbar.classList.toggle("more-open");
+  moreBtn.setAttribute("aria-expanded", String(open));
+});
+// A click on a button of the row, or outside the toolbar, closes the row.
+document.addEventListener("click", (e) => {
+  if (!toolbar.classList.contains("more-open")) return;
+  const t = e.target as HTMLElement;
+  if (t.closest(".toolbar") && !t.closest("button")) return;
+  closeMoreRow();
+});
 
 {
   let start = 0;
@@ -167,6 +259,10 @@ export function applyLayout() {
   }, save);
   dragResize(diffGrip, "y", () => (start = settings.diffRatio), (d) => {
     settings.diffRatio = Math.max(0.12, Math.min(0.85, start - d / workspace.clientHeight));
+    applyLayout();
+  }, save);
+  dragResize(logGrip, "y", () => (start = settings.logDetailsHeight), (d) => {
+    settings.logDetailsHeight = Math.max(80, Math.min(top.clientHeight - 120, start - d));
     applyLayout();
   }, save);
   dragResize(detailsGrip, "y", () => (start = settings.detailsRatio), (d) => {
@@ -265,13 +361,30 @@ export function updateStatus(background = false) {
 }
 
 /** Shows or hides the diff panel. The panel comes back with the size that it had. */
-export function toggleDiff(show = !settings.showDiff) {
+export function toggleDiff(show = !diffShown()) {
+  // The narrow layout shows the diff as a page over the tabs. The setting of the panel stays.
+  if (layout.mode === "narrow") {
+    if (show === layout.diffPage) return;
+    layout.diffPage = show;
+    applyLayout();
+    return;
+  }
   if (show === settings.showDiff) return;
   settings.showDiff = show;
   save();
   applyLayout();
 }
+/** True when the diff shows: the panel, or the page of the narrow layout. */
+export function diffShown(): boolean {
+  return layout.mode === "narrow" ? layout.diffPage : settings.showDiff;
+}
 diff.onHide = () => toggleDiff(false);
+// In the narrow layout, a click on a local change opens the diff page. A click on its check box does not.
+document.addEventListener("click", (e) => {
+  if (layout.mode !== "narrow") return;
+  const t = e.target as HTMLElement;
+  if (t.closest(".leftpane .cl-file") && !t.closest("input, button")) toggleDiff(true);
+});
 // A double click on a changed file of a commit shows the panel again.
 document.addEventListener("dblclick", (e) => {
   if ((e.target as HTMLElement).closest(".changes-panel .change")) toggleDiff(true);

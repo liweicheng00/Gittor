@@ -79,7 +79,10 @@ export class FilterBar {
     });
     this.clear.addEventListener("click", () => this.set({ ...emptyFilter(), regex: this.value.regex, matchCase: this.value.matchCase }, true));
     const textBox = h("span", { class: "filter-text-box" }, this.text, this.regexBtn, this.caseBtn);
-    this.el = h("div", { class: "filter-bar" }, textBox, this.branchBtn, this.author, this.authors, this.path, this.since, this.clear, this.info);
+    // The narrow layout shows the text field only. This button shows the other filters too.
+    const more = h("button", { class: "icon-button filter-more", title: "More filters: branch, user, path, date", "aria-label": "More filters", "aria-expanded": "false" }, icon("filter"));
+    more.addEventListener("click", () => more.setAttribute("aria-expanded", String(this.el.classList.toggle("show-all"))));
+    this.el = h("div", { class: "filter-bar" }, textBox, more, this.branchBtn, this.author, this.authors, this.path, this.since, this.clear, this.info);
   }
 
   private debounce() {

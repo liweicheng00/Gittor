@@ -165,6 +165,8 @@ export class DiffView {
     const toolbar = h(
       "div",
       { class: "diff-toolbar" },
+      // The narrow layout shows the diff as a page; Back closes it. Other layouts hide the button.
+      h("button", { class: "icon-button diff-back", title: "Back", "aria-label": "Back", onclick: () => this.onHide() }, icon("back")),
       btn(icon("up"), "Previous change (Shift+F7)", () => this.goToDiff("previous"), "previousChange"),
       btn(icon("down"), "Next change (F7)", () => this.goToDiff("next"), "nextChange"),
       btn(icon("prev-file"), "Previous file (Alt+Up)", () => this.onPrevFile(), "previousFile"),
@@ -331,6 +333,18 @@ export class DiffView {
     return this.singleEditor;
   }
 
+  private inlineOnly = false;
+  /** Side by side, from the setting, unless the layout has room for one column only. */
+  private get sideBySide(): boolean {
+    return settings.sideBySide && !this.inlineOnly;
+  }
+  /** The narrow layout shows the diff in one column, and keeps the setting. */
+  setInlineOnly(on: boolean) {
+    if (on === this.inlineOnly) return;
+    this.inlineOnly = on;
+    this.applyOptions();
+  }
+
   applySettings() {
     this.applyOptions();
     this.editor.updateOptions(editorFont());
@@ -340,7 +354,7 @@ export class DiffView {
 
   private applyOptions() {
     this.editor.updateOptions({
-      renderSideBySide: settings.sideBySide,
+      renderSideBySide: this.sideBySide,
       ignoreTrimWhitespace: settings.ignoreWhitespace,
       hideUnchangedRegions: { enabled: settings.collapseUnchanged },
     });
@@ -771,12 +785,12 @@ export class DiffView {
     let texts: [string, string][];
     if (m.kind === "view") texts = [[m.right, ""]];
     else if (m.kind !== "diff") texts = [[m.kind === "deleted" ? m.left : m.right, m.kind === "deleted" ? "Deleted file" : "New file"]];
-    else if (settings.sideBySide) texts = [[m.left, this.sideNames[0] || "Before"], [m.right, this.sideNames[1] || "After"]];
+    else if (this.sideBySide) texts = [[m.left, this.sideNames[0] || "Before"], [m.right, this.sideNames[1] || "After"]];
     else texts = [[m.right, this.sideNames[1] || "After"]];
     // In one column, the old blocks that a change removed show between the new blocks.
     for (const b of this.oldBlocks) b.el.remove();
-    this.oldBlocks = m.kind === "diff" && !settings.sideBySide ? blocksOf(renderMarkdown(m.left, ctx)) : [];
-    const layout = `${this.path}\0${m.kind}\0${settings.sideBySide}\0${texts.map((t) => t[1]).join("\0")}`;
+    this.oldBlocks = m.kind === "diff" && !this.sideBySide ? blocksOf(renderMarkdown(m.left, ctx)) : [];
+    const layout = `${this.path}\0${m.kind}\0${this.sideBySide}\0${texts.map((t) => t[1]).join("\0")}`;
     const docs = [...this.previewHost.querySelectorAll<HTMLElement>(".md-col > .md-body")];
     if (keep && layout === this.previewLayout && docs.length === texts.length) {
       // The same file again, changed on disk: the blocks with the same source keep their elements.
