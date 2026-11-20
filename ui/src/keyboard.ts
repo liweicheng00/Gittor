@@ -11,7 +11,8 @@ import { newBranchHere, undoLast } from "./operations";
 import { askForRepo, closeActiveTab, fetchAll, refresh, switchTab } from "./repo";
 import { settings } from "./settings";
 import { openSettings } from "./settings-flow";
-import { centerHooks, changes, commitPanel, diff, filesPanel, filterBar, log, worktreePanel, openBtn, showLeftTab, statusActivity, submodulePanel, toggleDiff } from "./shell";
+import { centerHooks, changes, commitPanel, diff, fileHost, filesPanel, filterBar, log, worktreePanel, openBtn, showLeftTab, statusActivity, submodulePanel, toggleDiff } from "./shell";
+import { diffViewAt } from "./diff-view";
 import { app } from "./state";
 import { pushBranch, updateBranch } from "./sync";
 import { resetZoom, zoomBy } from "./zoom";
@@ -47,7 +48,19 @@ for (const a of [
   { id: "push", label: "Push", defaults: ["Mod+Shift+K"], run: () => app.view && void pushBranch() },
   { id: "newBranch", label: "New Branch", defaults: ["Mod+B"], run: () => app.view && void newBranchHere() },
   { id: "undo", label: "Undo the Last Operation", defaults: ["Mod+Z"], run: () => app.view && void undoLast(), when: (t: HTMLElement) => !typing(t) },
-  { id: "filter", label: "Find in the Log (filter)", defaults: ["Mod+F"], run: () => { filterBar.text.focus(); filterBar.text.select(); }, when: (t: HTMLElement) => !t.closest(".monaco-editor") },
+  {
+    id: "filter",
+    label: "Find (in the open file, or the log filter)",
+    defaults: ["Mod+F"],
+    // A file that shows in the center panel, or a diff that has the focus, gets its find widget.
+    run: (t: HTMLElement) => {
+      const view = diffViewAt(t) ?? (fileHost.hidden ? undefined : diffViewAt(fileHost.querySelector(".diff")));
+      if (view) return view.find();
+      filterBar.text.focus();
+      filterBar.text.select();
+    },
+    when: (t: HTMLElement) => !t.closest(".monaco-editor"),
+  },
   { id: "files", label: "Files Tab", defaults: ["Mod+`"], run: () => { showLeftTab("files"); filesPanel.focus(); } },
   {
     id: "branches",
