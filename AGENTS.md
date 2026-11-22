@@ -256,6 +256,12 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   - "Copy Path" in a menu copies the absolute path. "Copy Relative Path" copies the path in the repository.
   - `copy.ts` removes the text selection on each press outside a text field. A row that prevents the
     press, or a `draggable` row, would keep an old selection, and Mod+C would copy that old text.
+- Go to File (`file-finder.ts`, the matcher `file-match.ts` with unit tests): double Shift or `Mod+Shift+O`
+  (`goToFile`) shows a search over the window. It finds a file of `worktree_files` by its name: the exact
+  name, then a name that starts with the query, contains it, or has its letters in order; a query with "/"
+  matches the whole path. Enter opens the file in the center panel (`fileFinderHooks.open`, set in
+  `files-flow.ts`). Double Shift is two presses of Shift alone within 400 ms; another key between them
+  stops it. The scenario is `go-to-file.mjs`.
 - Icons: add the Lucide file name to the glob and to `NAMES` in `ui/src/icons.ts`.
 - Trees of files: `buildTree`, `treeOrder`, `walkTree` in `file-tree.ts`.
   Unique short names of folders: `pathLabels` in `path-labels.ts`.

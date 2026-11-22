@@ -8,6 +8,7 @@ import { repoPath } from "./copy";
 import { api } from "./api";
 import { setFileViewReload, showLocalDiff } from "./commit-flow";
 import { DiffView } from "./diff-view";
+import { fileFinderHooks } from "./file-finder";
 import { showMenu } from "./context-menu";
 import { copyText, h, icon } from "./dom";
 import { openInEditor } from "./editor-flow";
@@ -124,6 +125,12 @@ function closeFile(path: string) {
   if (next) void openFile(next);
   else showLog();
 }
+
+// Go to File (double Shift) opens the file that the user finds by its name.
+fileFinderHooks.open = (path) => {
+  filesPanel.select(path);
+  void openFile(path);
+};
 
 /** Opens a file of the working tree in the center panel, with its notes. `again` loads it again. */
 async function openFile(path: string, again = false) {

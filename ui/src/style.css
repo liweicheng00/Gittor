@@ -429,6 +429,18 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 
 /* branch switcher */
 .tb-branch-button { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+/* Go to File: a search near the top of the window, as Search Everywhere of IntelliJ. */
+.file-finder-backdrop { position: fixed; inset: 0; z-index: 60; display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; }
+.file-finder { width: min(560px, calc(100vw - 32px)); display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28); overflow: hidden; }
+.file-finder-input { margin: 8px; padding: 6px 10px; font-size: 14px; border: 1px solid var(--border); border-radius: 5px; background: var(--bg); color: var(--fg); }
+.file-finder-list { max-height: 50vh; overflow: auto; padding-bottom: 6px; }
+.file-finder-row { display: flex; align-items: center; gap: 8px; padding: 3px 12px; white-space: nowrap; cursor: pointer; }
+.file-finder-row:hover { background: var(--hover); }
+.file-finder-row.selected { background: var(--select); }
+.file-finder-row img { width: 16px; height: 16px; flex: none; }
+.file-finder-name mark { background: transparent; color: var(--accent); font-weight: 700; }
+.file-finder-dir { overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+.file-finder-empty { padding: 6px 12px; }
 .switcher { width: 340px; display: flex; flex-direction: column; padding: 6px 0 4px; }
 .switcher-search { margin: 0 8px 6px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--fg); }
 .switcher-new { margin: 0 4px 4px; padding: 4px 8px; text-align: left; border: 0; border-radius: 4px; background: transparent; color: var(--accent); cursor: pointer; }

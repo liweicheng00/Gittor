@@ -13,6 +13,7 @@ import { settings } from "./settings";
 import { openSettings } from "./settings-flow";
 import { centerHooks, changes, commitPanel, diff, fileHost, filesPanel, filterBar, log, worktreePanel, openBtn, showLeftTab, statusActivity, submodulePanel, toggleDiff, diffShown } from "./shell";
 import { diffViewAt } from "./diff-view";
+import { showFileFinder } from "./file-finder";
 import { app } from "./state";
 import { pushBranch, updateBranch } from "./sync";
 import { resetZoom, zoomBy } from "./zoom";
@@ -61,6 +62,7 @@ for (const a of [
     },
     when: (t: HTMLElement) => !t.closest(".monaco-editor"),
   },
+  { id: "goToFile", label: "Go to File (also double Shift)", defaults: ["Mod+Shift+O"], run: () => void showFileFinder() },
   { id: "files", label: "Files Tab", defaults: ["Mod+`"], run: () => { showLeftTab("files"); filesPanel.focus(); } },
   {
     id: "branches",

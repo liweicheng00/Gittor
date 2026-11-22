@@ -111,12 +111,12 @@
 :root[data-style="glow"] :is(.note-card, .note-chip) { background: var(--glass-solid); }
 
 /* Overlays: they blur what is behind them. 82 % of --bg keeps the text clear where the blur does not draw. */
-:root[data-style="glow"] :is(.menu, .dialog, .toast, .merge-window, .history-window, .copy-hint, .tab-detach-hint, .rebase-drag-tip) {
+:root[data-style="glow"] :is(.menu, .dialog, .file-finder, .toast, .merge-window, .history-window, .copy-hint, .tab-detach-hint, .rebase-drag-tip) {
   background: var(--glass-overlay);
   backdrop-filter: blur(24px) saturate(1.4);
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
 }
-:root[data-style="glow"] :is(.menu, .dialog, .toast, .merge-window, .history-window, .key-hint) { border-color: color-mix(in srgb, var(--accent) 26%, var(--border)); }
+:root[data-style="glow"] :is(.menu, .dialog, .file-finder, .toast, .merge-window, .history-window, .key-hint) { border-color: color-mix(in srgb, var(--accent) 26%, var(--border)); }
 /* style.css paints these hints with --fg and puts --bg on the text. */
 :root[data-style="glow"] :is(.copy-hint, .tab-detach-hint) { color: var(--fg); box-shadow: var(--shadow); }
 :root[data-style="glow"] .overlay { background: rgba(8, 10, 18, 0.55); }

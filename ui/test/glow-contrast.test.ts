@@ -249,7 +249,7 @@ test("the file has no layout property, animation or blur on a row", () => {
   const layout = /^(font.*|padding.*|margin.*|width|height|min-.*|max-.*|display|position|gap|row-gap|column-gap|flex.*|grid.*|line-height|border|border-(top|right|bottom|left)|border(-(top|right|bottom|left))?-width|border-image.*|border-radius|overflow.*|inset|top|right|bottom|left|z-index|transform|filter|animation.*|transition.*|content|visibility|zoom)$/;
   // The fixed layer of the nebula is the only rule with a position.
   const nebula = new Set(["content", "position", "inset", "z-index", "pointer-events", "background"]);
-  const overlays = new Set([".menu", ".dialog", ".toast", ".merge-window", ".history-window", ".copy-hint", ".tab-detach-hint", ".rebase-drag-tip"]);
+  const overlays = new Set([".menu", ".dialog", ".file-finder", ".toast", ".merge-window", ".history-window", ".copy-hint", ".tab-detach-hint", ".rebase-drag-tip"]);
   const rows = /\.(log-row|change|cl-file|files-row|branch|stash-row|sm-row|history-row|local-history-row|conflict-row|review-commit|review-file|menu-item)\b/;
   for (const r of rules) {
     const where = r.selectors.join(", ");
