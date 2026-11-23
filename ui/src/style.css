@@ -888,6 +888,11 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .note-card:hover .note-card-text { max-height: none; }
 .note-card.draft { z-index: 2; border-left-color: var(--accent); }
 .note-card-input { width: 100%; box-sizing: border-box; margin-top: 4px; resize: vertical; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: 3px; padding: 4px; }
+/* The field that edits a note in place, on a card and in the list of notes. */
+.note-edit { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.note-edit-buttons { display: flex; align-items: center; gap: 6px; }
+.note-edit-hint { font-size: 11px; }
+.note-card-text { cursor: text; }
 .note-card-buttons { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
 /* the field for a note on the whole file, under the list of notes */
 .review-file-note-form { display: flex; align-items: center; gap: 6px; padding: 6px 10px; color: var(--muted); border-top: 1px solid var(--border); }

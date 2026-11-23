@@ -247,6 +247,7 @@ impl Service {
                 ReviewEdit::Viewed { branch, paths, viewed, commit } => r.set_viewed(&branch, &paths, viewed, commit.as_deref()),
                 ReviewEdit::Comment { branch, path, line, end_line, text, commit } => r.add_review_comment(&branch, &path, line, end_line, &text, commit.as_deref()),
                 ReviewEdit::DeleteComment { branch, id } => r.delete_review_comment(&branch, &id),
+                ReviewEdit::EditComment { branch, id, text } => r.edit_review_comment(&branch, &id, &text),
                 ReviewEdit::ResolveComment { branch, id, resolved } => r.resolve_review_comment(&branch, &id, resolved),
             }
             .map_err(err)

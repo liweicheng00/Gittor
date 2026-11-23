@@ -129,6 +129,8 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
   };
   closeBtn.addEventListener("click", close);
   const onKey = (e: KeyboardEvent) => {
+    // A field of a note handles its keys: Escape cancels the note, and does not close the window.
+    if ((e.target as HTMLElement | null)?.closest?.(".note-card, .note-edit, .review-file-note-input")) return;
     if (e.key === "Escape" && !document.querySelector(".overlay")) {
       e.preventDefault();
       close();

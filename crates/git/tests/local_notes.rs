@@ -29,6 +29,12 @@ fn notes_go_away_when_the_file_changes() {
     assert_eq!(a.iter().map(|n| (n.line, n.end_line, n.text.as_str())).collect::<Vec<_>>(), [(1, 0, "Rename a"), (1, 3, "Three lines")]);
     assert_eq!(repo.local_notes(None).unwrap().len(), 3);
 
+    // Edit: a new text, the same line. An empty text is refused.
+    repo.local_note_edit(LocalNoteEdit::Edit { path: "a.rs".into(), id: a[0].id.clone(), text: " Rename a to b ".into() }).unwrap();
+    let edited = &repo.local_notes(Some("a.rs")).unwrap()[0];
+    assert_eq!((edited.line, edited.text.as_str()), (1, "Rename a to b"));
+    assert!(repo.local_note_edit(LocalNoteEdit::Edit { path: "a.rs".into(), id: a[0].id.clone(), text: "  ".into() }).is_err());
+
     // Resolve, then open again; delete.
     repo.local_note_edit(LocalNoteEdit::Resolve { path: "a.rs".into(), id: a[0].id.clone(), resolved: true }).unwrap();
     assert!(repo.local_notes(Some("a.rs")).unwrap()[0].resolved);

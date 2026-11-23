@@ -68,6 +68,25 @@ await compareOf("main.rs");
 await addNote(2, "Ask the agent to log this");
 await shot("ln1-note");
 
+// A double click on the text of a card edits the note; Mod+Enter keeps the new text.
+await page.dblclick(`${win} .note-card:has-text('Ask the agent') .note-card-text`);
+await page.waitForSelector(`${win} .note-card.editing textarea`);
+check("the field has the text of the note", (await page.inputValue(`${win} .note-card.editing textarea`)) === "Ask the agent to log this");
+await page.fill(`${win} .note-card.editing textarea`, "Ask the agent to log this now");
+await page.press(`${win} .note-card.editing textarea`, "Control+Enter");
+await within("the card shows the new text", async () => (await cards()).some((t) => t.includes("log this now")));
+await shot("ln1b-edited");
+// The edit button of the list edits it too; Escape keeps the old text.
+await page.click(`${win} .review-note:has-text('log this now') .review-note-edit`);
+await page.waitForSelector(`${win} .review-notes-list .note-edit textarea`);
+await page.fill(`${win} .review-notes-list .note-edit textarea`, "Something else");
+await page.press(`${win} .review-notes-list .note-edit textarea`, "Escape");
+await within("Escape keeps the old text", async () => ((await page.textContent(`${win} .review-notes-list`)) ?? "").includes("log this now"));
+await page.click(`${win} .review-note:has-text('log this now') .review-note-edit`);
+await page.fill(`${win} .review-notes-list .note-edit textarea`, "Ask the agent to log this");
+await page.click(`${win} .review-notes-list .note-edit-save`);
+await within("Save in the list keeps the new text", async () => (await cards()).some((t) => t.includes("log this")) && !(await cards()).some((t) => t.includes("now")));
+
 // A note on another file of the window.
 await page.click(`${win} .compare-file:has-text('arith.rs')`);
 await page.waitForFunction((w) => document.querySelector(`${w} .diff-title`)?.textContent?.includes("arith.rs"), win);

@@ -93,6 +93,9 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   on; without handlers it is off, so the History window does not get it. Line 0 is a note on the whole
   file; its field is under the list of notes. `note-format.ts` makes the text for the clipboard.
   A resolved note (`resolved`) shows as an icon only (`.note-chip`); a click opens it. Copy All skips it.
+  The edit icon of a card or of a row of the list, or a double click on the text, edits a note in place
+  (`note-edit.ts`; `NoteHandlers.edit`, the actions `edit` of local notes and `editComment` of reviews).
+  A window ignores Escape in `.note-edit`, so Escape cancels the edit and does not close the window.
 - Markdown preview in `DiffView` (`renderPreview`, the toggle `.diff-preview-toggle`, the setting
   `markdownPreview`, on by default). `markdown-preview.ts` renders with markdown-it and DOMPurify: no
   styles, forms, frames or media, and no network images (the CSP allows only `'self'` and `data:`). An

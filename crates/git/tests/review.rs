@@ -69,6 +69,12 @@ fn review_shows_the_changes_of_the_branch() {
     assert_eq!((b.line, b.end_line), (1, 3), "a note on lines 1 to 3");
     let a = d.comment_list.iter().find(|c| c.path == "a.txt").unwrap();
     assert_eq!(a.end_line, 0, "a note on one line");
+    // Edit: a new text, the same lines. An empty text is refused.
+    repo.edit_review_comment("feature", &b.id, " Good, but name it well ").unwrap();
+    let d2 = repo.review("feature").unwrap();
+    let b2 = d2.comment_list.iter().find(|c| c.id == b.id).unwrap();
+    assert_eq!((b2.line, b2.end_line, b2.text.as_str()), (1, 3, "Good, but name it well"));
+    assert!(repo.edit_review_comment("feature", &b.id, " ").is_err());
     git(&dir, &["checkout", "-q", "feature"]);
     commit(&dir, "a.txt", "ONE\nTWO\nTHREE\n", "Change a once more");
     git(&dir, &["checkout", "-q", "main"]);

@@ -5,6 +5,7 @@
 import { formatDate, h, icon } from "./dom";
 import type { NoteHandlers, NoteItem } from "./note-layer";
 import { formatNote, formatNotes, lineRange } from "./note-format";
+import { focusEnd, noteEditor } from "./note-edit";
 
 export interface NotesPanelHandlers extends NoteHandlers {
   /** Shows the line of a note in the diff. */
@@ -18,6 +19,9 @@ export class NotesPanel {
   private readonly input = h("input", { class: "review-file-note-input", placeholder: "A note on the whole file (Enter adds it)", spellcheck: false });
   private readonly addBtn = h("button", { class: "tb-button" }, "Add");
   private handlers: NotesPanelHandlers | null = null;
+  /** The note that the user edits now, and the last arguments of set(), to draw the list again. */
+  private editingId: string | null = null;
+  private last: { path: string; notes: NoteItem[]; heading: string } | null = null;
   /** Writes the text of the clipboard; the window gives it. */
   constructor(private readonly copyText: (text: string) => void) {
     const form = h("div", { class: "review-file-note-form" }, icon("note"), this.input, this.addBtn);
@@ -46,6 +50,8 @@ export class NotesPanel {
 
   /** Shows the notes of a file. `heading` is the text at the top of the list. */
   set(path: string, notes: NoteItem[], handlers: NotesPanelHandlers, heading = `Notes in ${path}`) {
+    if (this.last?.path !== path || !notes.some((n) => n.id === this.editingId)) this.editingId = null;
+    this.last = { path, notes, heading };
     this.handlers = handlers;
     this.input.disabled = this.addBtn.disabled = false;
     // Copy All takes the open notes: a resolved note is done.
@@ -53,8 +59,8 @@ export class NotesPanel {
     const copyAll = h("button", { class: "tb-button review-notes-copy", title: "Copy All", disabled: !open.length }, icon("copy"), "Copy All");
     copyAll.addEventListener("click", () => this.copyText(formatNotes(path, open)));
     this.title.replaceChildren(h("span", {}, heading), h("span", { class: "spacer" }), copyAll);
-    const button = (iconName: "copy" | "close", title: string, run: () => void) => {
-      const b = h("button", { class: `icon-button${iconName === "copy" ? " review-note-copy" : ""}`, title }, icon(iconName));
+    const button = (iconName: "copy" | "close" | "edit", title: string, run: () => void) => {
+      const b = h("button", { class: `icon-button review-note-${iconName}` + (iconName === "copy" ? " review-note-copy" : ""), title }, icon(iconName));
       b.addEventListener("click", (e) => {
         e.stopPropagation();
         run();
@@ -64,6 +70,36 @@ export class NotesPanel {
     this.list.replaceChildren(
       ...notes.map((n) => {
         const onFile = n.line === 0;
+        const editing = this.editingId === n.id;
+        const startEdit = () => {
+          this.editingId = n.id;
+          this.redraw(true);
+        };
+        let body: HTMLElement;
+        if (editing) {
+          const ed = noteEditor(
+            n.text,
+            (text) => {
+              this.editingId = null;
+              void handlers.edit(n.id, text);
+            },
+            () => {
+              this.editingId = null;
+              this.redraw();
+            },
+          );
+          body = ed.el;
+          if (this.focusEdit) {
+            this.focusEdit = false;
+            focusEnd(ed.input);
+          }
+        } else {
+          body = h("span", { class: "review-note-body", title: "Double-click to edit" }, n.text);
+          body.addEventListener("dblclick", (e) => {
+            e.stopPropagation();
+            startEdit();
+          });
+        }
         const row = h(
           "div",
           {
@@ -71,10 +107,11 @@ export class NotesPanel {
             title: n.outdated ? "The file changed after this note. The line can be another line now." : onFile ? "A note on the whole file" : "Go to the line",
           },
           h("span", { class: "review-note-line-no" }, onFile ? "File" : `L${lineRange(n)}`),
-          h("span", { class: "review-note-body" }, n.text),
+          body,
           n.outdated ? h("span", { class: "muted-inline" }, "outdated") : "",
           n.resolved ? h("span", { class: "review-note-resolved", title: "Resolved" }, icon("resolved")) : "",
           h("span", { class: "muted-inline" }, formatDate(n.time)),
+          editing ? "" : button("edit", "Edit", startEdit),
           button("copy", "Copy", () => this.copyText(formatNote(path, n))),
           button("close", "Delete the note", () => void handlers.remove(n.id)),
         );
@@ -82,6 +119,15 @@ export class NotesPanel {
         return row;
       }),
     );
+  }
+
+  private focusEdit = false;
+
+  /** Draws the list again with the last notes, for example when an edit starts or stops. */
+  private redraw(focus = false) {
+    if (!this.last || !this.handlers) return;
+    this.focusEdit = focus;
+    this.set(this.last.path, this.last.notes, this.handlers, this.last.heading);
   }
 
   private async addFileNote() {

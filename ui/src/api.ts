@@ -581,9 +581,11 @@ export type ReviewEdit =
   | { action: "viewed"; branch: string; paths: string[]; viewed: boolean; commit?: string }
   | { action: "comment"; branch: string; path: string; line: number; endLine?: number; text: string; commit?: string }
   | { action: "deleteComment"; branch: string; id: string }
+  | { action: "editComment"; branch: string; id: string; text: string }
   | { action: "resolveComment"; branch: string; id: string; resolved: boolean };
 
 export type LocalNoteEdit =
   | { action: "add"; path: string; line: number; endLine?: number; text: string }
   | { action: "delete"; path: string; id: string }
+  | { action: "edit"; path: string; id: string; text: string }
   | { action: "resolve"; path: string; id: string; resolved: boolean };

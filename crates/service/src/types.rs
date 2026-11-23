@@ -136,6 +136,8 @@ pub enum ReviewEdit {
         commit: Option<String>,
     },
     DeleteComment { branch: String, id: String },
+    /// A new text for a note.
+    EditComment { branch: String, id: String, text: String },
     /// Marks a note as resolved, or as open again.
     ResolveComment { branch: String, id: String, resolved: bool },
 }

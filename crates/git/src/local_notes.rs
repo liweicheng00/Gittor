@@ -39,6 +39,8 @@ pub enum LocalNoteEdit {
         text: String,
     },
     Delete { path: String, id: String },
+    /// A new text for a note. The note keeps its lines and its time.
+    Edit { path: String, id: String, text: String },
     Resolve { path: String, id: String, resolved: bool },
 }
 
@@ -136,6 +138,13 @@ impl Repo {
                         store.remove(&path);
                     }
                 }
+            }
+            LocalNoteEdit::Edit { path, id, text } => {
+                if text.trim().is_empty() {
+                    return Err(GitError("The note is empty".into()));
+                }
+                let note = store.get_mut(&path).and_then(|f| f.notes.iter_mut().find(|c| c.id == id)).ok_or_else(|| GitError("The note does not exist".into()))?;
+                note.text = text.trim().into();
             }
             LocalNoteEdit::Resolve { path, id, resolved } => {
                 let note = store.get_mut(&path).and_then(|f| f.notes.iter_mut().find(|c| c.id == id)).ok_or_else(|| GitError("The note does not exist".into()))?;

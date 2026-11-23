@@ -5,6 +5,7 @@
 
 import * as monaco from "./monaco";
 import { copyText, formatDate, h, icon } from "./dom";
+import { focusEnd, noteEditor } from "./note-edit";
 import { lineRange } from "./note-format";
 
 export interface NoteItem {
@@ -23,6 +24,8 @@ export interface NoteItem {
 export interface NoteHandlers {
   add: (line: number, endLine: number, text: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
+  /** Gives a note a new text. */
+  edit: (id: string, text: string) => Promise<void>;
   /** Marks a note as resolved, or as open again. */
   resolve: (id: string, resolved: boolean) => Promise<void>;
   /** Copies the note to the clipboard, with its file and line. */
@@ -185,6 +188,9 @@ export class NoteLayer {
   /** The resolved notes that show as a card now, after a click on their icon. */
   readonly opened = new Set<string>();
   private draftText = "";
+  /** The note that the user edits now, and its text so far. */
+  private editingId: string | null = null;
+  private editText = "";
   private readonly layers = new Map<monaco.editor.ICodeEditor, EditorLayer>();
 
   /** `active` gives the editor that shows the right side now. */
@@ -262,16 +268,64 @@ export class NoteLayer {
     });
     const copy = h("button", { class: "icon-button note-card-copy", title: "Copy" }, icon("copy"));
     copy.addEventListener("click", () => this.handlers?.copy(n));
+    const edit = h("button", { class: "icon-button note-card-edit", title: "Edit" }, icon("edit"));
+    edit.addEventListener("click", () => this.startEdit(n));
+    const editing = this.editingId === n.id;
+    let body: HTMLElement;
+    if (editing) {
+      const ed = noteEditor(
+        this.editText,
+        (text) => void this.saveEdit(n.id, text),
+        () => this.stopEdit(),
+        (text) => (this.editText = text),
+      );
+      body = ed.el;
+      if (this.focusEdit) {
+        this.focusEdit = false;
+        focusEnd(ed.input);
+      }
+    } else {
+      body = h("div", { class: "note-card-text", title: "Double-click to edit" }, n.text);
+      body.addEventListener("dblclick", (e) => {
+        e.stopPropagation();
+        this.startEdit(n);
+      });
+    }
     return h(
       "div",
       {
-        class: "note-card" + (n.outdated ? " outdated" : "") + (n.resolved ? " resolved" : ""),
+        class: "note-card" + (n.outdated ? " outdated" : "") + (n.resolved ? " resolved" : "") + (editing ? " editing" : ""),
         "data-line": n.line,
         title: n.outdated ? "The file changed after this note. The line can be another line now." : "",
       },
-      h("div", { class: "note-card-head" }, icon("note"), h("span", {}, `L${lineRange(n)}`), n.outdated ? h("span", { class: "note-card-tag" }, "outdated") : "", n.resolved ? h("span", { class: "note-card-tag" }, "resolved") : "", h("span", { class: "spacer" }), h("span", {}, formatDate(n.time)), n.resolved ? fold : "", resolve, copy, del),
-      h("div", { class: "note-card-text" }, n.text),
+      h("div", { class: "note-card-head" }, icon("note"), h("span", {}, `L${lineRange(n)}`), n.outdated ? h("span", { class: "note-card-tag" }, "outdated") : "", n.resolved ? h("span", { class: "note-card-tag" }, "resolved") : "", h("span", { class: "spacer" }), h("span", {}, formatDate(n.time)), n.resolved ? fold : "", editing ? "" : edit, resolve, copy, del),
+      body,
     );
+  }
+
+  private focusEdit = false;
+
+  /** Shows the text of a note in a field to change it. */
+  startEdit(n: NoteItem) {
+    if (!this.handlers) return;
+    this.editingId = n.id;
+    this.editText = n.text;
+    this.focusEdit = true;
+    this.render();
+  }
+
+  private stopEdit() {
+    this.editingId = null;
+    this.editText = "";
+    this.render();
+  }
+
+  private async saveEdit(id: string, text: string) {
+    if (!this.handlers) return;
+    this.editingId = null;
+    this.editText = "";
+    await this.handlers.edit(id, text);
+    this.render();
   }
 
   draftCard(line: number, end: number): HTMLElement {

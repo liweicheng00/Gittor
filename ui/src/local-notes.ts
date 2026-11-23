@@ -25,6 +25,7 @@ export function localNoteHandlers(path: string, reload: () => Promise<void>): No
   return {
     add: (line, endLine, text) => run({ action: "add", path, line, endLine, text }),
     remove: (id) => run({ action: "delete", path, id }),
+    edit: (id, text) => run({ action: "edit", path, id, text }),
     resolve: (id, resolved) => run({ action: "resolve", path, id, resolved }),
     copy: (n) => void copyText(formatNote(path, n)),
   };

@@ -160,7 +160,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
   const onKey = (e: KeyboardEvent) => {
     if (document.querySelector(".overlay")) return;
     // The text field of a new note handles its keys: Esc cancels the note, and does not close the window.
-    if ((e.target as HTMLElement | null)?.closest?.(".note-card, .review-file-note-input")) return;
+    if ((e.target as HTMLElement | null)?.closest?.(".note-card, .note-edit, .review-file-note-input")) return;
     if (e.key === "Escape") {
       e.preventDefault();
       close();
@@ -350,6 +350,11 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
     await cb.edit({ action: "deleteComment", branch: current, id });
     await reload();
   };
+  const editNote = async (id: string, text: string) => {
+    if (!text.trim()) return;
+    await cb.edit({ action: "editComment", branch: current, id, text: text.trim() });
+    await reload();
+  };
   const addNote = async (line: number, endLine: number, text: string) => {
     const f = rows[selected];
     if (!f || !text.trim()) return;
@@ -364,6 +369,7 @@ export async function openReview(branch: string, cb: ReviewCallbacks, path?: str
     const handlers = {
       add: addNote,
       remove: deleteNote,
+      edit: editNote,
       resolve: resolveNote,
       copy: (n: { line: number; endLine: number; text: string }) => void copyText(formatNote(f.path, n)),
       reveal: (line: number) => d.revealLine(line),

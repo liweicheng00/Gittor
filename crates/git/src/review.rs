@@ -440,6 +440,18 @@ impl Repo {
         })
     }
 
+    /// A new text for a note. The note keeps its lines, its version of the file and its time.
+    pub fn edit_review_comment(&self, branch: &str, id: &str, text: &str) -> Result<()> {
+        if text.trim().is_empty() {
+            return Err(GitError("The note is empty".into()));
+        }
+        self.edit_review(branch, |r| {
+            let c = r.comments.iter_mut().find(|c| c.id == id).ok_or_else(|| GitError("The note does not exist".into()))?;
+            c.text = text.trim().into();
+            Ok(())
+        })
+    }
+
     pub fn delete_review_comment(&self, branch: &str, id: &str) -> Result<()> {
         self.edit_review(branch, |r| {
             r.comments.retain(|c| c.id != id);
