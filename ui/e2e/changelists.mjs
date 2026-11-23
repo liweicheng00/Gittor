@@ -126,14 +126,15 @@ await within("the new change is in Changes", async () => {
 // A file in .ignore cannot be checked, and no commit takes it.
 await page.dragAndDrop(".cl-file:has-text('parser.rs')", ".cl-header:has-text('.ignore')");
 await within("parser.rs is in .ignore", async () => /\.ignore ?1 file ?parser\.rs/.test(await tree()));
-// A mouse drag over the rows selects no text.
+// A mouse drag of a changelist onto its own rows selects no text, and moves nothing.
 const first = await page.locator(".cl-header:has-text('.ignore') .cl-name").boundingBox();
-const last = await page.locator(".cl-header:has-text('Docs') .cl-name").boundingBox();
+const last = await page.locator(".cl-file:has-text('parser.rs')").boundingBox();
 await page.mouse.move(first.x + 2, first.y + first.height / 2);
 await page.mouse.down();
-await page.mouse.move(last.x + last.width, last.y + last.height / 2, { steps: 10 });
+await page.mouse.move(last.x + last.width / 2, last.y + last.height / 2, { steps: 10 });
 await page.mouse.up();
 check("a drag over the changelists selects no text", (await page.evaluate(() => window.getSelection().toString())) === "");
+check("a changelist dropped on itself keeps its files", /\.ignore ?1 file ?parser\.rs/.test(await tree()));
 check("the box of parser.rs is off", await page.isDisabled(".cl-file:has-text('parser.rs') .cl-check"));
 check("the box of .ignore is off", await page.isDisabled(".cl-header:has-text('.ignore') .cl-check"));
 await page.click(".cl-header:has-text('.ignore')", { button: "right" });
@@ -191,6 +192,30 @@ check("the compare window of .ignore lists its files only", JSON.stringify(ignor
 check("the compare window names .ignore", ((await page.textContent(".compare-files-title")) ?? "").includes("2 files in .ignore"));
 await shot("cl8b-compare-ignore");
 await page.keyboard.press("Escape");
+
+// A drag of a changelist header moves all its files to another changelist. The drop can be on any row
+// of that changelist, not only on its header.
+const filesOf = (name) => page.evaluate((name) => {
+  const head = [...document.querySelectorAll(".cl-header")].find((h) => h.querySelector(".cl-name")?.textContent === name);
+  const out = [];
+  for (let n = head?.nextElementSibling; n && !n.classList.contains("cl-header"); n = n.nextElementSibling) {
+    const p = n.querySelector(".path")?.textContent;
+    if (p) out.push(p);
+  }
+  return out;
+}, name);
+appendFileSync(`${repo}/arith.rs`, "// one more change\n");
+// The count of a changelist, from its header: the Changes header can be closed here.
+const countOf = (name) => page.evaluate((name) => {
+  const head = [...document.querySelectorAll(".cl-header")].find((h) => h.querySelector(".cl-name")?.textContent === name);
+  return parseInt(head?.querySelector(".cl-count")?.textContent ?? "0", 10);
+}, name);
+await within("the new change of arith.rs is in Changes", async () => (await countOf("Changes")) === 1);
+const ignoredBefore = await countOf(".ignore");
+await page.dragAndDrop(".cl-header[data-list]:has(.cl-name:text-is('Changes'))", ".cl-file:has(.path:text-is('parser.rs'))");
+await within("the files of Changes are in .ignore now", async () => (await countOf("Changes")) === 0 && (await countOf(".ignore")) === ignoredBefore + 1 && (await filesOf(".ignore")).includes("arith.rs"));
+check("git did not change the files", git("status", "--porcelain").includes(" M arith.rs"));
+await shot("cl10-drag-changelist");
 
 console.log("errors:", JSON.stringify(errors));
 await browser.close();

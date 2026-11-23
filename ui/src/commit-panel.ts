@@ -145,6 +145,39 @@ export class CommitPanel {
     this.tree = h("div", { class: "commit-tree", tabIndex: 0 });
     copySource(this.tree, () => repoPaths([...new Set(this.selectedFiles().map((f) => f.change.path))]));
     this.tree.addEventListener("keydown", (e) => this.onKey(e));
+    // A drop on a changelist: on its header, or on any row under it, up to the next header.
+    const headerAt = (target: EventTarget | null): HTMLElement | null => {
+      let el = (target as HTMLElement | null)?.closest?.<HTMLElement>(".commit-tree > *") ?? null;
+      while (el && !el.classList.contains("cl-header")) el = el.previousElementSibling as HTMLElement | null;
+      // Unversioned Files is no changelist: a file goes there only by a rollback.
+      return el && !el.classList.contains("unversioned") ? el : null;
+    };
+    const mark = (head: HTMLElement | null) => {
+      for (const el of this.tree.querySelectorAll(".cl-header.drop")) if (el !== head) el.classList.remove("drop");
+      head?.classList.add("drop");
+    };
+    this.tree.addEventListener("dragover", (e) => {
+      if (!e.dataTransfer?.types.includes("text/x-gittor-paths")) return;
+      const head = headerAt(e.target);
+      mark(head);
+      if (head) e.preventDefault();
+    });
+    this.tree.addEventListener("dragleave", (e) => {
+      if (!this.tree.contains(e.relatedTarget as Node | null)) mark(null);
+    });
+    this.tree.addEventListener("drop", (e) => {
+      const head = headerAt(e.target);
+      mark(null);
+      if (!head) return;
+      e.preventDefault();
+      const to = head.dataset.list!;
+      // A changelist on itself: nothing to move.
+      if (e.dataTransfer?.getData("text/x-gittor-list") === to) return;
+      const paths = JSON.parse(e.dataTransfer?.getData("text/x-gittor-paths") || "[]") as string[];
+      const unversioned = JSON.parse(e.dataTransfer?.getData("text/x-gittor-unversioned") || "[]") as string[];
+      if (paths.length || unversioned.length) this.onMove(paths, to, unversioned);
+    });
+    this.tree.addEventListener("dragend", () => mark(null));
     this.message = h("textarea", { class: "commit-message", placeholder: "Commit message", spellcheck: true, rows: 5 });
     this.message.addEventListener("input", () => {
       this.scheduleSave();
@@ -650,7 +683,7 @@ export class CommitPanel {
     const twist = twisty(open);
     const row = h(
       "div",
-      { class: "cl-header" + (ignored ? " ignore-list" : "") + (list ? "" : " unversioned"), "data-list": id, title: list?.comment || name },
+      { class: "cl-header" + (ignored ? " ignore-list" : "") + (list ? "" : " unversioned"), "data-list": id, title: list?.comment || name, draggable: keys.length > 0 },
       twist,
       box,
       h("span", { class: "cl-name" }, name),
@@ -667,21 +700,12 @@ export class CommitPanel {
       if (list) this.onListMenu(list, e);
       else this.onUnversionedMenu(e);
     });
-    if (list) {
-      row.addEventListener("dragover", (e) => {
-        if (!e.dataTransfer?.types.includes("text/x-gittor-paths")) return;
-        e.preventDefault();
-        row.classList.add("drop");
-      });
-      row.addEventListener("dragleave", () => row.classList.remove("drop"));
-      row.addEventListener("drop", (e) => {
-        e.preventDefault();
-        row.classList.remove("drop");
-        const paths = JSON.parse(e.dataTransfer?.getData("text/x-gittor-paths") || "[]") as string[];
-        const unversioned = JSON.parse(e.dataTransfer?.getData("text/x-gittor-unversioned") || "[]") as string[];
-        if (paths.length || unversioned.length) this.onMove(paths, list.id, unversioned);
-      });
-    }
+    // A drag of the header moves all files of the changelist to the changelist of the drop.
+    row.addEventListener("dragstart", (e) => {
+      const keySet = new Set(keys);
+      setDragData(e, this.files.filter((f) => keySet.has(f.key)));
+      e.dataTransfer?.setData("text/x-gittor-list", id);
+    });
     return row;
   }
 

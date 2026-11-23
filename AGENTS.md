@@ -76,6 +76,9 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
 - Changelists (`crates/git/src/changelist.rs`): ".ignore" (`IGNORE_ID`) and "Changes" (`DEFAULT_ID`) are
   always the first two and cannot be removed or renamed. Every new change goes to "Changes"; there is
   no active changelist. The UI never checks a file in ".ignore", so no commit takes it.
+  A drag of a changelist header moves all its files. A drop counts on the header or on any row under it,
+  up to the next header (the `drop` handler of `.commit-tree` in `commit-panel.ts`); Unversioned Files
+  takes no drop. A changelist dropped on itself moves nothing.
 - Submodules: `Repo::submodules` reads all of them with three git commands (`.gitmodules`, the index,
   `git status --porcelain=v2`). The Submodules section is `submodule-panel.ts` and `submodule-flow.ts`.
   It is under the commit message of the Changes tab (`shell.ts` puts it there); `Mod+6` opens it.

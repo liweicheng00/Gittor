@@ -14,7 +14,7 @@ const ALLOWED: Record<string, string> = {
   ".tabbar": "The project tabs: a custom drag moves a tab, and the bar is the title bar of the window.",
   ".group-header": "A header of the Branches tab: a click opens and closes the group.",
   ".commit-tree": "The files of the Changes tab are draggable to a changelist. Mod+C copies their paths.",
-  ".cl-header": "A header of a changelist: a click opens and closes it, and files drop on it.",
+  ".cl-header": "A header of a changelist: a click opens and closes it, files drop on it, and a drag moves all its files.",
   ".sm-head": "The header of the Submodules section: a click opens and closes it.",
   ".rebase-grip": "The handle of a row of the rebase editor: it starts the custom drag.",
 };
