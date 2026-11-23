@@ -495,6 +495,9 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 /* A modified file is blue, as in IntelliJ. */
 .files-name.status-text-M { color: var(--renamed); }
 .files-dir-hint { overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
+/* The count of the open notes of a file or a folder, in the Files tab and the Compare window. */
+.files-notes { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; padding-left: 6px; color: var(--muted); font-size: 11px; flex: none; }
+.files-notes .icon { width: 12px; height: 12px; }
 .leftpane > [hidden] { display: none !important; }
 .leftpane .sidebar > .pane-title { display: none; }
 /* The tabs sit on the color of the list under them, so they belong to the panel and not to the toolbar. */

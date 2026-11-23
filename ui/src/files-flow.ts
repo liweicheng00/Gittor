@@ -14,7 +14,7 @@ import { copyText, h, icon } from "./dom";
 import { openInEditor } from "./editor-flow";
 import { showHistory } from "./history-flow";
 import { keymap } from "./keyboard";
-import { listLocalNotes, localNoteHandlers } from "./local-notes";
+import { LOCAL_NOTES_CHANGED, listLocalNotes, localNoteCounts, localNoteHandlers } from "./local-notes";
 import { NotesPanel } from "./notes-panel";
 import { visit } from "./nav";
 import { jumpToOid } from "./repo";
@@ -28,10 +28,14 @@ let request = 0;
 async function loadFiles() {
   stale = false;
   const req = ++request;
-  const files = await api.worktreeFiles().catch(() => null);
+  const [files, notes] = await Promise.all([api.worktreeFiles().catch(() => null), localNoteCounts()]);
   if (req !== request || !files) return;
   filesPanel.setFiles(files);
+  filesPanel.setNoteCounts(notes);
 }
+
+// A note was added, changed or removed (local-notes.ts): the counts of the tree change.
+window.addEventListener(LOCAL_NOTES_CHANGED, () => void localNoteCounts().then((c) => filesPanel.setNoteCounts(c)));
 
 /** A new set of local changes can add or remove files. The tab loads them now, or when it shows. */
 commitPanel.onLoad = (files) => {

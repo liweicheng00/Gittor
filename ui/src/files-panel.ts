@@ -3,7 +3,7 @@
 // the matching files as a flat list. The folders are closed at first, so a large repository draws fast.
 
 import { copySource, repoPath } from "./copy";
-import { h, twisty } from "./dom";
+import { h, icon, twisty } from "./dom";
 import { fileIcon } from "./file-icon";
 import { reconcile, type KeyedItem } from "./keyed";
 
@@ -24,6 +24,8 @@ export class FilesPanel {
   private root: Dir = { dirs: new Map(), files: [] };
   /** The status of each changed file, and of each folder above a changed file (key "a/b/"). */
   private status = new Map<string, string>();
+  /** The open notes of each file, and of each folder (key "a/b/"). */
+  private notes = new Map<string, number>();
   /** The open folders, by path with a slash at the end. */
   private readonly open = new Set<string>();
   private selected = "";
@@ -90,6 +92,30 @@ export class FilesPanel {
     this.render();
   }
 
+  /** The open notes on local changes: the count of each file, and the sum of each folder (key "a/b/"). */
+  setNoteCounts(counts: Map<string, number>) {
+    const next = new Map<string, number>();
+    for (const [path, n] of counts) {
+      if (!n) continue;
+      next.set(path, n);
+      const parts = path.split("/");
+      for (let i = 1; i < parts.length; i++) {
+        const dir = parts.slice(0, i).join("/") + "/";
+        next.set(dir, (next.get(dir) ?? 0) + n);
+      }
+    }
+    const same = next.size === this.notes.size && [...next].every(([k, v]) => this.notes.get(k) === v);
+    if (same) return;
+    this.notes = next;
+    this.render();
+  }
+
+  /** The count of notes at the end of a row, or nothing. */
+  private noteBadge(key: string): HTMLElement | string {
+    const n = this.notes.get(key);
+    return n ? h("span", { class: "files-notes", title: `${n} note${n === 1 ? "" : "s"}` }, icon("note"), String(n)) : "";
+  }
+
   /** Marks a file as selected, opens its folders, and scrolls to it. */
   select(path: string) {
     this.selected = path;
@@ -134,13 +160,14 @@ export class FilesPanel {
     const s = this.status.get(full) ?? "";
     return {
       key: `d:${full}`,
-      sig: `${name}|${depth}|${isOpen}|${s}`,
+      sig: `${name}|${depth}|${isOpen}|${s}|${this.notes.get(full) ?? 0}`,
       build: () => {
         const row = h(
           "div",
           { class: "files-row files-dir", "data-dir": full, role: "treeitem", "aria-expanded": String(isOpen), title: full.slice(0, -1), style: { paddingLeft: `${6 + depth * 14}px` } },
           twisty(isOpen),
           h("span", { class: "files-name" + (s ? ` status-text-${s} files-changed` : "") }, name),
+          this.noteBadge(full),
         );
         row.addEventListener("mousedown", (e) => {
           if (e.button !== 0) return;
@@ -157,7 +184,7 @@ export class FilesPanel {
     const slash = path.lastIndexOf("/");
     return {
       key: `f:${path}`,
-      sig: `${depth}|${withDir}|${s}`,
+      sig: `${depth}|${withDir}|${s}|${this.notes.get(path) ?? 0}`,
       build: () => {
         const row = h(
           "div",
@@ -165,6 +192,7 @@ export class FilesPanel {
           fileIcon(path),
           h("span", { class: "files-name" + (s ? ` status-text-${s} files-changed` : "") }, path.slice(slash + 1)),
           withDir && slash > 0 ? h("span", { class: "files-dir-hint muted-inline" }, path.slice(0, slash)) : "",
+          this.noteBadge(path),
         );
         row.addEventListener("mousedown", (e) => {
           if (e.button !== 0) return;

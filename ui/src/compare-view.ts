@@ -11,6 +11,7 @@ import { dragResize, formatDate, h, icon, rowSplitter, twisty } from "./dom";
 import { fileIcon } from "./file-icon";
 import type { NoteHandlers, NoteItem } from "./note-layer";
 import { NotesPanel } from "./notes-panel";
+import { LOCAL_NOTES_CHANGED } from "./local-notes";
 import { formatNotes } from "./note-format";
 import { toast } from "./notify";
 import { buildTree, treeOrder, walkTree } from "./file-tree";
@@ -41,7 +42,12 @@ export interface CompareCallbacks {
   scope?: { name: string; paths: () => Promise<Set<string>> };
   /** The notes on the working tree. The window shows them, and the user can add notes, while the right
    * side is the working tree. */
-  notes?: { list: (path: string) => Promise<NoteItem[]>; handlers: (path: string, reload: () => Promise<void>) => NoteHandlers };
+  notes?: {
+    list: (path: string) => Promise<NoteItem[]>;
+    handlers: (path: string, reload: () => Promise<void>) => NoteHandlers;
+    /** The count of open notes of each file. */
+    counts: () => Promise<Map<string, number>>;
+  };
 }
 
 /** Opens the window. `path` is the file to show first; without it, the first file. */
@@ -125,6 +131,7 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
     stopWatching();
     d.setRevert(null);
     overlay.remove();
+    window.removeEventListener(LOCAL_NOTES_CHANGED, onNotesChanged);
     document.removeEventListener("keydown", onKey, true);
   };
   closeBtn.addEventListener("click", close);
@@ -216,6 +223,18 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
     }
   };
 
+  /** The open notes of each file, while the right side is the working tree. */
+  let noteCounts = new Map<string, number>();
+  const loadNoteCounts = async () => {
+    const next = cb.notes && right === WORKTREE ? await cb.notes.counts().catch(() => new Map<string, number>()) : new Map<string, number>();
+    const same = next.size === noteCounts.size && [...next].every(([k, v]) => noteCounts.get(k) === v);
+    noteCounts = next;
+    if (!same) renderFiles();
+  };
+  const noteBadge = (n: number | undefined) => (n ? h("span", { class: "files-notes", title: `${n} note${n === 1 ? "" : "s"}` }, icon("note"), String(n)) : "");
+  const onNotesChanged = () => void loadNoteCounts();
+  window.addEventListener(LOCAL_NOTES_CHANGED, onNotesChanged);
+
   /** The menu of a file row; load() sets it for the two sides. */
   let fileMenu: (c: Change, e: MouseEvent) => void = () => {};
   /** The text of the diff when the sides have the same files. */
@@ -248,6 +267,7 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
       fileIcon(c.path),
       h("span", { class: `rebase-subject status-text-${c.status}` }, c.path.slice(slash + 1)),
       h("span", { class: "rebase-author" }, withDir && slash > 0 ? c.path.slice(0, slash) : ""),
+      noteBadge(noteCounts.get(c.path)),
       h("span", { class: `status status-end status-${c.status}`, title: statusName(c.status) }, c.status),
     );
     row.addEventListener("mousedown", (e) => e.button === 0 && void select(i));
@@ -269,7 +289,7 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
       treeBtn.title = settings.compareAsTree ? "Show as a flat list" : "Group by folder";
     }
     const out: KeyedItem<HTMLElement>[] = [];
-    const file = (c: Change, i: number, depth: number, withDir: boolean) => out.push({ key: `f:${c.path}`, sig: JSON.stringify([c, i, depth, withDir]), build: () => fileRow(c, i, depth, withDir) });
+    const file = (c: Change, i: number, depth: number, withDir: boolean) => out.push({ key: `f:${c.path}`, sig: JSON.stringify([c, i, depth, withDir, noteCounts.get(c.path) ?? 0]), build: () => fileRow(c, i, depth, withDir) });
     const paint = () => {
       reconcile(filesEl, out);
       for (const el of filesEl.querySelectorAll<HTMLElement>(".compare-file")) el.classList.toggle("selected", Number(el.dataset.index) === selected);
@@ -279,13 +299,18 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
       return paint();
     }
     walkTree(buildTree(files.map((c, index) => ({ path: c.path, index }))), collapsed, {
-      dir: (label, full, depth, open, count) => out.push({ key: `d:${full}`, sig: JSON.stringify([label, depth, open, count]), build: () => {
+      dir: (label, full, depth, open, count) => {
+        // The notes of a folder: the sum of its files.
+        let notes = 0;
+        for (const [p, n] of noteCounts) if (p.startsWith(full.endsWith("/") ? full : `${full}/`)) notes += n;
+        out.push({ key: `d:${full}`, sig: JSON.stringify([label, depth, open, count, notes]), build: () => {
         const row = h(
           "div",
           { class: "history-row compare-dir", style: { paddingLeft: `${8 + depth * 14}px` }, title: full },
           twisty(open),
           h("span", { class: "dir-name" }, label),
           h("span", { class: "dir-count" }, String(count)),
+          noteBadge(notes),
         );
         row.addEventListener("mousedown", (e) => {
           if (e.button !== 0) return;
@@ -294,7 +319,8 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
           renderFiles();
         });
         return row;
-      } }),
+      } });
+      },
       file: (index, depth) => file(files[index], index, depth, false),
     });
     paint();
@@ -386,6 +412,7 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
       const first = path ? files.findIndex((f) => f.path === path) : -1;
       selected = quiet ? Math.max(0, first) : -1;
       renderFiles();
+      void loadNoteCounts();
       path = undefined;
       if (files.length) void select(Math.max(0, first), quiet);
       else d.message(sameText);

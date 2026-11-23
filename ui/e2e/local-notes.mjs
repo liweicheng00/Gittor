@@ -92,6 +92,9 @@ await page.click(`${win} .compare-file:has-text('arith.rs')`);
 await page.waitForFunction((w) => document.querySelector(`${w} .diff-title`)?.textContent?.includes("arith.rs"), win);
 await page.waitForSelector(`${modified} .view-line`);
 await addNote(1, "Check the overflow");
+// The list of the window shows the count of the open notes of each file.
+const badge = (file) => page.textContent(`${win} .compare-file:has-text('${file}') .files-notes`).catch(() => null);
+await within("the file list counts the notes of each file", async () => (await badge("arith.rs"))?.trim() === "1" && (await badge("main.rs"))?.trim() === "1");
 
 // The right side on a branch: these are no local changes, so no notes.
 await page.selectOption(`${win} .compare-select >> nth=1`, "feature/cli");

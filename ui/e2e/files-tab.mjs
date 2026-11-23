@@ -105,6 +105,8 @@ await within("the note on the whole file shows in the list", async () => ((await
 await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
 await page.click(".file-host .review-notes-copy");
 await within("Copy All copies the notes of the file", async () => (await page.evaluate(() => navigator.clipboard.readText())) === "arith.rs\nRename this file\n\narith.rs:1\nCheck this add");
+// The tree of the Files tab shows the count of the open notes of the file.
+await within("the Files tab counts the notes of arith.rs", async () => ((await page.textContent(`${row("arith.rs")} .files-notes`).catch(() => "")) ?? "").trim() === "2");
 await shot("ft3-file-notes");
 // The find button opens the find widget of the editor of the file.
 await page.click(".file-host .diff-find");

@@ -19,7 +19,7 @@ import { app } from "./state";
 import { branchUrl, commitUrl, webUrl } from "./web-url";
 import { copyText } from "./dom";
 import { openInEditor } from "./editor-flow";
-import { listLocalNotes, localNoteHandlers } from "./local-notes";
+import { listLocalNotes, localNoteCounts, localNoteHandlers } from "./local-notes";
 
 export async function fetchRemote(name: string) {
   const out = await runOp({ op: "fetchRemote", name }, `Fetching ${name}`);
@@ -105,7 +105,7 @@ export function compareBranches(leftRef: string, rightRef: string, path?: string
     openInEditor: (p) => void openInEditor(p),
     copyText: (t) => void copyText(t),
     scope,
-    notes: { list: listLocalNotes, handlers: localNoteHandlers },
+    notes: { list: listLocalNotes, handlers: localNoteHandlers, counts: localNoteCounts },
   }, path);
 }
 

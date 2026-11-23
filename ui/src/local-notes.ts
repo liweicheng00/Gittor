@@ -12,6 +12,16 @@ export async function listLocalNotes(path: string): Promise<NoteItem[]> {
   return (await api.localNotes(path).catch(() => [])).map((n) => ({ ...n, outdated: false }));
 }
 
+/** The open notes on local changes of each file. A resolved note is done, so it does not count. */
+export async function localNoteCounts(): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  for (const n of await api.localNotes("").catch(() => [])) if (!n.resolved) counts.set(n.path, (counts.get(n.path) ?? 0) + 1);
+  return counts;
+}
+
+/** The event on the window after a change of a note on local changes. */
+export const LOCAL_NOTES_CHANGED = "gittor-local-notes";
+
 /** The handlers for the notes of a file. `reload` shows the notes again after a change. */
 export function localNoteHandlers(path: string, reload: () => Promise<void>): NoteHandlers {
   const run = async (e: LocalNoteEdit) => {
@@ -20,6 +30,7 @@ export function localNoteHandlers(path: string, reload: () => Promise<void>): No
     } catch (err) {
       toast(String(err).replace(/^Error: /, ""), "error");
     }
+    window.dispatchEvent(new Event(LOCAL_NOTES_CHANGED));
     await reload();
   };
   return {

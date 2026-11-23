@@ -113,6 +113,9 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   The notes of a file keep the git hash of its content; when the file changes, they go away.
   They show in the Compare window only, while its right side is the working tree (`local-notes.ts`, the
   `notes` callback of `openCompare`). The diff panel under the Changes tab has no notes.
+  The Files tab and the file list of the Compare window show the count of the open notes of each file
+  and folder (`.files-notes`, `localNoteCounts`). `localNoteHandlers` sends the window event
+  `LOCAL_NOTES_CHANGED` after each change, and both lists count again.
 - Updates of the app: `update-flow.ts` (checks 10 s after the start and every 6 h, only in the main
   window). Only a build with the public key checks: `scripts/build-dmg.sh --updater` merges
   `target/tauri.build.conf.json`, and `main.rs` registers the updater plugin only then. A local
