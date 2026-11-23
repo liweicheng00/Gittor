@@ -19,6 +19,15 @@ fn git(dir: &Path, args: &[&str]) -> String {
     String::from_utf8_lossy(&out.stdout).trim().to_string()
 }
 
+/// Allows the file protocol in the git processes of the library, through the environment. The tests run
+/// in threads of one process, and a git of another test can start while this runs. So the count comes
+/// last: git sees the count only when the key and the value are there.
+fn allow_file_protocol() {
+    std::env::set_var("GIT_CONFIG_KEY_0", "protocol.file.allow");
+    std::env::set_var("GIT_CONFIG_VALUE_0", "always");
+    std::env::set_var("GIT_CONFIG_COUNT", "1");
+}
+
 fn init(dir: &Path) {
     std::fs::create_dir_all(dir).unwrap();
     git(dir, &["init", "-q", "-b", "main"]);
@@ -36,9 +45,7 @@ fn temp(name: &str) -> std::path::PathBuf {
 #[test]
 fn submodules() {
     // The clone of `submodule update` runs in a child process: allow the file protocol there too.
-    std::env::set_var("GIT_CONFIG_COUNT", "1");
-    std::env::set_var("GIT_CONFIG_KEY_0", "protocol.file.allow");
-    std::env::set_var("GIT_CONFIG_VALUE_0", "always");
+    allow_file_protocol();
     let base = temp("submodule");
     let lib = base.join("lib");
     init(&lib);
@@ -104,9 +111,7 @@ fn submodules() {
 
 #[test]
 fn submodule_range() {
-    std::env::set_var("GIT_CONFIG_COUNT", "1");
-    std::env::set_var("GIT_CONFIG_KEY_0", "protocol.file.allow");
-    std::env::set_var("GIT_CONFIG_VALUE_0", "always");
+    allow_file_protocol();
     let base = temp("subrange");
     let lib = base.join("lib");
     init(&lib);
@@ -218,9 +223,7 @@ fn partial_commit_runs_clean_filters() {
 
 #[test]
 fn submodule_branches() {
-    std::env::set_var("GIT_CONFIG_COUNT", "1");
-    std::env::set_var("GIT_CONFIG_KEY_0", "protocol.file.allow");
-    std::env::set_var("GIT_CONFIG_VALUE_0", "always");
+    allow_file_protocol();
     let base = temp("subbranch");
     let lib = base.join("lib");
     init(&lib);
