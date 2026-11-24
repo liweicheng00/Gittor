@@ -273,6 +273,72 @@ service (`crates/service`), UI flow module (`ui/src`).
 - **From outside.** The MCP convention of the agents (`.mcp.json` for Claude Code; Codex and Cursor
   have their own config files). A skill or `AGENTS.md` line tells the agent to use it.
 
+### 4a. The agent starts a review: `gittor-bridge review start`
+
+The owner asked for this on 2026-11-24. It is the first command of the bridge (idea 4), because
+`Repo::start_review` already exists, and it needs no note states. Wireframe 4.
+
+- **What.** When the agent finishes a task in its worktree, it runs:
+
+  ```sh
+  gittor-bridge review start [--branch <b>] [--base <b>] [--title <t>] [--summary-file <md>] [--json]
+  ```
+
+  - `--branch`: by default the branch of the worktree in the current directory.
+  - `--base`: by default the base of the existing review. For a new review: the local branch of
+    `origin/HEAD`, else `main`, else `master`. The command stops when it cannot choose one.
+  - The review goes to `<common git dir>/gittor/reviews.json`, so the main window of the owner sees
+    it, also when the agent works in `.claude/worktrees/<name>`.
+  - The output tells the agent what the human will see: commits, files, conflicts with the base
+    (`merge-tree`, as the window does), the commits that the branch is behind, and uncommitted files.
+    The agent can fix a conflict before it asks for a review.
+- **Rounds.** A second `start` on the same branch does not make a second review. It adds a round:
+  `{ round, head, base_oid, time, author, summary }`. A round is the patch set of Gerrit and the diff
+  version of GitLab, but the agent says when it is ready, not each push. Idea 2 uses the rounds:
+  "Compare round 1 ↔ 2", and "changed since your last review".
+- **Rules of the command** (the differences from the UI):
+  - It never changes the base of an existing review. `Repo::start_review` changes it today; the
+    bridge needs a variant that refuses (exit code 3). Only the user changes the base.
+  - It stops when the worktree has uncommitted changes in tracked files (exit code 4), because the
+    review shows commits only. `--allow-uncommitted` skips the check.
+  - It refuses a branch that is the base, a protected branch (`main`, `master` and the setting of
+    protected branches), and a remote-tracking branch.
+  - It cannot remove a review, finish (merge) it, or change viewed marks.
+  - `author` is the value of `--agent <name>`, else the environment (`CLAUDECODE=1` gives
+    "Claude Code"), else "agent". It is a label, not a proof.
+- **UI.**
+  - The Reviews tab shows "by <agent>" and "round N ready" until the user opens that round.
+  - A toast "<agent> asks for a review" with Open Review.
+  - The Review window shows the summary of each round above the files, and a round selector.
+  - This needs the watcher to see `gittor/reviews.json` (`watch.rs` ignores it today) and the lock
+    of section 5, idea 4.
+- **Value.** High. Loop A starts by itself: the owner does not need to find the branch, choose the base
+  and open the review. The summary of the agent stays with the round, and is not lost in a terminal.
+- **Risk.** Low to medium.
+  - Many reviews: one review per branch, so the count is the count of agent branches. Rounds can grow;
+    keep the last 20 and cut a summary at 20 KB.
+  - The summary is text from the agent: render it only through the sanitizer of
+    `markdown-preview.ts`, and never run a link or a command from it.
+  - A toast can disturb the owner: a setting turns it off.
+- **Layers.**
+  - `crates/git/src/review.rs`: the fields `title`, `created_by` and `rounds` in `Stored` (all with
+    `#[serde(default)]`). A function `request_review(branch, base, title, summary, author)` that
+    refuses a new base and adds a round.
+  - The command: a separate binary is the simple way. The app takes its first argument as a
+    repository path (`initial_path` in `crates/app/src/main.rs`), so `Gittor review start` would open
+    a repository named "review". A flag (`Gittor --cli review start`) also works, but on macOS a
+    start of the app binary from a terminal is slow, and it must not open a window.
+  - The binary goes into the app bundle as a Tauri sidecar (`externalBin`). A menu item "Install
+    Command Line Tool" makes a link in `/usr/local/bin` or `~/.local/bin`, as VS Code does for `code`.
+  - `ReviewSummary` and `ReviewDetail` get the new fields (ts-rs bindings). `review-panel.ts` and
+    `review-view.ts` draw them. A `review-request-flow.ts` shows the toast.
+- **From outside.** One line in `AGENTS.md`, or a Claude Code skill `/gittor-review`, that tells the
+  agent to run the command at the end of a task. A `Stop` hook is a poor fit: it runs at the end of
+  each turn, not of each task.
+- **First step.** `review start` with `--branch`, `--base`, `--title`, `--summary-file`, `--json`, the
+  rules above, one round per call, and the "by" label and the summary in the UI. The compare of rounds
+  comes with idea 2.
+
 ### 5. Agent sessions on the Worktrees tab
 
 - **What.** The Worktrees tab shows which agent works in which worktree, and its state: working,
@@ -335,6 +401,9 @@ Ideas 3 and 1, the smallest part of each, with no external dependency:
 
 The agent answers in its terminal as today. The human then sees which notes went out.
 
+The bridge can start in parallel with `gittor-bridge review start` (idea 4a). It uses the same lock and
+watcher fixes, and no note states. With it, the agent opens the loop, and "Send to Agent" closes it.
+
 ### Later step
 
 1. Replies and Answered (idea 1), written by `gittor-bridge review reply` (idea 4, CLI only).
@@ -352,6 +421,12 @@ The agent answers in its terminal as today. The human then sees which notes went
 5. Where does the task file go: only the clipboard, or also `.git/gittor/tasks/` for a hook to read?
 6. Should Gittor add a line to `AGENTS.md` or a skill to `.claude/skills` of a repository, or only
    show the text for the user to copy?
+7. `review start` (idea 4a): may the agent start a review of any branch, or only of the branch of its
+   own worktree? The proposal: any local branch except the protected ones.
+8. Must a new round reset the viewed marks? The proposal: no. The marks keep the blob, so only the
+   files that changed in the round become "changed since viewed" (idea 2).
+9. When the agent calls `review start` and the app is closed: is the toast at the next start enough,
+   or must the command also start the app?
 
 ## 8. Wireframes
 
@@ -360,3 +435,4 @@ The agent answers in its terminal as today. The human then sees which notes went
 | [`review-ai/1-note-loop.png`](review-ai/1-note-loop.png) ([HTML](review-ai/1-note-loop.html)) | 1 and 3: note states, the reply of the agent with its commit, Send to Agent |
 | [`review-ai/2-since-last-review.png`](review-ai/2-since-last-review.png) ([HTML](review-ai/2-since-last-review.html)) | 2: the diff from the viewed blob, the note that follows its line |
 | [`review-ai/3-agent-bridge.png`](review-ai/3-agent-bridge.png) ([HTML](review-ai/3-agent-bridge.html)) | 4 and 5: the tools of the bridge, what the agent cannot do, agents on the Worktrees tab |
+| [`review-ai/4-agent-starts-review.png`](review-ai/4-agent-starts-review.png) ([HTML](review-ai/4-agent-starts-review.html)) | 4a: `review start` in a terminal, the rounds, the toast, "by <agent>" on the Reviews tab |

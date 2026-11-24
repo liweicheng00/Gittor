@@ -1,0 +1,84 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Wireframe 4: the agent starts a review</title><link rel="stylesheet" href="wire.css">
+<style>
+.cols { display: flex; gap: 18px; align-items: flex-start; }
+.term { width: 560px; }
+.term pre { margin: 0; padding: 12px 14px; font: 11.5px/1.55 "JetBrains Mono", ui-monospace, monospace; color: #c8ccd2; white-space: pre-wrap; background: #16171a; }
+.term .c { color: var(--ok); } .term .m { color: var(--muted); } .term .w { color: var(--warn); }
+.right { width: 662px; display: flex; flex-direction: column; gap: 18px; }
+.rv { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.rv .l1 { display: flex; gap: 6px; align-items: center; }
+.rv .l2 { color: var(--muted); font-size: 12px; margin-top: 3px; display: flex; gap: 8px; align-items: center; }
+.summary { padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--panel-2); font-size: 12.5px; }
+.summary h4 { margin: 0 0 4px; font-size: 12.5px; }
+.summary ul { margin: 4px 0 0 18px; padding: 0; }
+.rounds { display: flex; gap: 6px; align-items: center; }
+.toast { position: relative; background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--agent); border-radius: 6px; padding: 8px 10px; display: flex; gap: 10px; align-items: center; box-shadow: 0 6px 20px #0007; }
+</style></head>
+<body>
+<h1 class="wf-title">Wireframe 4 · The agent starts a review with the CLI</h1>
+<p class="wf-sub">When the agent finishes a task in its worktree, it runs <code>gittor-bridge review start</code>. Gittor makes the review (or a new round of it), keeps the summary of the agent, and shows a toast. A second run on the same branch adds round 2. It does not change the base, and it does not make a second review. The rounds give the "changes since round 1" diff of wireframe 2.</p>
+<div class="cols">
+  <div class="win term">
+    <div class="hdr"><b>Terminal</b><span class="cnt">~/src/gittor/.claude/worktrees/retry-policy</span></div>
+<pre><span class="m">$ git status --short</span>
+<span class="m">$ </span>gittor-bridge review start --base main \
+    --title "Retry policy for fetch" \
+    --summary-file /tmp/summary.md --json
+<span class="c">{
+  "review": "feature/retry-policy",
+  "base": "main",
+  "round": 1,
+  "head": "0aa28f13",
+  "commits": 3, "files": 6,
+  "conflicts": [],
+  "uncommitted": [],
+  "behind": 2,
+  "created": true
+}</span>
+
+<span class="m"># ... the human writes 2 notes, the agent fixes them ...</span>
+
+<span class="m">$ </span>gittor-bridge review start --summary-file /tmp/r2.md --json
+<span class="c">{ "review": "feature/retry-policy", "round": 2,
+  "head": "e41f09a2", "created": false,
+  "since_round_1": { "commits": 1, "files": 2 } }</span>
+
+<span class="m">$ </span>gittor-bridge review start --base develop
+<span class="w">error: the review of feature/retry-policy has the base main.
+Only the user changes the base.  (exit 3)</span>
+
+<span class="m">$ </span>gittor-bridge review start   <span class="m"># with an unsaved edit</span>
+<span class="w">error: 1 file has uncommitted changes (src/retry.rs).
+Commit them first, or add --allow-uncommitted.  (exit 4)</span></pre>
+  </div>
+  <div class="right">
+    <div class="toast"><span class="dot" style="background:var(--agent)"></span><span><b>Claude Code</b> asks for a review: feature/retry-policy → main (round 2)</span><span style="flex:1"></span><span class="btn primary">Open Review</span><span class="btn">Later</span></div>
+    <div class="win" style="width:auto">
+      <div class="hdr"><b>Reviews</b><span class="sp"></span><span class="btn">New Review…</span></div>
+      <div class="rv" style="background:#2e436e">
+        <div class="l1"><b>feature/retry-policy</b><span class="cnt">→ main</span><span style="flex:1"></span><span class="pill p-done">by Claude Code</span><span class="pill p-open">round 2 ready</span></div>
+        <div class="l2">Retry policy for fetch · 4 commits · 2 files changed since your last review · no conflicts</div>
+      </div>
+      <div class="rv">
+        <div class="l1"><b>chore/docs</b><span class="cnt">→ main</span><span style="flex:1"></span><span class="pill p-done">by Codex</span><span class="pill p-muted">round 1 · 6/6 viewed</span></div>
+        <div class="l2">Fix links in the docs · 1 commit</div>
+      </div>
+      <div class="rv">
+        <div class="l1"><b>spike/graph</b><span class="cnt">→ main</span><span style="flex:1"></span><span class="pill p-muted">by you</span></div>
+        <div class="l2">5 commits · 2/9 viewed</div>
+      </div>
+    </div>
+    <div class="win" style="width:auto">
+      <div class="hdr"><b>Review</b><span class="btn">feature/retry-policy → main ▾</span><span class="sp"></span>
+        <span class="rounds"><span class="cnt">Round</span><span class="btn">1</span><span class="btn primary">2</span><span class="btn">Compare 1 ↔ 2</span></span></div>
+      <div class="summary">
+        <h4>Round 2 · Claude Code · e41f09a2</h4>
+        Fixed the 2 notes of round 1.
+        <ul><li>Capped the backoff at <code>max_ms</code> (note 3a1e).</li><li>501 does not retry now (note 7f3c).</li><li>Tests: <code>cargo test -p net</code> passes.</li></ul>
+      </div>
+      <div class="foot"><span>The summary is text from the agent. Gittor shows it through the Markdown sanitizer, and cuts it at 20 KB.</span></div>
+    </div>
+  </div>
+</div>
+</body></html>

@@ -58,6 +58,7 @@ pre { margin: 0; padding: 10px 14px; background: var(--panel-2); border-top: 1px
     <div class="sec">Tools of the MCP server (the same as the CLI subcommands)</div>
     <div style="padding:8px 14px">
       <div class="tool"><b>review_list</b>() → the reviews of the repository</div>
+      <div class="tool"><b>review_start</b>(branch?, base?, title?, summary?) → a new review, or a new round (wireframe 4)</div>
       <div class="tool"><b>review_get</b>(branch) → files, commits, notes with state, path:line and code around the line</div>
       <div class="tool"><b>review_task</b>(branch, state="sent") → one Markdown task, as "Send to Agent" makes it</div>
       <div class="tool"><b>note_reply</b>(branch, id, text, commit?) → the note becomes Answered</div>
