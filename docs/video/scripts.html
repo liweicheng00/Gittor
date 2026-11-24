@@ -1,0 +1,358 @@
+<title>Gittor 影片腳本</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: a sticky index of the scripts at the left, and one sheet for each script at the right.
+     A sheet is a shot list: the caption of each beat, what the screen shows, and where the camera is. */
+  :root {
+    --bg: #f6f6f9;
+    --panel: #ffffff;
+    --line: #dcdde6;
+    --fg: #1b1d27;
+    --muted: #62667a;
+    --accent: #5a45d6;
+    --accent-soft: #ecebfb;
+    --done: #12715b;
+    --done-soft: #dff3ec;
+    --idea: #96600a;
+    --idea-soft: #fbefd6;
+    --code: #f0f0f5;
+    --text: "Inter", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #13141b; --panel: #1b1d27; --line: #2e3140; --fg: #e8e9f1; --muted: #9a9eb2;
+      --accent: #a99cff; --accent-soft: #2a2748; --done: #6fd6b6; --done-soft: #17352e;
+      --idea: #f0c26b; --idea-soft: #3a2e14; --code: #232532; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #13141b; --panel: #1b1d27; --line: #2e3140; --fg: #e8e9f1; --muted: #9a9eb2;
+    --accent: #a99cff; --accent-soft: #2a2748; --done: #6fd6b6; --done-soft: #17352e;
+    --idea: #f0c26b; --idea-soft: #3a2e14; --code: #232532; color-scheme: dark;
+  }
+  body { background: var(--bg); color: var(--fg); font: 400 15px/1.65 var(--text); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding-block: 36px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  header.top { display: flex; flex-direction: column; gap: 6px; margin-bottom: 28px; }
+  h1 { font: 700 28px/1.2 var(--text); margin: 0; letter-spacing: -0.01em; }
+  .lede { color: var(--muted); margin: 0; max-width: 64ch; }
+  .updated { font: 400 13px/1.4 var(--mono); color: var(--muted); }
+  .cols { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 32px; align-items: start; }
+  nav.index { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); display: flex; flex-direction: column; gap: 18px; font-size: 14px; max-height: calc(100vh - 32px); overflow-y: auto; }
+  nav.index h2 { font: 600 12px/1 var(--text); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+  nav.index ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  nav.index a { display: flex; gap: 8px; padding: 5px 8px; border-radius: 6px; color: var(--fg); text-decoration: none; }
+  nav.index a:hover { background: var(--accent-soft); }
+  nav.index a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  nav.index .n { font: 500 12px/1.9 var(--mono); color: var(--muted); flex: none; width: 22px; }
+  main { display: flex; flex-direction: column; gap: 40px; min-width: 0; }
+  section.group { display: flex; flex-direction: column; gap: 18px; }
+  section.group > h2 { font: 700 20px/1.3 var(--text); margin: 0; }
+  section.group > p { margin: 0; color: var(--muted); max-width: 70ch; }
+  article.sheet { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; scroll-margin-top: 16px; }
+  .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; }
+  .head .n { font: 500 13px/1 var(--mono); color: var(--muted); }
+  .head h3 { font: 700 19px/1.3 var(--text); margin: 0; }
+  .chip { font: 600 12px/1 var(--text); padding: 5px 9px; border-radius: 999px; white-space: nowrap; }
+  .chip.done { color: var(--done); background: var(--done-soft); }
+  .chip.idea { color: var(--idea); background: var(--idea-soft); }
+  .chip.first { color: var(--accent); background: var(--accent-soft); }
+  .hook { font: 600 17px/1.4 var(--text); margin: 0; }
+  .hook small { display: block; font: 400 13px/1.5 var(--text); color: var(--muted); margin-top: 2px; }
+  dl.facts { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 16px; font-size: 14px; }
+  dl.facts dt { color: var(--muted); }
+  dl.facts dd { margin: 0; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th { text-align: left; font: 600 12px/1.3 var(--text); letter-spacing: 0.04em; color: var(--muted); padding: 0 12px 8px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { vertical-align: top; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: 0; }
+  td.i { font: 500 12px/1.9 var(--mono); color: var(--muted); width: 20px; }
+  td.cap { font-weight: 600; min-width: 170px; }
+  td.cam { color: var(--muted); min-width: 120px; }
+  pre { margin: 0; background: var(--code); border-radius: 8px; padding: 12px 14px; font: 400 13px/1.6 var(--mono); overflow-x: auto; white-space: pre; }
+  .label { font: 600 12px/1 var(--text); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+  ul.plain { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; }
+  .note { margin: 0; color: var(--muted); font-size: 14px; }
+  .rules { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px 24px; }
+  @media (max-width: 800px) {
+    .cols { grid-template-columns: minmax(0, 1fr); }
+    nav.index { position: static; max-height: none; }
+    article.sheet { padding: 18px 16px; }
+    h1 { font-size: 24px; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Gittor 影片腳本</h1>
+    <p class="lede">每支短片的字幕、畫面動作與鏡頭位置。字幕是影片裡的英文原文。這一頁是我們討論腳本的工作文件，改動都記在這裡。</p>
+    <span class="updated" id="updated"></span>
+  </header>
+  <div class="cols">
+    <nav class="index" id="index" aria-label="腳本索引"></nav>
+    <main id="main"></main>
+  </div>
+</div>
+
+<script>
+  // The scripts of the videos. Change the text here; the page draws itself from this object.
+  const DOC = {
+    updated: "2026-11-24",
+    rules: {
+      title: "已定的規格",
+      items: [
+        "直式 9:16，1080×1920。上方只留一小塊字幕區，其餘給 app 畫面。",
+        "app 用 Plasma 主題。",
+        "每支一個主題，四到六個快速步驟。鏡頭先給完整視窗，再推近到正在操作的區域。",
+        "音樂：慢、音高低，結尾不加特效音，只有和弦淡出。",
+        "錄製改在 Mac 上進行：雲端環境沒有顯示卡，漸層會出現色帶。",
+        "影片檔不進 GitHub。",
+      ],
+    },
+    groups: [
+      {
+        id: "tours",
+        title: "功能導覽（已錄製）",
+        intro: "八支都在雲端環境錄過一版。之後要在 Mac 上重錄，腳本可以先在這裡修改。",
+        scripts: [
+          {
+            id: "tour", n: 1, title: "Basics tour", status: "done", length: "21.5 秒",
+            hook: "A light git client. The basics, fast.",
+            setup: "本機有兩個修改過的檔案（arith.rs、main.rs），停在 Branches 分頁。",
+            beats: [
+              ["All the history, as a graph", "點選兩個 commit，其中一個是合併 commit。", "推近 commit graph"],
+              ["One click to the diff", "下方 diff 顯示選取的 commit 改了什麼（單欄）。", "移到 diff 面板"],
+              ["Switch branches", "在分支 feature/cli 上按右鍵，選 Checkout。", "推近側欄的分支清單，再跟到選單項目"],
+              ["Check, write, commit", "切到 Changes 分頁，輸入訊息 Add a division，按 Commit Changes。", "檔案清單到 Commit 按鈕"],
+              ["Changed your mind? Undo.", "按通知上的 Undo，兩個檔案回到本機變更。", "推近通知，再拉回完整視窗"],
+            ],
+          },
+          {
+            id: "agent", n: 2, title: "Review your agent", status: "done", length: "22.2 秒",
+            hook: "Your agent wrote it. Now review it.",
+            setup: "agent 在 arith.rs 加了一個會除以零的 div 函式，尚未 commit。",
+            beats: [
+              ["Leave a note on the line", "雙擊 arith.rs 開啟 Compare 視窗。在第 6 行的行號旁按註記圖示，輸入 Division by zero panics. Return Option<i32>.", "先推近檔案列，再到新版那一側的程式碼"],
+              ["Copy the notes", "按 Copy All。", "推近 Copy All 按鈕"],
+              ["Paste them to your agent", "終端機視窗出現，按 ⌘V 貼上「檔名:行號」與註記內容。", "程式碼在上、終端機在下的同一個畫面"],
+              ["The fix lands. The note clears.", "agent 改寫檔案。上方的程式碼變成 checked_div，註記自動消失。", "不動"],
+              ["Then commit", "關閉 Compare 視窗，輸入 Add a checked division，按 Commit。", "檔案清單到 Commit 按鈕"],
+            ],
+            notes: ["終端機是畫面上疊加的模擬視窗，標題是通用的 agent。檔案是真的被改寫，diff 與註記的變化是 app 自己的反應。"],
+          },
+          {
+            id: "review", n: 3, title: "Local pull request", status: "done", length: "24.4 秒",
+            hook: "A pull request that never leaves your machine",
+            setup: "分支 agent/add-division 有兩個 commit，main 是目前的分支。",
+            beats: [
+              ["（開場字幕延續）", "在分支上按右鍵，選 Review Branch，按 Start Review。Review 視窗開啟。", "分支 → 對話框 → 完整視窗"],
+              ["Notes on lines", "在第 6 行加註記 Follow-up: add a test for b = 0.", "推近 diff"],
+              ["Mark files as viewed", "勾選兩個檔案的「已看」。", "推近檔案清單"],
+              ["Squash and merge", "按 Merge…，選 Squash，按 Merge。", "Merge 按鈕 → 對話框"],
+              ["No remote. Undo is one click.", "通知出現（含 Undo）。點最上面的新 commit。", "推近通知，再到 log 頂端"],
+            ],
+            notes: ["註記刻意寫成不擋合併的後續事項，這樣留了註記還直接合併才合理。"],
+          },
+          {
+            id: "history", n: 4, title: "Rewrite history", status: "done", length: "25.5 秒",
+            hook: "Rewrite history. Break nothing.",
+            setup: "main 上有四個本機 commit：Add a sub function、Add neg、Fix teh build docs、wip: debug prints。",
+            beats: [
+              ["Squash commits", "選取 Add neg 與 Add a sub function，右鍵 Squash 2 Commits，訊息改成 Add sub and neg。", "log → 選單項目 → 對話框"],
+              ["Fix a message", "在 Fix teh build docs 上右鍵 Edit Commit Message，改成 Fix the build docs。", "同上"],
+              ["Drop a commit", "在 wip: debug prints 上右鍵 Drop Commit，確認。", "同上"],
+              ["Undo any of it", "按通知上的 Undo，wip commit 回來。", "推近通知，再回到 log"],
+            ],
+          },
+          {
+            id: "changes", n: 5, title: "Changelists and partial commits", status: "done", length: "22.3 秒",
+            hook: "Commit exactly what you mean",
+            setup: "calc.rs 有兩處修改（一處是真正的修正，一處是 debug 輸出），README.md 也改了。",
+            beats: [
+              ["Group files in changelists", "在 README.md 上右鍵 New Changelist，命名 Docs，取消勾選它。", "Changes 面板 → 對話框"],
+              ["Pick single changes", "點 calc.rs，在 diff 裡取消勾選 debug 那一處修改。", "推近 diff"],
+              ["Commit only what is checked", "輸入 Use saturating add，按 Commit。", "Changes 面板"],
+              ["The rest waits for later", "再點 calc.rs，debug 那一行仍是本機變更。", "推近 diff"],
+            ],
+          },
+          {
+            id: "worktrees", n: 6, title: "Worktrees and windows", status: "done", length: "17.4 秒",
+            hook: "One repository. Many worktrees.",
+            setup: "停在 Worktrees 分頁，只有主要的 worktree。",
+            beats: [
+              ["Add a worktree", "按 +，分支填 agent/parser，資料夾填 rustcalc-wt/parser，按 Create。", "+ 按鈕 → 對話框 → 清單裡的新項目"],
+              ["It opens in its own tab", "雙擊新的 worktree，上方多一個專案分頁。", "推近分頁列"],
+              ["Drag a tab out for a new window", "把分頁往下拖，出現新視窗。", "跟著新視窗"],
+            ],
+            notes: ["只有三個步驟，是八支裡最短的。可以考慮加一步，例如用快捷鍵在分頁間切換。"],
+          },
+          {
+            id: "inspect", n: 7, title: "File history and preview", status: "done", length: "20.6 秒",
+            hook: "Every line has a story",
+            setup: "docs/GUIDE.md 有本機修改，內含一張 Mermaid 流程圖。",
+            beats: [
+              ["File history, across renames", "選一個 commit，在 arith.rs 上右鍵 Show History。清單裡有改名前（math.rs）的紀錄。", "檔案 → 選單項目 → History 視窗的清單"],
+              ["Who changed each line", "勾選 Annotate，每行旁邊出現日期與作者。", "推近標註欄"],
+              ["Markdown and diagrams, rendered", "回到 Changes，點 GUIDE.md。預覽顯示改過的清單項目與多了一個節點的流程圖。", "完整視窗 → diff 面板"],
+              ["The source is one click away", "按 Preview 切換鈕，回到原始碼的 diff。", "不動"],
+            ],
+            notes: ["已知問題：單欄模式下，行號與標註的日期貼在一起（看起來像 12026-11-06）。這是 app 的顯示，重錄前可以先修。"],
+          },
+          {
+            id: "filter", n: 8, title: "Filter the graph", status: "done", length: "20.1 秒",
+            hook: "Find any commit in the graph",
+            setup: "停在 log，沒有任何篩選。",
+            beats: [
+              ["Click a label: the branch name is copied", "點 feature/cli 標籤，旁邊出現剪貼簿內容。", "推近篩選列與 log"],
+              ["Double-click: only that branch", "雙擊同一個標籤，log 只剩這個分支，篩選列顯示 Branch: feature/cli。", "不動"],
+              ["Filter by text", "清掉分支篩選，在文字欄輸入 parser，剩 3 筆。", "不動"],
+              ["And by user", "在使用者欄輸入 Grace，剩 2 筆。", "不動"],
+              ["One click to clear", "按 Clear，回到完整的 graph。", "不動"],
+            ],
+          },
+        ],
+      },
+      {
+        id: "tutorials",
+        title: "Git 教學系列（提案）",
+        intro: "每支解決一個真實會遇到的麻煩。結構固定：情境 → 用 graph 看懂發生了什麼 → 在 Gittor 裡修正 → 畫面下方對照等效的 git 指令。尚未錄製，內容都可以改。",
+        scripts: [
+          {
+            id: "t-wrong-branch", n: 1, title: "I committed to main by mistake", status: "idea", first: true,
+            concept: "分支只是指向 commit 的指標。移動指標不會弄丟 commit。",
+            steps: ["開場：在 main 上按下 commit，graph 上 main 往前走一格。", "在那個 commit 上建立新分支。", "把 main 重設回 origin/main。新分支仍指著剛才的 commit。"],
+            git: "git branch feature/login\ngit reset --keep origin/main",
+          },
+          {
+            id: "t-undo-commit", n: 2, title: "I need to undo my last commit", status: "idea", first: true,
+            concept: "reset 的三種模式差在哪：變更留在暫存區、留在工作目錄，或整個丟掉。",
+            steps: ["開場：commit 之後才發現漏了一個檔案。", "Undo Commit，變更回到本機變更。", "補上檔案，重新 commit。"],
+            git: "git reset --soft HEAD~1",
+          },
+          {
+            id: "t-secret", n: 3, title: "I committed a secret", status: "idea", first: true,
+            concept: "再 commit 一次把檔案刪掉沒有用，舊的 commit 裡還看得到。必須改寫那個 commit。",
+            steps: ["開場：.env 出現在某個 commit 的檔案清單裡。", "示範錯誤做法：刪掉檔案再 commit，但舊 commit 仍然有它。", "在那個 commit 的 .env 上選 Drop Selected Changes，歷史被改寫。", "結尾字幕：已經 push 的密鑰必須作廢重發。"],
+            git: "git rebase -i <commit>^   # mark the commit as edit\ngit rm --cached .env\ngit commit --amend --no-edit\ngit rebase --continue",
+            notes: ["要講實話：改寫歷史只在還沒 push 時才夠用。這句一定要放進影片。"],
+          },
+          {
+            id: "t-squash", n: 4, title: "My PR has 12 \"wip\" commits", status: "idea", first: true,
+            concept: "互動式 rebase 做的事：把多個 commit 合成一個，並重寫訊息。",
+            steps: ["開場：graph 上一長串 wip、fix、fix again。", "選取全部，Squash。", "寫一個像樣的訊息。", "graph 上剩一個 commit。"],
+            git: "git rebase -i origin/main   # pick the first, squash the rest",
+          },
+          {
+            id: "t-split", n: 5, title: "One commit does two things", status: "idea",
+            concept: "一個 commit 只做一件事，之後才好 revert、好 review。",
+            steps: ["開場：一個 commit 同時改了功能與格式。", "選取屬於格式的檔案，Extract 成新的 commit。", "graph 上變成兩個 commit。"],
+            git: "git rebase -i <commit>^   # mark the commit as edit\ngit reset HEAD^\ngit add -p && git commit   # once for each part\ngit rebase --continue",
+          },
+          {
+            id: "t-conflict", n: 6, title: "Merge conflict. Now what?", status: "idea", first: true,
+            concept: "三方合併：你的版本、對方的版本，以及兩邊共同的起點。",
+            steps: ["開場：merge 停下來，檔案標成衝突。", "打開三欄合併視窗：左邊你的、右邊對方的、中間是結果。", "逐一決定每個修改要哪一邊，或兩邊都要。", "全部解完，Continue。"],
+            git: "git merge main\n# edit the files, then\ngit add <file>\ngit merge --continue",
+          },
+          {
+            id: "t-switch", n: 7, title: "I need to switch branches, but I'm not done", status: "idea",
+            concept: "stash 是把半成品暫時收起來；worktree 是同時開兩份工作目錄，根本不必切換。",
+            steps: ["開場：改到一半，被要求立刻修另一個分支的 bug。", "做法一：Stash 目前的變更，切過去修，回來 Pop。", "做法二：開一個 worktree，在新分頁修，原本的分頁不受影響。"],
+            git: "git stash -u && git switch hotfix\n# or\ngit worktree add ../repo-hotfix hotfix",
+          },
+          {
+            id: "t-cherry-pick", n: 8, title: "The fix is on the wrong branch", status: "idea",
+            concept: "cherry-pick 複製的是那個 commit 的變更，會產生一個新的 commit。",
+            steps: ["開場：修正在 feature 分支上，但 release 分支也需要。", "切到 release，在那個 commit 上選 Cherry-Pick。", "graph 上兩個分支各有一個內容相同的 commit。"],
+            git: "git switch release\ngit cherry-pick <commit>",
+          },
+          {
+            id: "t-blame", n: 9, title: "Who changed this line, and why?", status: "idea",
+            concept: "blame 找到最後改這一行的 commit，commit 訊息說明原因。",
+            steps: ["開場：一行看起來很奇怪的程式碼。", "Annotate，那一行旁邊顯示日期與作者。", "點標註，跳到那個 commit，讀它的訊息與完整的修改。"],
+            git: "git blame -L 40,40 src/app.rs\ngit show <commit>",
+          },
+          {
+            id: "t-behind", n: 10, title: "My branch is 30 commits behind main", status: "idea",
+            concept: "merge 會留下一個合併 commit；rebase 把你的 commit 接到最新的 main 後面，歷史是一直線。",
+            steps: ["開場：graph 上你的分支從很久以前的 main 分出去。", "Update，選 rebase。本機變更自動暫存再還原。", "graph 上你的 commit 排到 main 的最前面。"],
+            git: "git fetch\ngit rebase --autostash origin/main",
+          },
+          {
+            id: "t-revert", n: 11, title: "I pushed, then realized it's wrong", status: "idea",
+            concept: "已經 push 的 commit 不該改寫，別人可能已經拉下去了。用 revert 加一個反向的 commit。",
+            steps: ["開場：壞掉的 commit 已經在 origin/main 上。", "在那個 commit 上選 Revert Commit。", "graph 上多一個反向的 commit，Push。"],
+            git: "git revert <commit>\ngit push",
+          },
+          {
+            id: "t-cleanup", n: 12, title: "I have 40 old branches", status: "idea",
+            concept: "已經合併進 main 的分支，內容都在 main 裡了，可以安全刪除。",
+            steps: ["開場：側欄一長串分支。", "Delete Merged Branches，預覽列出可以刪的分支。", "保留其中幾個，刪除其餘的。", "按 Undo 可以全部救回來。"],
+            git: "git branch --merged main | grep -v main | xargs git branch -d",
+          },
+        ],
+      },
+    ],
+    open: {
+      title: "待決定",
+      items: [
+        "教學系列的結構（情境 → 看懂 → 修正 → 對照指令）是否就是要的方向。",
+        "第一批做哪幾支。目前建議標了「第一批」的五支。",
+        "教學片的長度放寬到 30 到 45 秒是否可以。",
+        "教學系列沿用目前的版面與 Plasma 主題，還是要有自己的樣子。",
+        "結尾標語 The git client for reviewing your agents 只和第 2、3 支直接相關，其他幾支要不要換。",
+        "音樂（慢、低、結尾無特效音）是否已經到位。",
+      ],
+    },
+  };
+
+  const el = (tag, props = {}, ...kids) => {
+    const node = Object.assign(document.createElement(tag), props);
+    node.append(...kids.filter((k) => k !== null && k !== undefined));
+    return node;
+  };
+  const STATUS = { done: ["done", "已錄製"], idea: ["idea", "提案"] };
+  const list = (title, items) => el("div", {}, el("p", { className: "label" }, title), el("ul", { className: "plain" }, ...items.map((t) => el("li", {}, t))));
+
+  function sheet(s, prefix) {
+    const [cls, text] = STATUS[s.status];
+    const head = el("div", { className: "head" },
+      el("span", { className: "n" }, `${prefix}${s.n}`),
+      el("h3", {}, s.title),
+      el("span", { className: `chip ${cls}` }, text),
+      s.first ? el("span", { className: "chip first" }, "第一批") : null,
+    );
+    const parts = [head];
+    if (s.hook) parts.push(el("p", { className: "hook" }, s.hook, el("small", {}, "開場字幕")));
+    const facts = [];
+    if (s.length) facts.push(el("dt", {}, "長度"), el("dd", {}, s.length));
+    if (s.setup) facts.push(el("dt", {}, "開場狀態"), el("dd", {}, s.setup));
+    if (s.concept) facts.push(el("dt", {}, "教的觀念"), el("dd", {}, s.concept));
+    if (facts.length) parts.push(el("dl", { className: "facts" }, ...facts));
+    if (s.beats) {
+      const rows = s.beats.map(([cap, action, cam], i) => el("tr", {},
+        el("td", { className: "i" }, String(i + 1)), el("td", { className: "cap" }, cap), el("td", {}, action), el("td", { className: "cam" }, cam)));
+      parts.push(el("div", { className: "scroll" }, el("table", {},
+        el("thead", {}, el("tr", {}, el("th", {}, ""), el("th", {}, "字幕"), el("th", {}, "畫面動作"), el("th", {}, "鏡頭"))),
+        el("tbody", {}, ...rows))));
+    }
+    if (s.steps) parts.push(el("div", {}, el("p", { className: "label" }, "步驟"), el("ol", { className: "plain" }, ...s.steps.map((t) => el("li", {}, t)))));
+    if (s.git) parts.push(el("div", {}, el("p", { className: "label" }, "對照的 git 指令"), el("pre", {}, s.git)));
+    if (s.notes) parts.push(...s.notes.map((t) => el("p", { className: "note" }, `備註：${t}`)));
+    return el("article", { className: "sheet", id: s.id }, ...parts);
+  }
+
+  document.getElementById("updated").textContent = `最後更新 ${DOC.updated}`;
+  const main = document.getElementById("main");
+  const index = document.getElementById("index");
+  main.append(el("section", { className: "rules", id: "rules" }, list(DOC.rules.title, DOC.rules.items)));
+  index.append(el("div", {}, el("ol", {}, el("li", {}, el("a", { href: "#rules" }, el("span", { className: "n" }, "·"), DOC.rules.title)), el("li", {}, el("a", { href: "#open" }, el("span", { className: "n" }, "·"), DOC.open.title)))));
+  for (const g of DOC.groups) {
+    const prefix = g.id === "tutorials" ? "T" : "";
+    main.append(el("section", { className: "group", id: g.id }, el("h2", {}, g.title), el("p", {}, g.intro), ...g.scripts.map((s) => sheet(s, prefix))));
+    index.append(el("div", {}, el("h2", {}, g.title), el("ol", {}, ...g.scripts.map((s) => el("li", {}, el("a", { href: `#${s.id}` }, el("span", { className: "n" }, `${prefix}${s.n}`), s.title))))));
+  }
+  main.append(el("section", { className: "rules", id: "open" }, list(DOC.open.title, DOC.open.items)));
+</script>

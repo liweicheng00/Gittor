@@ -149,6 +149,12 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   changes are in the Compare window (a double click on the file), so the `agent` scene works there.
   `record.mjs` (the intro video) still has the selectors of the old left tabs and needs the same
   changes before the next recording.
+  The scripts of the videos (the caption, the action and the camera of each step, and the plan of the
+  git tutorials) are in `docs/video/scripts.html`, in Traditional Chinese with the English captions.
+  The owner reads it as the artifact https://claude.ai/artifact/2TCTrrwJ45tDj8AptNTPYB : after a change
+  of the file, publish it there again (the Artifact tool with that `url`), and set `updated` in `DOC`.
+  The owner will record the videos on a Mac: this container has no GPU, and the dark gradients of the
+  glass themes show steps here.
   Give `shorts.sh` a work dir with a short path (`SHORTS_WORK`), because the worktree dialog shows it. Do not use a symbolic link: the tab then shows `work/rustcalc`, not `rustcalc`.
 - CI: `.github/workflows/ci.yml` runs the tests, clippy, the types, the unit tests and all UI
   scenarios on each push to main, the scenarios in 4 parts on 4 machines. Failed scenarios run once
