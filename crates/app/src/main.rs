@@ -51,8 +51,8 @@ fn open_window(app: tauri::AppHandle, path: String, x: f64, y: f64, width: f64, 
     let builder = tauri::WebviewWindowBuilder::new(&app, label, tauri::WebviewUrl::default())
         .title(format!("{name} – Gittor"))
         .position(x, y)
-        .inner_size(width.max(600.0), height.max(400.0))
-        .min_inner_size(600.0, 400.0)
+        .inner_size(width.max(320.0), height.max(400.0))
+        .min_inner_size(320.0, 400.0)
         .disable_drag_drop_handler()
         .initialization_script(format!("window.__GITTOR_WINDOW__ = {data};"));
     // The same title bar as the main window (tauri.conf.json): the tabs go next to the window buttons.

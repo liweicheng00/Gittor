@@ -178,7 +178,8 @@ Monaco. These notes hold what earlier sessions learned. Read them before you cha
   move above the workspace and get a Log tab (`showLogTab`); no Files tab; a click on a local change opens
   the diff as a page (`layout.diffPage`, Back or Escape closes it) in one column (`DiffView.setInlineOnly`);
   the toolbar keeps Update, Push, the branch and `tb-more`, which shows the other buttons in a second row.
-  The saved settings do not change with the mode. The `narrow` scenario tests 400, 800 and 1600 px.
+  The saved settings do not change with the mode. The `narrow` scenario tests 400, 320, 800 and 1600 px.
+  320 px is the least width of a window (`minWidth` in `tauri.conf.json`, and `open_window` in `main.rs`).
   `showLeftTab(tab, false)` at the start keeps View › Left Panel off after a reload.
 - Windows (Compare, History, Review, Show Repository): `windows.ts`. A window calls
   `registerWindow(close, kind, show)`, and listens with `onRepoChange`. `watch.ts` calls

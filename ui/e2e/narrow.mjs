@@ -74,6 +74,17 @@ await page.click(".filter-more");
 await shot("narrow-4-log");
 check("the page still does not scroll sideways", await noSideScroll());
 
+// 320 px, the least width of the app window: the toolbar, the tabs and the changes still fit.
+await page.setViewportSize({ width: 320, height: 900 });
+await within("the layout stays narrow at 320 px", async () => (await layout()) === "narrow");
+await page.waitForTimeout(300);
+check("at 320 px the page does not scroll sideways", await noSideScroll());
+check("at 320 px Update, Push and More show", (await shows(".tb-more")) && (await page.isVisible("button:has-text('Push')")));
+const rowTops = await page.evaluate(() => [".tb-more", ".tb-branch-button"].map((s) => Math.round(document.querySelector(s).getBoundingClientRect().top)));
+check("at 320 px the toolbar keeps one row", Math.abs(rowTops[0] - rowTops[1]) < 6);
+await page.click(".lp-tab[aria-label^='Changes']");
+await shot("narrow-5-320");
+
 // 800 px: the medium layout keeps the left pane and puts the details under the log.
 await page.setViewportSize({ width: 800, height: 900 });
 await within("the layout is medium at 800 px", async () => (await layout()) === "medium");

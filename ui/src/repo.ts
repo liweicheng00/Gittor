@@ -72,9 +72,10 @@ export function renderTabs() {
       const info = tabInfo.get(root);
       // A linked worktree shows the worktree icon. Its tooltip names the main repository.
       const worktree = info?.mainRoot ?? null;
-      const label = worktree
-        ? [icon("worktree", "tab-icon"), h("span", { class: "tab-name" }, name)]
-        : [h("span", { class: "tab-name" }, name)];
+      // The folders above the name (for two folders with the same name) hide in the narrow layout.
+      const slash = name.lastIndexOf("/");
+      const nameEl = h("span", { class: "tab-name" }, slash > 0 ? h("span", { class: "tab-dir" }, name.slice(0, slash + 1)) : "", name.slice(slash + 1));
+      const label = worktree ? [icon("worktree", "tab-icon"), nameEl] : [nameEl];
       const title = [worktree ? `Worktree of ${worktree}` : "", info?.branch ? `Branch: ${info.branch}` : info ? "Detached HEAD" : "", root].filter(Boolean).join("\n");
       // Mod+W closes the active tab: its close button names the key.
       const close = h("button", { class: "tab-close", title: "Close the tab", "data-key-action": root === settings.activeTab ? "closeProject" : undefined }, icon("close"));

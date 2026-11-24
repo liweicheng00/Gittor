@@ -59,6 +59,14 @@ const texts = (await tabs()).map((t) => t.text);
 check("the two tabs with the same name differ", same.every((p) => texts.some((t) => t.startsWith(short(p)))));
 check("the toolbar names the repository as its tab does", ((await page.textContent(".tb-repo")) ?? "").trim() === short(same[1]));
 await shot("wt1-tabs");
+// In the narrow layout, a tab shows the folder name only, without the folders above it.
+await page.setViewportSize({ width: 400, height: 900 });
+await within("a narrow window hides the folders above the name", async () => {
+  const shown = await page.$$eval(".tab .tab-name", (els) => els.map((e) => e.innerText.trim()));
+  return shown.filter((t) => t === "app").length === 2 && !shown.some((t) => t.includes("/"));
+});
+await shot("wt2-narrow-tabs");
+await page.setViewportSize({ width: 1600, height: 1000 });
 console.log("errors:", JSON.stringify(errors));
 await browser.close();
 rmSync(wt, { recursive: true, force: true });

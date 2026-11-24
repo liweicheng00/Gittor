@@ -135,11 +135,13 @@ html.titlebar-tabs .tab { border-top: 2px solid transparent; }
 [data-layout="narrow"] .hcol.author, [data-layout="narrow"] .log-row .author, [data-layout="narrow"] .hcol.date, [data-layout="narrow"] .log-row .date, [data-layout="narrow"] .hcol.hash, [data-layout="narrow"] .log-row .hash { display: none; }
 [data-layout="medium"] .toolbar > .tb-repo { display: none; }
 [data-layout="narrow"] .leftpane { border-right: 0; }
+/* A project tab shows the folder name only: the folders above it take too much room. */
+[data-layout="narrow"] .tab-dir { display: none; }
 .lp-tab.lp-tab-log { order: -1; }
 [data-layout="narrow"] .toolbar { flex-wrap: wrap; }
 [data-layout="narrow"] .toolbar:not(.more-open) > :not(.tb-keep), [data-layout="narrow"] .toolbar > .spacer, [data-layout="narrow"] .toolbar > .tb-repo { display: none; }
 [data-layout="narrow"] .tb-more { display: inline-flex; margin-left: auto; }
-[data-layout="narrow"] .tb-branch-button { min-width: 0; max-width: 45vw; overflow: hidden; }
+[data-layout="narrow"] .tb-branch-button { min-width: 0; max-width: max(64px, calc(100vw - 250px)); overflow: hidden; }
 [data-layout="narrow"] .statusbar .sb-left { display: none; }
 [data-layout="narrow"] .filter-more { display: inline-flex; }
 [data-layout="narrow"] .filter-bar:not(.show-all) > :not(.filter-text-box, .filter-more, .filter-clear, .filter-info) { display: none; }
