@@ -95,7 +95,11 @@ function eased(keys, pick, time) {
   return expr;
 }
 
-const enc = ["-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p", "-r", String(FPS)];
+// The dark gradients of the glass themes have only a few of the 256 levels, so they show steps, and the
+// encoder makes the steps wider. `deband` makes the steps soft, and a little noise hides the rest. The noise is the
+// same in each frame: noise that changes makes the file three times larger. The encoder keeps more bits for dark, flat places (aq-mode 3).
+const SMOOTH = process.env.SHORTS_NO_SMOOTH ? "null" : "deband=1thr=0.015:2thr=0.015:3thr=0.015:range=22:blur=1,noise=alls=3:allf=u";
+const enc = ["-c:v", "libx264", "-preset", "slow", "-crf", "17", "-aq-mode", "3", "-pix_fmt", "yuv420p", "-r", String(FPS)];
 for (const [n, s] of shorts.entries()) {
   if (only.length && !only.includes(s.scene)) continue;
   const { start, duration, marks, cams, view } = meta[s.scene];
@@ -128,7 +132,7 @@ for (const [n, s] of shorts.entries()) {
   const inputs = ["-ss", String(start), "-t", String(duration), "-i", source, "-loop", "1", "-t", total.toFixed(2), "-i", join(tmp, "frame.png")];
   // The page at two times its size, so the camera moves in steps of half a pixel.
   let chain = `[0:v]setpts=PTS/${SPEED},fps=${FPS},scale=${view.width * 2}:${view.height * 2}:flags=lanczos,` +
-    `zoompan=z='${zoom}':x='(${cx})*2-iw/zoom/2':y='(${cy})*2-ih/zoom/2':d=1:s=${SLOT.w}x${SLOT.h}:fps=${FPS},` +
+    `zoompan=z='${zoom}':x='(${cx})*2-iw/zoom/2':y='(${cy})*2-ih/zoom/2':d=1:s=${SLOT.w}x${SLOT.h}:fps=${FPS},${SMOOTH},` +
     `pad=${W}:${H}:${SLOT.x}:${SLOT.y}:color=0x14161a,setsar=1[app];[app][1:v]overlay=0:0[v0];`;
   for (const [i] of s.captions.entries()) {
     const from = at[i];
