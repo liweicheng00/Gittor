@@ -1,0 +1,76 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Wireframe 1: the note loop</title><link rel="stylesheet" href="wire.css"><style>.card { margin-right: 280px; }</style></head>
+<body>
+<h1 class="wf-title">Wireframe 1 · The note loop in the Review window</h1>
+<p class="wf-sub">Each note has a state: Open → Sent → Answered (the agent replied, with a commit) → Resolved. "Send to Agent" makes one task text from the open notes and marks them as Sent. The agent writes its reply into the note through the <code>gittor-bridge</code> CLI or the local MCP server. The human checks the change and clicks Accept or Reopen.</p>
+<div class="win">
+  <div class="hdr">
+    <b>Review</b>
+    <span class="btn">feature/retry-policy → main ▾</span>
+    <span class="cnt">4 commits · 6 files · 3/6 viewed</span>
+    <span class="sp"></span>
+    <span class="pill p-agent" style="color:var(--agent)">● Claude Code · worktree retry-policy</span>
+    <span class="btn agent">Send 2 Open Notes to Agent…</span>
+    <span class="btn">Rebase…</span>
+    <span class="btn primary">Merge…</span>
+    <span class="btn">Close</span>
+  </div>
+  <div class="status">
+    <span><span class="pill p-open">2 open</span></span>
+    <span><span class="pill p-sent">1 sent</span></span>
+    <span><span class="pill p-done">2 answered</span></span>
+    <span><span class="pill p-ok">5 resolved</span></span>
+    <span style="flex:1"></span>
+    <span>Filter: <span class="btn">Needs my check (2)</span></span>
+  </div>
+  <div class="body">
+    <div class="side">
+      <div class="sec">Commits <span class="sp"></span><span class="btn">Rebase…</span></div>
+      <div class="row"><b>All changes</b> <span class="cnt">from 7c1d2e90</span></div>
+      <div class="row"><span class="box part"></span><code>e41f09a2</code><span class="grow">Address review: cap the backoff</span><span class="pill p-done" style="font-size:10px">agent</span></div>
+      <div class="row"><span class="box on"></span><code>9b3a77c1</code><span class="grow">Add jitter to retries</span><span class="cnt">2/2</span></div>
+      <div class="row"><span class="box on"></span><code>51c0d6e4</code><span class="grow">Retry policy for fetch</span><span class="cnt">3/3</span></div>
+      <div class="row"><span class="box"></span><code>0aa28f13</code><span class="grow">Tests for the policy</span><span class="cnt">0/1</span></div>
+      <div class="sec">Files · 3/6 viewed <span class="sp"></span><span class="cnt">notes</span></div>
+      <div class="row sel"><span class="box"></span><span class="grow">crates/net/src/retry.rs</span><span class="pill p-done" style="font-size:10px">2</span><span class="pill p-open" style="font-size:10px">1</span></div>
+      <div class="row"><span class="box on"></span><span class="grow">crates/net/src/client.rs</span><span class="pill p-sent" style="font-size:10px">1</span></div>
+      <div class="row"><span class="box"></span><span class="grow">crates/net/tests/retry.rs</span><span class="pill p-open" style="font-size:10px">1</span></div>
+      <div class="row"><span class="box on"></span><span class="grow">docs/net.md</span></div>
+      <div class="row"><span class="box on"></span><span class="grow">Cargo.toml</span></div>
+      <div class="row"><span class="box"></span><span class="grow">crates/net/src/lib.rs</span></div>
+    </div>
+    <div class="main">
+      <div class="diff">
+        <div class="ln"><span class="no">40</span><span class="tx">pub fn delay(&amp;self, attempt: u32) -&gt; Duration {</span></div>
+        <div class="ln del"><span class="no"></span><span class="tx">    let ms = self.base_ms * 2u64.pow(attempt);</span></div>
+        <div class="ln add"><span class="no">41</span><span class="tx">    let ms = (self.base_ms &lt;&lt; attempt.min(16)).min(self.max_ms);</span></div>
+        <div class="ln add hl"><span class="no">42</span><span class="tx">    let jitter = rand::random::&lt;u64&gt;() % (ms / 2 + 1);</span></div>
+        <div class="card done">
+          <div class="ch"><span class="pill p-done">Answered</span><span>line 41–42 · on 9b3a77c1</span><span class="sp"></span><span>you, 10:02 · agent, 10:17</span></div>
+          <div class="cb"><span class="who">You</span><br>2.pow can overflow after attempt 63. Cap the shift and the result at max_ms.</div>
+          <div class="reply"><span class="who ag">Claude Code</span> · commit <code>e41f09a2</code><br>Capped the shift at 16 and the delay at <code>max_ms</code>. Added a test for attempt 100 in <code>tests/retry.rs</code>.</div>
+          <div class="acts"><span class="btn">Show the change of e41f09a2</span><span class="btn primary">Accept and Resolve</span><span class="btn">Reopen with a Reply…</span></div>
+        </div>
+        <div class="ln add"><span class="no">43</span><span class="tx">    Duration::from_millis(ms + jitter)</span></div>
+        <div class="ln"><span class="no">44</span><span class="tx">}</span></div>
+        <div class="ln"><span class="no">45</span><span class="tx"></span></div>
+        <div class="ln add"><span class="no">46</span><span class="tx">pub fn should_retry(status: u16) -&gt; bool {</span></div>
+        <div class="ln add"><span class="no">47</span><span class="tx">    matches!(status, 429 | 500..=599)</span></div>
+        <div class="card">
+          <div class="ch"><span class="pill p-open">Open</span><span>line 47</span><span class="sp"></span><span>you, 10:20</span></div>
+          <div class="cb">501 Not Implemented must not retry. Keep 429, 502, 503, 504.</div>
+          <div class="acts"><span class="btn agent">Send to Agent</span><span class="btn">Edit</span><span class="btn">Resolve</span></div>
+        </div>
+        <div class="ln add"><span class="no">48</span><span class="tx">}</span></div>
+        <div class="callout" style="right:16px;top:20px"><b>Agent reply in the note</b>The agent writes the reply and the commit. The note shows the diff of that commit on request.</div>
+        <div class="callout" style="right:16px;top:300px"><b>One click per note</b>"Send to Agent" puts the note in the task file, or copies it, and the state becomes Sent.</div>
+      </div>
+      <div class="foot"><span>Notes of this file: 1 open · 0 sent · 1 answered · 1 resolved</span><span style="flex:1"></span><span>Note on the whole file…</span></div>
+    </div>
+  </div>
+</div>
+<ul class="legend">
+  <li><span class="pill p-open">Open</span> the human wrote it. <span class="pill p-sent">Sent</span> it is in a task for the agent. <span class="pill p-done">Answered</span> the agent replied, usually with a commit. <span class="pill p-ok">Resolved</span> the human accepted it.</li>
+  <li>The header shows the agent session that belongs to the worktree of the branch, when the bridge knows it.</li>
+</ul>
+</body></html>

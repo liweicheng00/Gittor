@@ -1,0 +1,54 @@
+/* Wireframe style: the colors of the Dark theme of Gittor (ui/src/style.css). Not app code. */
+:root {
+  --bg: #1e1f22; --fg: #dfe1e5; --muted: #8c9199; --border: #393b40;
+  --panel: #2b2d30; --panel-2: #26282b; --accent: #548af7;
+  --add: #2f4a33; --del: #4d2c2f; --warn: #d9a343; --ok: #5fb865; --agent: #b48cf2; --sent: #4fb3c8;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #111214; color: var(--fg); font: 13px/1.45 Inter, system-ui, sans-serif; padding: 24px; }
+h1.wf-title { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+p.wf-sub { color: var(--muted); margin: 0 0 14px; max-width: 1180px; }
+.win { width: 1240px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; box-shadow: 0 10px 40px #0008; }
+.hdr { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--panel); border-bottom: 1px solid var(--border); }
+.hdr .sp { flex: 1; }
+.btn { border: 1px solid var(--border); background: var(--panel-2); color: var(--fg); border-radius: 4px; padding: 3px 9px; font-size: 12px; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.agent { border-color: var(--agent); color: var(--agent); }
+.pill { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 9px; font-size: 11px; border: 1px solid currentColor; white-space: nowrap; }
+.p-open { color: var(--warn); } .p-sent { color: var(--sent); } .p-done { color: var(--agent); } .p-ok { color: var(--ok); } .p-muted { color: var(--muted); }
+.status { padding: 5px 10px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--border); display: flex; gap: 14px; align-items: center; }
+.body { display: flex; height: 620px; }
+.side { width: 300px; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+.sec { padding: 6px 10px; font-size: 12px; color: var(--muted); background: var(--panel-2); border-bottom: 1px solid var(--border); display: flex; gap: 6px; align-items: center; }
+.sec .sp { flex: 1; }
+.row { padding: 4px 10px; display: flex; gap: 6px; align-items: center; white-space: nowrap; overflow: hidden; }
+.row.sel { background: #2e436e; }
+.row code { color: var(--muted); font-size: 12px; }
+.row .grow { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.cnt { color: var(--muted); font-size: 11px; }
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.diff { flex: 1; font: 12px/1.6 "JetBrains Mono", ui-monospace, monospace; overflow: hidden; position: relative; }
+.ln { display: flex; }
+.ln .no { width: 44px; text-align: right; padding-right: 8px; color: #5a5d63; flex: none; }
+.ln .tx { white-space: pre; }
+.ln.add { background: var(--add); } .ln.del { background: var(--del); }
+.ln.hl { outline: 1px solid var(--accent); outline-offset: -1px; }
+.card { margin: 4px 12px 8px 52px; border: 1px solid var(--border); border-left: 3px solid var(--warn); background: var(--panel); border-radius: 5px; font: 12.5px/1.45 Inter, system-ui, sans-serif; }
+.card.done { border-left-color: var(--agent); }
+.card.sent { border-left-color: var(--sent); }
+.card .ch { display: flex; gap: 8px; align-items: center; padding: 5px 9px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11.5px; }
+.card .ch .sp { flex: 1; }
+.card .cb { padding: 6px 9px; }
+.reply { border-top: 1px dashed var(--border); padding: 6px 9px; }
+.who { font-weight: 600; font-size: 11.5px; }
+.who.ag { color: var(--agent); }
+.acts { display: flex; gap: 6px; padding: 6px 9px; border-top: 1px solid var(--border); }
+.foot { border-top: 1px solid var(--border); background: var(--panel-2); padding: 6px 10px; font-size: 12px; color: var(--muted); display: flex; gap: 10px; align-items: center; }
+.callout { position: absolute; background: #fff3c4; color: #3a2f00; border-radius: 4px; padding: 5px 8px; font: 11.5px/1.35 Inter, system-ui, sans-serif; max-width: 250px; box-shadow: 0 2px 8px #0006; z-index: 5; }
+.callout b { display: block; }
+.legend { margin-top: 14px; color: var(--muted); font-size: 12px; max-width: 1240px; }
+.legend li { margin: 2px 0; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+.box { width: 12px; height: 12px; border: 1px solid var(--muted); border-radius: 2px; display: inline-block; flex: none; }
+.box.on { background: var(--accent); border-color: var(--accent); }
+.box.part { background: linear-gradient(var(--warn), var(--warn)) center/8px 2px no-repeat; border-color: var(--warn); }

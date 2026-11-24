@@ -1,0 +1,82 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Wireframe 3: the agent bridge</title><link rel="stylesheet" href="wire.css">
+<style>
+.cols { display: flex; gap: 18px; align-items: flex-start; }
+.panel { width: 400px; }
+.panel .body, .set .body { height: auto; }
+.set { width: 822px; }
+.tool { font: 12px/1.5 "JetBrains Mono", ui-monospace, monospace; padding: 2px 0; }
+.tool b { color: var(--accent); font-weight: 500; }
+.grid { display: grid; grid-template-columns: 210px 1fr; gap: 6px 14px; padding: 12px 14px; align-items: center; }
+.grid .k { color: var(--muted); }
+.chk { display: flex; align-items: center; gap: 6px; }
+pre { margin: 0; padding: 10px 14px; background: var(--panel-2); border-top: 1px solid var(--border); font: 11.5px/1.5 "JetBrains Mono", ui-monospace, monospace; color: #c8ccd2; white-space: pre-wrap; }
+.wt { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.wt .l1 { display: flex; gap: 6px; align-items: center; }
+.wt .l2 { color: var(--muted); font-size: 12px; margin-top: 2px; display: flex; gap: 8px; align-items: center; }
+</style></head>
+<body>
+<h1 class="wf-title">Wireframe 3 · The agent bridge: notes in, replies out, no ref writes</h1>
+<p class="wf-sub">Left: the Worktrees tab shows which agent session works in which worktree, its state, and the open notes of the review of its branch. Right: Settings › Agents. Gittor gives a CLI and a local MCP server over stdio. The agent starts the server as a child process, so no port is open. The tools can read the review and write replies and suggestions. They cannot move refs, merge or push.</p>
+<div class="cols">
+  <div class="win panel">
+    <div class="hdr"><b>Worktrees</b><span class="sp"></span><span class="btn">New…</span></div>
+    <div class="sec">Search <span class="sp"></span><span class="cnt">★ first</span></div>
+    <div class="wt">
+      <div class="l1">★ <b>gittor</b> <span class="cnt">main</span><span class="sp" style="flex:1"></span><span class="cnt">you</span></div>
+      <div class="l2">~/src/gittor</div>
+    </div>
+    <div class="wt" style="background:#2e436e">
+      <div class="l1">★ <b>retry-policy</b> <span class="cnt">feature/retry-policy</span><span style="flex:1"></span><span class="pill p-done">● Claude Code</span></div>
+      <div class="l2"><span class="dot" style="background:var(--ok)"></span>working · 3 files changed in the last minute</div>
+      <div class="l2"><span class="pill p-sent">1 sent</span><span class="pill p-done">2 answered</span><span class="btn">Open Review</span></div>
+    </div>
+    <div class="wt">
+      <div class="l1"><b>docs-cleanup</b> <span class="cnt">chore/docs</span><span style="flex:1"></span><span class="pill p-done">● Codex</span></div>
+      <div class="l2"><span class="dot" style="background:var(--warn)"></span>stopped · waits for you · 10 min ago</div>
+      <div class="l2"><span class="pill p-done">4 answered</span><span class="btn">Open Review</span></div>
+    </div>
+    <div class="wt">
+      <div class="l1"><b>spike-graph</b> <span class="cnt">spike/graph</span><span style="flex:1"></span><span class="pill p-muted">no agent</span></div>
+      <div class="l2">2 uncommitted files · 1 open local note</div>
+    </div>
+    <div class="foot">The state comes from the agent hooks (Stop, Notification) or from the bridge.</div>
+  </div>
+
+  <div class="win set">
+    <div class="hdr"><b>Settings</b><span class="cnt">› Agents</span><span class="sp"></span><span class="btn">Close</span></div>
+    <div class="grid">
+      <span class="k">Agent bridge</span><span class="chk"><span class="box on"></span> On for this repository</span>
+      <span class="k">Command for the agent</span><span><code>gittor-bridge mcp --repo ~/src/gittor</code> <span class="btn">Copy</span> <span class="btn">Add to .mcp.json…</span></span>
+      <span class="k">The agent can</span><span class="chk"><span class="box on"></span> read the review, the diff and the notes</span>
+      <span></span><span class="chk"><span class="box on"></span> reply to a note, and mark it Answered with a commit</span>
+      <span></span><span class="chk"><span class="box on"></span> add suggestions (AI first pass); you accept or drop them</span>
+      <span></span><span class="chk"><span class="box"></span> resolve a note <span class="cnt">(off: only you resolve)</span></span>
+      <span class="k">The agent can never</span><span class="cnt">move a ref, merge, rebase, push, delete a review, or change viewed marks. The bridge has no command for these.</span>
+      <span class="k">Log</span><span class="cnt">Each write of the bridge goes to <code>.git/gittor/bridge.log</code> and shows in Local History.</span>
+    </div>
+    <div class="sec">Tools of the MCP server (the same as the CLI subcommands)</div>
+    <div style="padding:8px 14px">
+      <div class="tool"><b>review_list</b>() → the reviews of the repository</div>
+      <div class="tool"><b>review_get</b>(branch) → files, commits, notes with state, path:line and code around the line</div>
+      <div class="tool"><b>review_task</b>(branch, state="sent") → one Markdown task, as "Send to Agent" makes it</div>
+      <div class="tool"><b>note_reply</b>(branch, id, text, commit?) → the note becomes Answered</div>
+      <div class="tool"><b>note_suggest</b>(branch, path, line, end_line, text, severity) → a suggestion, not a note yet</div>
+      <div class="tool"><b>local_notes_get</b>(path?) → the notes on uncommitted changes of this worktree</div>
+    </div>
+    <pre>$ gittor-bridge review task feature/retry-policy --state sent
+# Review notes from Gittor: feature/retry-policy → main
+HEAD must be: e41f09a2  (stop if it is not)
+
+## crates/net/src/retry.rs:47  [note 7f3c]
+    46 | pub fn should_retry(status: u16) -&gt; bool {
+  &gt; 47 |     matches!(status, 429 | 500..=599)
+    48 | }
+501 Not Implemented must not retry. Keep 429, 502, 503, 504.
+
+## Rules
+- Commit each fix. Then run: gittor-bridge review reply feature/retry-policy 7f3c --commit &lt;oid&gt; "&lt;what you did&gt;"
+- Do not push. Do not resolve notes. Do not rewrite commits that are older than HEAD above.</pre>
+  </div>
+</div>
+</body></html>
