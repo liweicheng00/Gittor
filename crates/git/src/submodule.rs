@@ -335,21 +335,59 @@ impl Repo {
     }
 
     /// Checks out the recorded commit of the submodules, and initializes them first. With no paths, all
-    /// submodules. Nested submodules are updated too.
+    /// submodules. Nested submodules are updated too. A submodule with commits on no branch and no tag
+    /// is skipped, because the checkout would lose them.
     pub fn update_submodules(&self, paths: &[String]) -> Result<OpResult> {
-        let mut args = vec!["submodule", "update", "--init", "--recursive"];
-        if !paths.is_empty() {
-            args.push("--");
-            for p in paths {
-                args.push(safe(p)?);
+        for p in paths {
+            safe(p)?;
+        }
+        let all = self.submodules()?;
+        let targets: Vec<&Submodule> = all.iter().filter(|s| paths.is_empty() || paths.contains(&s.path)).collect();
+        let mut skipped = Vec::new();
+        // A path that the list does not have (for example a nested submodule) goes to git as it is.
+        let mut update: Vec<&str> = paths.iter().filter(|p| !all.iter().any(|s| &s.path == *p)).map(String::as_str).collect();
+        for s in &targets {
+            let lost = self.unreferenced_commits(s);
+            if lost == 0 {
+                update.push(s.path.as_str());
+            } else {
+                skipped.push(format!("{} ({lost} commit{} on no branch)", s.path, if lost == 1 { "" } else { "s" }));
             }
         }
-        self.git_write(&args, &[]).map_err(|(out, e)| GitError(if out.is_empty() { e } else { format!("{e}\n{out}") }))?;
-        Ok(OpResult::ok_msg(if paths.is_empty() {
-            "Updated the submodules".to_string()
-        } else {
-            format!("Updated {} submodule{}", paths.len(), if paths.len() == 1 { "" } else { "s" })
-        }))
+        if !update.is_empty() {
+            let mut args = vec!["submodule", "update", "--init", "--recursive", "--"];
+            args.extend(update.iter().copied());
+            self.git_write(&args, &[]).map_err(|(out, e)| GitError(if out.is_empty() { e } else { format!("{e}\n{out}") }))?;
+        }
+        if skipped.is_empty() {
+            return Ok(OpResult::ok_msg(if paths.is_empty() {
+                "Updated the submodules".to_string()
+            } else {
+                format!("Updated {} submodule{}", update.len(), if update.len() == 1 { "" } else { "s" })
+            }));
+        }
+        let why = format!("Skipped {}. Create a branch there to keep the commits, then update.", skipped.join(", "));
+        if update.is_empty() {
+            return Err(GitError(why));
+        }
+        Ok(OpResult::ok_msg(format!("Updated {} submodule{}. {why}", update.len(), if update.len() == 1 { "" } else { "s" })))
+    }
+
+    /// The count of commits of the checked-out HEAD of a submodule that no branch, tag or remote branch
+    /// holds and that the recorded commit does not contain. A checkout of the recorded commit loses them.
+    fn unreferenced_commits(&self, s: &Submodule) -> usize {
+        let Some(current) = s.current.as_deref() else { return 0 };
+        if current == s.recorded {
+            return 0;
+        }
+        let repo = Repo { root: self.root.join(&s.path) };
+        let recorded = format!("{}^{{commit}}", s.recorded);
+        let has_recorded = repo.git(&["rev-parse", "--verify", "-q", &recorded]).is_ok();
+        let mut args = vec!["rev-list", "--count", "HEAD", "--not", "--branches", "--tags", "--remotes"];
+        if has_recorded {
+            args.push(&s.recorded);
+        }
+        repo.git(&args).ok().and_then(|o| String::from_utf8_lossy(&o).trim().parse().ok()).unwrap_or(0)
     }
 
     /// The text that a diff shows for a submodule: the checked-out commit, as in `git diff`.

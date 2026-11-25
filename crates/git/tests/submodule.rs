@@ -105,6 +105,25 @@ fn submodules() {
     assert_eq!(repo.submodules().unwrap()[0].state, SubmoduleState::Clean);
     assert!(app.join("vendor/lib/lib.rs").exists());
 
+    // Update skips a submodule with a commit on no branch: the checkout would lose it.
+    let sub = app.join("vendor/lib");
+    git(&sub, &["config", "user.name", "Test"]);
+    git(&sub, &["config", "user.email", "test@example.com"]);
+    git(&sub, &["checkout", "-q", "--detach"]);
+    std::fs::write(sub.join("lib.rs"), "own\n").unwrap();
+    git(&sub, &["-c", "commit.gpgsign=false", "commit", "-q", "-am", "Own"]);
+    let own = git(&sub, &["rev-parse", "HEAD"]);
+    let e = repo.update_submodules(&[]).unwrap_err().to_string();
+    assert!(e.contains("vendor/lib (1 commit on no branch)"), "{e}");
+    assert_eq!(git(&sub, &["rev-parse", "HEAD"]), own);
+    // Rollback uses the same check.
+    assert!(repo.rollback(&["vendor/lib".to_string()]).is_err());
+    assert_eq!(git(&sub, &["rev-parse", "HEAD"]), own);
+    // With a branch on the commit, Update checks out the recorded commit.
+    git(&sub, &["branch", "keep"]);
+    assert!(repo.update_submodules(&[]).unwrap().ok);
+    assert_eq!(git(&sub, &["rev-parse", "HEAD"]), c2);
+
     // A repository without submodules has an empty list.
     assert!(Repo::open(&lib).unwrap().submodules().unwrap().is_empty());
 }
