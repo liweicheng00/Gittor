@@ -267,7 +267,7 @@ export async function openCompare(leftRef: string, rightRef: string, cb: Compare
       fileIcon(c.path),
       h("span", { class: `rebase-subject status-text-${c.status}` }, c.path.slice(slash + 1)),
       h("span", { class: "rebase-author" }, withDir && slash > 0 ? c.path.slice(0, slash) : ""),
-      noteBadge(noteCounts.get(c.path)),
+      noteBadge(noteCounts.get(c.path)) || h("span", { class: "files-notes-none" }),
       h("span", { class: `status status-end status-${c.status}`, title: statusName(c.status) }, c.status),
     );
     row.addEventListener("mousedown", (e) => e.button === 0 && void select(i));

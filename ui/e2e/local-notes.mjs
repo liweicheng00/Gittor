@@ -95,6 +95,11 @@ await addNote(1, "Check the overflow");
 // The list of the window shows the count of the open notes of each file.
 const badge = (file) => page.textContent(`${win} .compare-file:has-text('${file}') .files-notes`).catch(() => null);
 await within("the file list counts the notes of each file", async () => (await badge("arith.rs"))?.trim() === "1" && (await badge("main.rs"))?.trim() === "1");
+const oneLine = await page.$eval(`${win} .compare-file:has-text('arith.rs')`, (row) => {
+  const top = (sel) => Math.round(row.querySelector(sel).getBoundingClientRect().top);
+  return Math.abs(top(".status-end") - top(".rebase-subject")) < 4 && Math.abs(top(".files-notes") - top(".rebase-subject")) < 4;
+});
+check("the count and the status stay on the line of the file name", oneLine);
 
 // The right side on a branch: these are no local changes, so no notes.
 await page.selectOption(`${win} .compare-select >> nth=1`, "feature/cli");

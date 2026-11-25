@@ -815,7 +815,9 @@ textarea.dialog-input { font-family: var(--mono, ui-monospace, monospace); font-
 .compare-none { padding: 2px 8px 6px; display: block; }
 .compare-commit { grid-template-columns: 70px minmax(0, 1fr) auto auto; }
 .compare-files { flex: 1; border-right: none; }
-.compare-file { display: grid; grid-template-columns: auto minmax(0, auto) minmax(0, 1fr) auto; gap: 6px; align-items: center; }
+.compare-file { display: grid; grid-template-columns: auto minmax(0, auto) minmax(0, 1fr) auto auto; gap: 6px; align-items: center; }
+/* The cell of the note count stays in the grid without notes too, so the status keeps its column. */
+.compare-file .files-notes { margin-left: 0; padding-left: 0; }
 .compare-file .status-end { margin-left: 0; }
 .compare-dir { display: flex; gap: 6px; align-items: center; cursor: default; }
 .compare-tree-toggle { margin-left: auto; }
